@@ -35,7 +35,7 @@ function MktNav() {
         </Link>
         <Link href="/onboarding">
           <OAButton variant="primary" size="sm">
-            Start free <ArrowRight size={14} />
+            Register Now <ArrowRight size={14} />
           </OAButton>
         </Link>
       </div>
