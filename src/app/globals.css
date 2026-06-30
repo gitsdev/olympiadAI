@@ -1,0 +1,376 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ============================================================
+   OlympiadAI — Design Tokens
+   All design values from the OlympiadAI design system.
+   ============================================================ */
+
+:root {
+  /* ---------------------------------------------------------------- PALETTE */
+  --paper:      oklch(0.992 0.004 95);
+  --paper-2:    oklch(0.975 0.006 95);
+  --surface:    oklch(1 0 0);
+  --ink-900:    oklch(0.230 0.020 264);
+  --ink-700:    oklch(0.380 0.022 264);
+  --ink-500:    oklch(0.560 0.020 264);
+  --ink-400:    oklch(0.660 0.016 264);
+  --line-200:   oklch(0.915 0.008 264);
+  --line-300:   oklch(0.870 0.010 264);
+  --fill-100:   oklch(0.960 0.006 264);
+  --fill-200:   oklch(0.935 0.008 264);
+
+  /* Brand — Olympiad Cobalt */
+  --cobalt-50:  oklch(0.965 0.018 258);
+  --cobalt-100: oklch(0.925 0.040 258);
+  --cobalt-200: oklch(0.855 0.080 258);
+  --cobalt-300: oklch(0.760 0.130 258);
+  --cobalt-400: oklch(0.640 0.175 258);
+  --cobalt-500: oklch(0.520 0.195 259);
+  --cobalt-600: oklch(0.460 0.180 261);
+  --cobalt-700: oklch(0.400 0.155 262);
+  --cobalt-900: oklch(0.285 0.090 264);
+
+  /* Accent — Medal Gold */
+  --gold-50:    oklch(0.975 0.022 85);
+  --gold-100:   oklch(0.940 0.050 84);
+  --gold-300:   oklch(0.860 0.105 82);
+  --gold-400:   oklch(0.815 0.130 80);
+  --gold-500:   oklch(0.760 0.140 76);
+  --gold-700:   oklch(0.560 0.110 70);
+
+  /* Semantic */
+  --success:    oklch(0.625 0.150 152);
+  --success-bg: oklch(0.955 0.035 152);
+  --success-tx: oklch(0.440 0.110 152);
+  --warning:    oklch(0.790 0.135 70);
+  --warning-bg: oklch(0.960 0.045 78);
+  --warning-tx: oklch(0.520 0.110 60);
+  --danger:     oklch(0.585 0.205 27);
+  --danger-bg:  oklch(0.960 0.030 27);
+  --danger-tx:  oklch(0.470 0.170 27);
+  --info:       oklch(0.600 0.120 235);
+  --info-bg:    oklch(0.960 0.030 235);
+
+  /* Subject accents */
+  --subj-math:    oklch(0.520 0.195 259);
+  --subj-science: oklch(0.610 0.150 152);
+  --subj-english: oklch(0.560 0.170 18);
+  --subj-gk:      oklch(0.640 0.140 300);
+  --subj-cyber:   oklch(0.600 0.120 200);
+
+  /* ---------------------------------------------------------- ROLE TOKENS */
+  --bg:            var(--paper);
+  --bg-sunk:       var(--paper-2);
+  --bg-card:       var(--surface);
+  --fg:            var(--ink-900);
+  --fg-muted:      var(--ink-500);
+  --fg-subtle:     var(--ink-400);
+  --border-light:  var(--line-200);
+  --border-strong: var(--line-300);
+  --brand:         var(--cobalt-500);
+  --brand-hover:   var(--cobalt-600);
+  --brand-press:   var(--cobalt-700);
+  --brand-tint:    var(--cobalt-50);
+  --accent-color:  var(--gold-400);
+  --on-brand:      oklch(0.985 0.01 258);
+
+  /* ----------------------------------------------------------------- TYPE */
+  --font-display: 'Bricolage Grotesque', 'Hanken Grotesk', system-ui, sans-serif;
+  --font-sans:    'Hanken Grotesk', system-ui, -apple-system, sans-serif;
+  --font-mono:    'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* Type scale */
+  --t-display: 4.0rem;
+  --t-h1:      2.625rem;
+  --t-h2:      2.0rem;
+  --t-h3:      1.5rem;
+  --t-h4:      1.25rem;
+  --t-lg:      1.125rem;
+  --t-base:    1.0rem;
+  --t-sm:      0.875rem;
+  --t-xs:      0.8125rem;
+  --t-2xs:     0.6875rem;
+
+  /* ---------------------------------------------------------------- RADII */
+  --r-xs:   4px;
+  --r-sm:   7px;
+  --r-md:   10px;
+  --r-lg:   14px;
+  --r-xl:   20px;
+  --r-2xl:  28px;
+  --r-pill: 999px;
+
+  /* --------------------------------------------------------------- SHADOWS */
+  --shadow-xs:    0 1px 2px oklch(0.30 0.04 264 / 0.06);
+  --shadow-sm:    0 1px 2px oklch(0.30 0.04 264 / 0.06), 0 2px 6px oklch(0.30 0.04 264 / 0.05);
+  --shadow-md:    0 2px 4px oklch(0.30 0.04 264 / 0.05), 0 8px 20px oklch(0.30 0.04 264 / 0.08);
+  --shadow-lg:    0 4px 8px oklch(0.30 0.04 264 / 0.06), 0 20px 40px oklch(0.30 0.04 264 / 0.12);
+  --shadow-brand: 0 6px 18px oklch(0.52 0.195 259 / 0.30);
+  --ring-brand:   0 0 0 3px oklch(0.520 0.195 259 / 0.18);
+
+  /* -------------------------------------------------------------- SPACING */
+  --s-1: 4px;  --s-2: 8px;   --s-3: 12px; --s-4: 16px; --s-5: 20px;
+  --s-6: 24px; --s-8: 32px;  --s-10: 40px; --s-12: 48px; --s-16: 64px;
+  --s-20: 80px; --s-24: 96px;
+
+  /* --------------------------------------------------------------- MOTION */
+  --ease-out:    cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-fast: 120ms;
+  --dur:      200ms;
+  --dur-slow: 360ms;
+
+  /* ----------------------------------------------------------------- GRID */
+  --grid-line: oklch(0.520 0.10 259 / 0.06);
+  --grid: linear-gradient(var(--grid-line) 1px, transparent 1px),
+          linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  --grid-size: 24px 24px;
+
+  /* ========== ShadCN semantic mappings (override defaults) ========= */
+  --background:          var(--paper);
+  --foreground:          var(--ink-900);
+  --card:                var(--surface);
+  --card-foreground:     var(--ink-900);
+  --popover:             var(--surface);
+  --popover-foreground:  var(--ink-900);
+  --primary:             var(--cobalt-500);
+  --primary-foreground:  var(--on-brand);
+  --secondary:           var(--fill-100);
+  --secondary-foreground:var(--ink-700);
+  --muted:               var(--paper-2);
+  --muted-foreground:    var(--ink-500);
+  --accent:              var(--cobalt-50);
+  --accent-foreground:   var(--cobalt-700);
+  --destructive:         var(--danger);
+  --border:              var(--line-200);
+  --input:               var(--line-300);
+  --ring:                var(--cobalt-500);
+  --radius:              0.625rem;
+
+  /* Sidebar */
+  --sidebar:                    var(--surface);
+  --sidebar-foreground:         var(--ink-900);
+  --sidebar-primary:            var(--cobalt-500);
+  --sidebar-primary-foreground: var(--on-brand);
+  --sidebar-accent:             var(--cobalt-50);
+  --sidebar-accent-foreground:  var(--cobalt-700);
+  --sidebar-border:             var(--line-200);
+  --sidebar-ring:               var(--cobalt-500);
+}
+
+/* ============ Tailwind v4 @theme — expose tokens as utilities ============ */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-display: var(--font-display);
+  --font-heading: var(--font-display);
+
+  /* brand */
+  --color-brand:       var(--cobalt-500);
+  --color-brand-hover: var(--cobalt-600);
+  --color-brand-tint:  var(--cobalt-50);
+  --color-accent-gold: var(--gold-400);
+
+  /* cobalt scale */
+  --color-cobalt-50:  var(--cobalt-50);
+  --color-cobalt-100: var(--cobalt-100);
+  --color-cobalt-200: var(--cobalt-200);
+  --color-cobalt-300: var(--cobalt-300);
+  --color-cobalt-400: var(--cobalt-400);
+  --color-cobalt-500: var(--cobalt-500);
+  --color-cobalt-600: var(--cobalt-600);
+  --color-cobalt-700: var(--cobalt-700);
+
+  /* gold scale */
+  --color-gold-50:  var(--gold-50);
+  --color-gold-100: var(--gold-100);
+  --color-gold-300: var(--gold-300);
+  --color-gold-400: var(--gold-400);
+  --color-gold-500: var(--gold-500);
+  --color-gold-700: var(--gold-700);
+
+  /* ink/paper */
+  --color-paper:   var(--paper);
+  --color-paper-2: var(--paper-2);
+  --color-surface: var(--surface);
+  --color-ink-900: var(--ink-900);
+  --color-ink-700: var(--ink-700);
+  --color-ink-500: var(--ink-500);
+  --color-ink-400: var(--ink-400);
+  --color-line-200: var(--line-200);
+  --color-line-300: var(--line-300);
+  --color-fill-100: var(--fill-100);
+  --color-fill-200: var(--fill-200);
+
+  /* semantic */
+  --color-success:    var(--success);
+  --color-success-bg: var(--success-bg);
+  --color-success-tx: var(--success-tx);
+  --color-warning:    var(--warning);
+  --color-warning-bg: var(--warning-bg);
+  --color-warning-tx: var(--warning-tx);
+  --color-danger:     var(--danger);
+  --color-danger-bg:  var(--danger-bg);
+  --color-danger-tx:  var(--danger-tx);
+
+  /* subjects */
+  --color-subj-math:    var(--subj-math);
+  --color-subj-science: var(--subj-science);
+  --color-subj-english: var(--subj-english);
+  --color-subj-gk:      var(--subj-gk);
+  --color-subj-cyber:   var(--subj-cyber);
+
+  /* radii */
+  --radius-xs:   var(--r-xs);
+  --radius-sm:   var(--r-sm);
+  --radius-md:   var(--r-md);
+  --radius-lg:   var(--r-lg);
+  --radius-xl:   var(--r-xl);
+  --radius-2xl:  var(--r-2xl);
+  --radius-pill: var(--r-pill);
+
+  /* shadows */
+  --shadow-xs:    var(--shadow-xs);
+  --shadow-sm:    var(--shadow-sm);
+  --shadow-md:    var(--shadow-md);
+  --shadow-lg:    var(--shadow-lg);
+  --shadow-brand: var(--shadow-brand);
+
+  /* ShadCN standard */
+  --color-sidebar-ring:               var(--sidebar-ring);
+  --color-sidebar-border:             var(--sidebar-border);
+  --color-sidebar-accent-foreground:  var(--sidebar-accent-foreground);
+  --color-sidebar-accent:             var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary:            var(--sidebar-primary);
+  --color-sidebar-foreground:         var(--sidebar-foreground);
+  --color-sidebar:                    var(--sidebar);
+  --color-ring:                       var(--ring);
+  --color-input:                      var(--input);
+  --color-border:                     var(--border);
+  --color-destructive:                var(--destructive);
+  --color-accent-foreground:          var(--accent-foreground);
+  --color-accent:                     var(--accent);
+  --color-muted-foreground:           var(--muted-foreground);
+  --color-muted:                      var(--muted);
+  --color-secondary-foreground:       var(--secondary-foreground);
+  --color-secondary:                  var(--secondary);
+  --color-primary-foreground:         var(--primary-foreground);
+  --color-primary:                    var(--primary);
+  --color-popover-foreground:         var(--popover-foreground);
+  --color-popover:                    var(--popover);
+  --color-card-foreground:            var(--card-foreground);
+  --color-card:                       var(--card);
+  --radius-sm:  calc(var(--radius) * 0.6);
+  --radius-md:  calc(var(--radius) * 0.8);
+  --radius-lg:  var(--radius);
+  --radius-xl:  calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* ============================================================ BASE STYLES */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+}
+
+/* ============================================================ TYPOGRAPHY */
+.t-display {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--t-display);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--fg);
+}
+.t-h1 { font-family: var(--font-display); font-weight: 700; font-size: var(--t-h1); line-height: 1.2; letter-spacing: -0.02em; color: var(--fg); }
+.t-h2 { font-family: var(--font-display); font-weight: 700; font-size: var(--t-h2); line-height: 1.2; letter-spacing: -0.01em; color: var(--fg); }
+.t-h3 { font-family: var(--font-display); font-weight: 600; font-size: var(--t-h3); line-height: 1.2; letter-spacing: -0.01em; color: var(--fg); }
+.t-h4 { font-family: var(--font-sans);    font-weight: 600; font-size: var(--t-h4); line-height: 1.2; color: var(--fg); }
+.t-lead { font-family: var(--font-sans); font-weight: 400; font-size: var(--t-lg); line-height: 1.65; color: var(--ink-700); }
+.t-body { font-family: var(--font-sans); font-weight: 400; font-size: var(--t-base); line-height: 1.5; color: var(--fg); }
+.t-sm   { font-family: var(--font-sans); font-weight: 400; font-size: var(--t-sm);  line-height: 1.5; color: var(--fg); }
+.t-cap  { font-family: var(--font-sans); font-weight: 500; font-size: var(--t-xs);  line-height: 1.5; color: var(--fg-muted); }
+.t-overline {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: var(--t-2xs);
+  line-height: 1;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+.t-mono   { font-family: var(--font-mono); font-weight: 500; font-feature-settings: 'tnum' 1, 'zero' 1; letter-spacing: -0.01em; }
+.t-metric { font-family: var(--font-mono); font-weight: 700; font-size: var(--t-h1); letter-spacing: -0.03em; font-feature-settings: 'tnum' 1; color: var(--fg); }
+
+/* ======================================================= UTILITY CLASSES */
+.graph-bg {
+  background-image: var(--grid);
+  background-size: var(--grid-size);
+}
+
+/* Animations */
+@keyframes oa-fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes oa-blink {
+  0%, 80%, 100% { opacity: 0.25; }
+  40%           { opacity: 1; }
+}
+@keyframes oa-shimmer {
+  to { transform: translateX(100%); }
+}
+
+.oa-fade  { animation: oa-fade-up 360ms var(--ease-out) both; }
+.oa-dots span {
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--cobalt-400);
+  animation: oa-blink 1.2s infinite both;
+}
+.oa-dots span:nth-child(2) { animation-delay: 0.2s; }
+.oa-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+.oa-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.oa-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, oklch(0.52 0.10 259 / 0.06), transparent);
+  transform: translateX(-100%);
+  animation: oa-shimmer 1.3s infinite;
+}
+
+/* Scrollbar */
+.oa-scroll::-webkit-scrollbar { width: 10px; }
+.oa-scroll::-webkit-scrollbar-thumb { background: var(--line-300); border-radius: 999px; border: 3px solid var(--paper); }
+.oa-scroll::-webkit-scrollbar-thumb:hover { background: var(--ink-400); }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
