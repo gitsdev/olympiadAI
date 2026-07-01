@@ -96,7 +96,7 @@ function Hero() {
         <div className="flex gap-3 justify-center mb-4">
           <Link href="/onboarding">
             <OAButton variant="primary" size="lg">
-              Register Now <ArrowRight size={18} />
+              Try for Free <ArrowRight size={18} />
             </OAButton>
           </Link>
           <OAButton variant="secondary" size="lg">
