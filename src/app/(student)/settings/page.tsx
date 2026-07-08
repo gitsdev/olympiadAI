@@ -69,26 +69,28 @@ export default function SettingsPage() {
 
   return (
     <AppShell title="Settings" subtitle="Account & preferences">
-      <div className="max-w-[720px] mx-auto px-7 py-6 pb-10 flex flex-col gap-4">
+      <div className="max-w-[720px] mx-auto px-4 sm:px-7 py-6 pb-10 flex flex-col gap-4">
 
         {/* ── Profile card ── */}
         <OACard style={{ padding: "22px 24px" }}>
           {!editing ? (
             /* View mode */
-            <div className="flex items-center gap-4">
-              <OAAvatar name={user.name} size={64} />
-              <div className="flex-1">
-                <h2 className="font-bold text-[21px] tracking-tight" style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.015em" }}>
-                  {user.name}
-                </h2>
-                <p className="text-[13.5px] mt-0.5" style={{ color: "var(--fg-muted)" }}>{user.email || "—"}</p>
-                <div className="flex gap-1.5 mt-2.5">
-                  <OABadge tone="cobalt">{user.board}</OABadge>
-                  <OABadge tone="neutral">Class {user.cls}</OABadge>
-                  <OABadge tone="gold" className="gap-1.5"><Zap size={11} />Level {level}</OABadge>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="flex items-center gap-4 flex-1">
+                <OAAvatar name={user.name} size={56} />
+                <div className="flex-1 min-w-0">
+                  <h2 className="font-bold text-[19px] sm:text-[21px] tracking-tight truncate" style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.015em" }}>
+                    {user.name}
+                  </h2>
+                  <p className="text-[13px] mt-0.5 truncate" style={{ color: "var(--fg-muted)" }}>{user.email || "—"}</p>
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    <OABadge tone="cobalt">{user.board}</OABadge>
+                    <OABadge tone="neutral">Class {user.cls}</OABadge>
+                    <OABadge tone="gold" className="gap-1.5"><Zap size={11} />Level {level}</OABadge>
+                  </div>
                 </div>
               </div>
-              <OAButton variant="secondary" size="sm" onClick={openEdit}>
+              <OAButton variant="secondary" size="sm" onClick={openEdit} className="self-start sm:self-auto">
                 <PencilLine size={14} /> Edit
               </OAButton>
             </div>
@@ -133,7 +135,7 @@ export default function SettingsPage() {
               {/* Class */}
               <div>
                 <p className="text-[12px] font-semibold mb-2" style={{ color: "var(--ink-700)" }}>Class</p>
-                <div className="grid grid-cols-10 gap-1.5">
+                <div className="grid grid-cols-5 sm:grid-cols-10 gap-1.5">
                   {[1,2,3,4,5,6,7,8,9,10].map((c) => (
                     <button
                       key={c}
@@ -223,7 +225,7 @@ export default function SettingsPage() {
         </OACard>
 
         {/* ── Actions ── */}
-        <div className="flex gap-2.5">
+        <div className="flex flex-wrap gap-2.5">
           <OAButton variant="ghost" size="md" onClick={() => logout()} style={{ color: "var(--danger)" }}>
             <LogOut size={16} /> Log out
           </OAButton>
