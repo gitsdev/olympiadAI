@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { SearchPalette } from "./SearchPalette";
@@ -15,8 +16,11 @@ interface AppShellProps {
 
 export function AppShell({ title, subtitle, noScroll = false, children }: AppShellProps) {
   const user = useStudent();
-  const [searchOpen, setSearchOpen] = useState(false);
+  const pathname = usePathname();
+  const [searchOpen, setSearchOpen]     = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  // Close ⌘K on shortcut
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
@@ -28,6 +32,11 @@ export function AppShell({ title, subtitle, noScroll = false, children }: AppShe
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
+  // Close mobile drawer on route change
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
+
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar
@@ -35,6 +44,8 @@ export function AppShell({ title, subtitle, noScroll = false, children }: AppShe
         board={user.board}
         cls={user.cls}
         streakDays={user.streakDays}
+        mobileOpen={mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
       />
 
       <div className="flex flex-col flex-1 min-w-0 min-h-0">
@@ -42,6 +53,7 @@ export function AppShell({ title, subtitle, noScroll = false, children }: AppShe
           title={title}
           subtitle={subtitle}
           onSearchOpen={() => setSearchOpen(true)}
+          onMenuOpen={() => setMobileMenuOpen(true)}
         />
 
         {noScroll ? (
