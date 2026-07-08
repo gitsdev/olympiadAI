@@ -44,7 +44,7 @@ export default function ResultsClient({ attempt, metrics }: Props) {
 
   return (
     <AppShell title="Your results" subtitle={subtitle}>
-      <div className="max-w-[860px] mx-auto px-7 py-6 pb-11 flex flex-col gap-5">
+      <div className="max-w-[860px] mx-auto px-4 sm:px-7 py-6 pb-11 flex flex-col gap-5">
         {/* Headline */}
         <div className="flex items-center gap-2">
           <OABadge tone="green" className="gap-1.5"><CircleCheck size={12} />Test complete</OABadge>
@@ -54,27 +54,27 @@ export default function ResultsClient({ attempt, metrics }: Props) {
         </div>
 
         {/* Readiness + rank prediction */}
-        <OACard noPadding className="overflow-hidden grid grid-cols-2">
-          <div className="p-6 border-r border-[var(--line-200)] flex items-center gap-5">
-            <OARing value={readiness} size={104} stroke={10}>
-              <span className="font-bold leading-none" style={{ fontFamily: "var(--font-mono)", fontSize: 28, color: "var(--ink-900)" }}>{readiness}</span>
+        <OACard noPadding className="overflow-hidden grid grid-cols-1 sm:grid-cols-2">
+          <div className="p-5 sm:p-6 border-b sm:border-b-0 sm:border-r border-[var(--line-200)] flex items-center gap-5">
+            <OARing value={readiness} size={100} stroke={10}>
+              <span className="font-bold leading-none" style={{ fontFamily: "var(--font-mono)", fontSize: 26, color: "var(--ink-900)" }}>{readiness}</span>
               <span className="mt-0.5" style={{ fontFamily: "var(--font-mono)", fontSize: 9.5, color: "var(--fg-subtle)", letterSpacing: "0.06em" }}>/ 100</span>
             </OARing>
             <div>
               <p className="t-overline mb-1.5">Olympiad readiness</p>
-              <h3 className="font-bold text-[20px] tracking-tight" style={{ fontFamily: "var(--font-display)" }}>{readinessLabel(readiness)}</h3>
+              <h3 className="font-bold text-[19px] sm:text-[20px] tracking-tight" style={{ fontFamily: "var(--font-display)" }}>{readinessLabel(readiness)}</h3>
             </div>
           </div>
 
-          <div className="p-6 graph-bg" style={{ backgroundSize: "22px 22px" }}>
+          <div className="p-5 sm:p-6 graph-bg" style={{ backgroundSize: "22px 22px" }}>
             <p className="t-overline mb-3">Predicted IMO performance</p>
             <div className="flex gap-6">
               <div>
-                <p className="font-bold text-[26px] tracking-tight" style={{ fontFamily: "var(--font-mono)", letterSpacing: "-0.02em", color: "var(--ink-900)" }}>#120–180</p>
+                <p className="font-bold text-[24px] sm:text-[26px] tracking-tight" style={{ fontFamily: "var(--font-mono)", letterSpacing: "-0.02em", color: "var(--ink-900)" }}>#120–180</p>
                 <p className="text-[12px] mt-0.5" style={{ color: "var(--fg-muted)" }}>Expected rank range</p>
               </div>
               <div>
-                <p className="font-bold text-[26px] tracking-tight" style={{ fontFamily: "var(--font-mono)", letterSpacing: "-0.02em", color: "var(--gold-700)" }}>
+                <p className="font-bold text-[24px] sm:text-[26px] tracking-tight" style={{ fontFamily: "var(--font-mono)", letterSpacing: "-0.02em", color: "var(--gold-700)" }}>
                   {Math.min(99, Math.round(accuracy * 0.85))}<span className="text-[15px]">%</span>
                 </p>
                 <p className="text-[12px] mt-0.5" style={{ color: "var(--fg-muted)" }}>Award probability</p>
@@ -86,8 +86,8 @@ export default function ResultsClient({ attempt, metrics }: Props) {
           </div>
         </OACard>
 
-        {/* Stat tiles */}
-        <div className="grid grid-cols-3 gap-3.5">
+        {/* Stat tiles — 1 col mobile, 3 col sm+ */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
           {STATS.map(({ k, v, unit, icon: Icon, tone, note }) => (
             <OACard key={k} style={{ padding: "16px 18px" }}>
               <div className="flex items-center gap-2 mb-3">
@@ -95,7 +95,7 @@ export default function ResultsClient({ attempt, metrics }: Props) {
                 <span className="t-overline">{k}</span>
               </div>
               <div className="flex items-baseline gap-1">
-                <span className="font-bold text-[30px] tracking-tight" style={{ fontFamily: "var(--font-mono)", letterSpacing: "-0.03em", color: "var(--ink-900)" }}>{v}</span>
+                <span className="font-bold text-[28px] sm:text-[30px] tracking-tight" style={{ fontFamily: "var(--font-mono)", letterSpacing: "-0.03em", color: "var(--ink-900)" }}>{v}</span>
                 <span className="text-[14px] font-medium" style={{ fontFamily: "var(--font-mono)", color: "var(--fg-muted)" }}>{unit}</span>
               </div>
               <p className="text-[12px] mt-1.5" style={{ color: "var(--fg-muted)" }}>{note}</p>
@@ -103,7 +103,7 @@ export default function ResultsClient({ attempt, metrics }: Props) {
           ))}
         </div>
 
-        <div className="grid grid-cols-[1fr_300px] gap-5 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-5 items-start">
           {/* Concept mastery */}
           <OACard style={{ padding: "18px 20px" }}>
             <h3 className="font-bold text-[17px] mb-1" style={{ fontFamily: "var(--font-display)" }}>Concept mastery</h3>
