@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+
+export const maxDuration = 60; // seconds — needed for parallel batch generation
 import { createClient } from "@/lib/supabase/server";
 import { asConcepts } from "@/lib/supabase/types-helper";
 import type { Board, Subject, Difficulty } from "@/types/database";
 
 const anthropic = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY });
 
-interface GeneratedQuestion {
+// Max questions per single Claude call — keeps each response well within 8 192 token budget
+const BATCH_SIZE = 12;
+
+export interface GeneratedQuestion {
   question_text: string;
   options: string[];
   correct_answer_index: number;
@@ -16,69 +21,156 @@ interface GeneratedQuestion {
   estimated_time_seconds: number;
 }
 
+// Compact schema Claude must return (redundant fields filled server-side)
+interface RawQuestion {
+  q: string;          // question text
+  o: string[];        // 4 options
+  a: number;          // correct index (0-3)
+  e: string;          // explanation (2-3 sentences max)
+}
+
+/* ── Olympiad context map ──────────────────────────────────────────── */
+const OLYMPIAD_MAP: Record<string, string> = {
+  "SOF IMO":  "SOF International Mathematics Olympiad — tests mathematical reasoning, pattern recognition, and multi-step problem solving beyond standard curriculum",
+  "SOF NSO":  "SOF National Science Olympiad — tests conceptual understanding and application across physics, chemistry, and biology",
+  "SOF IEO":  "SOF International English Olympiad — tests vocabulary, grammar, reading comprehension, and verbal reasoning",
+  "SOF IGKO": "SOF International General Knowledge Olympiad — tests current affairs, history, geography, civics, and logical reasoning",
+  "IOQM":     "Indian Olympiad Qualifier in Mathematics — advanced MCQ on number theory, algebra, combinatorics, and geometry at national competition level",
+  "INMO":     "Indian National Mathematical Olympiad — highest national level with problems requiring deep mathematical insight and elegant reasoning",
+};
+
+/* ── Robust JSON extraction ────────────────────────────────────────── */
+function extractQuestions(raw: string): RawQuestion[] {
+  const strip = raw.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+
+  // Try the whole string first
+  try { return JSON.parse(strip); } catch { /* fall through */ }
+
+  // Try to pull out the first [...] block
+  const m = strip.match(/\[[\s\S]*\]/);
+  if (!m) return [];
+
+  try { return JSON.parse(m[0]); } catch { /* fall through */ }
+
+  // Last resort: parse all complete objects inside the array
+  const objects: RawQuestion[] = [];
+  const re = /\{[\s\S]*?\}(?=\s*[,\]])/g;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(m[0])) !== null) {
+    try { objects.push(JSON.parse(match[0])); } catch { /* skip malformed */ }
+  }
+  return objects;
+}
+
+/* ── Single-batch generator ────────────────────────────────────────── */
+async function generateBatch(
+  n: number,
+  systemPrompt: string,
+  userMsg: string,
+): Promise<RawQuestion[]> {
+  const response = await anthropic.messages.create({
+    model:      "claude-sonnet-4-6",
+    max_tokens: 8192,
+    system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
+    messages: [{ role: "user", content: userMsg }],
+  });
+
+  const raw = response.content[0].type === "text" ? response.content[0].text : "[]";
+  return extractQuestions(raw).slice(0, n);
+}
+
+/* ── POST handler ──────────────────────────────────────────────────── */
 export async function POST(req: NextRequest) {
   try {
     const {
-      subject, topicName, difficulty, count = 5, classLevel, board,
+      subject, topicName, difficulty, count = 10, classLevel, board,
     } = await req.json() as {
       subject: Subject; topicName: string; difficulty: Difficulty;
       count: number; classLevel: number; board: Board;
     };
 
+    // Fetch concept context from DB (best-effort; fine if empty)
     const supabase = await createClient();
     const { data: rawConcepts } = await supabase
       .from("concepts")
-      .select("title, definition, formula, examples, common_mistakes")
+      .select("title, definition, formula, examples")
       .eq("subject", subject)
       .eq("class_level", classLevel)
       .eq("board", board)
-      .ilike("topic_name", `%${topicName}%`)
-      .limit(3);
+      .ilike("topic_name", `%${topicName.split("—")[0].trim()}%`)
+      .limit(2);
 
     const concepts = asConcepts(rawConcepts);
     const conceptContext = concepts
       .map((c) =>
-        `${c.title}: ${c.definition}${c.formula ? `\nFormula: ${c.formula}` : ""}${
-          c.examples?.length ? `\nExamples: ${c.examples.slice(0, 2).join("; ")}` : ""
+        `${c.title}: ${c.definition}${c.formula ? ` | Formula: ${c.formula}` : ""}${
+          c.examples?.length ? ` | Example: ${c.examples[0]}` : ""
         }`
       )
-      .join("\n\n") ?? "";
+      .join("\n");
 
-    const systemPrompt = `You generate original Olympiad-style MCQ questions for ${board} Class ${classLevel} ${subject}.
-Each question must be completely original, pedagogically sound, with exactly one correct answer.
+    // Detect olympiad
+    const olympiadKey = Object.keys(OLYMPIAD_MAP).find((k) => topicName.startsWith(k));
+    const olympiadCtx = olympiadKey ? OLYMPIAD_MAP[olympiadKey] : null;
 
-Difficulty: ${difficulty}
-Topic: ${topicName}
+    const estimatedSecs = difficulty === "Easy" ? 45 : difficulty === "Medium" ? 70 : difficulty === "HOTS" ? 120 : 90;
 
-Knowledge context:
-${conceptContext || `Standard ${board} Class ${classLevel} ${subject} curriculum — topic: ${topicName}`}
+    const systemPrompt = `You generate original MCQ questions for Class ${classLevel} ${subject}.
+${olympiadCtx
+  ? `Exam context: ${olympiadCtx}.`
+  : `Curriculum: ${board} Class ${classLevel} ${subject}.`}
+Difficulty: ${difficulty}.${olympiadKey ? ` Match the actual style of ${olympiadKey} past papers.` : ""}
+${conceptContext ? `Curriculum notes:\n${conceptContext}` : ""}
 
-Return ONLY a valid JSON array of ${count} questions:
-[{
-  "question_text": "...",
-  "options": ["A", "B", "C", "D"],
-  "correct_answer_index": 0,
-  "explanation": "Step-by-step working...",
-  "difficulty": "${difficulty}",
-  "topic_name": "${topicName}",
-  "estimated_time_seconds": 60
-}]`;
+Rules:
+- Exactly 4 options per question; exactly one correct answer.
+- Options must be plausible — no obviously wrong distractors.
+- Explanation: 2-3 sentences, show key working step.
+- For higher classes (8-12) and HOTS: include multi-step reasoning questions.
+- NEVER repeat a question from earlier in this session.
 
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 4096,
-      system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
-      messages: [{
-        role: "user",
-        content: `Generate ${count} ${difficulty} MCQ questions about ${topicName} for ${board} Class ${classLevel} ${subject}.`,
-      }],
-    });
+Return ONLY a valid JSON array — no markdown, no preamble:
+[{"q":"...","o":["...","...","...","..."],"a":0,"e":"..."}]`;
 
-    const raw = response.content[0].type === "text" ? response.content[0].text : "[]";
-    const jsonStr = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-    const questions: GeneratedQuestion[] = JSON.parse(jsonStr);
+    const userMsg = olympiadCtx
+      ? `Generate EXACTLY {N} ${difficulty} MCQ questions for ${topicName}. Return only the JSON array.`
+      : `Generate EXACTLY {N} ${difficulty} MCQ questions for Class ${classLevel} ${subject} — focus area: ${topicName}. Return only the JSON array.`;
 
-    // Persist to DB asynchronously (best-effort)
+    // Split into parallel batches if count > BATCH_SIZE
+    let rawQuestions: RawQuestion[];
+
+    if (count <= BATCH_SIZE) {
+      rawQuestions = await generateBatch(count, systemPrompt, userMsg.replace("{N}", String(count)));
+    } else {
+      const batches: number[] = [];
+      let remaining = count;
+      while (remaining > 0) {
+        const n = Math.min(BATCH_SIZE, remaining);
+        batches.push(n);
+        remaining -= n;
+      }
+      const results = await Promise.all(
+        batches.map((n) => generateBatch(n, systemPrompt, userMsg.replace("{N}", String(n))))
+      );
+      rawQuestions = results.flat();
+    }
+
+    if (rawQuestions.length === 0) {
+      return NextResponse.json({ error: "No questions generated." }, { status: 500 });
+    }
+
+    // Normalise to full GeneratedQuestion shape
+    const questions: GeneratedQuestion[] = rawQuestions.map((r) => ({
+      question_text:          r.q,
+      options:                r.o,
+      correct_answer_index:   r.a,
+      explanation:            r.e,
+      difficulty,
+      topic_name:             topicName,
+      estimated_time_seconds: estimatedSecs,
+    }));
+
+    // Persist best-effort (don't block response)
     persistQuestions(supabase, questions, subject, classLevel, board).catch(() => {});
 
     return NextResponse.json({ questions });
@@ -88,6 +180,7 @@ Return ONLY a valid JSON array of ${count} questions:
   }
 }
 
+/* ── Background persist ────────────────────────────────────────────── */
 async function persistQuestions(
   supabase: Awaited<ReturnType<typeof createClient>>,
   questions: GeneratedQuestion[],

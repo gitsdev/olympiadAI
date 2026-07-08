@@ -2,230 +2,363 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, FileText, Clock, Star, Zap, ChevronDown, ChevronRight } from "lucide-react";
+import { Trophy, ArrowLeft, ArrowRight, BookOpen, FlaskConical, Globe, Calculator } from "lucide-react";
 import { AppShell } from "@/components/layout";
-import { OABadge, OACard, OASubjectDot, type Subject } from "@/components/ui";
+import { OACard, OABadge, OASubjectDot, type Subject } from "@/components/ui";
 import { useStudent } from "@/contexts/StudentContext";
+import { cn } from "@/lib/utils";
 
-const TYPES = ["All", "Topic", "Chapter", "Subject", "Olympiad", "Adaptive"];
+/* ── Olympiad catalog ────────────────────────────────────────────────── */
+interface Olympiad {
+  id: string;
+  shortName: string;
+  fullName: string;
+  organiser: string;
+  subject: Subject;
+  minClass: number;
+  maxClass: number;
+  desc: string;
+  Icon: React.ElementType;
+  accent: string;
+  accentBg: string;
+}
 
-const TESTS = [
-  { subj: "Mathematics" as Subject, title: "Number System — full chapter", kind: "Chapter",  q: 25, min: 30, diff: "Medium", topic: "Number System" },
-  { subj: "Mathematics" as Subject, title: "IMO Mock · Set 4",             kind: "Olympiad", q: 35, min: 60, diff: "Hard",   topic: "Mixed Topics", star: true },
-  { subj: "Science"     as Subject, title: "Light & Reflection",           kind: "Topic",    q: 12, min: 15, diff: "Easy",   topic: "Light and Reflection" },
-  { subj: "Mathematics" as Subject, title: "Adaptive diagnostic",          kind: "Adaptive", q: 20, min: 25, diff: "Adaptive", topic: "Mixed Topics" },
-  { subj: "English"     as Subject, title: "Reading comprehension",        kind: "Topic",    q: 15, min: 20, diff: "Medium", topic: "Reading Comprehension" },
-  { subj: "Cyber"       as Subject, title: "Logical reasoning sprint",     kind: "Subject",  q: 30, min: 35, diff: "Hard",   topic: "Logical Reasoning" },
+const OLYMPIADS: Olympiad[] = [
+  {
+    id: "sof-imo",
+    shortName: "SOF IMO",
+    fullName: "International Mathematics Olympiad",
+    organiser: "Science Olympiad Foundation",
+    subject: "Mathematics",
+    minClass: 1, maxClass: 12,
+    desc: "Tests mathematical reasoning, logical thinking, and problem-solving across all chapters.",
+    Icon: Calculator,
+    accent: "var(--cobalt-600)",
+    accentBg: "var(--cobalt-50)",
+  },
+  {
+    id: "sof-nso",
+    shortName: "SOF NSO",
+    fullName: "National Science Olympiad",
+    organiser: "Science Olympiad Foundation",
+    subject: "Science",
+    minClass: 1, maxClass: 12,
+    desc: "Covers physics, chemistry, biology and environmental science at the olympiad level.",
+    Icon: FlaskConical,
+    accent: "var(--success-tx)",
+    accentBg: "var(--success-bg)",
+  },
+  {
+    id: "sof-ieo",
+    shortName: "SOF IEO",
+    fullName: "International English Olympiad",
+    organiser: "Science Olympiad Foundation",
+    subject: "English",
+    minClass: 1, maxClass: 12,
+    desc: "Evaluates vocabulary, grammar, reading comprehension, and writing skills.",
+    Icon: BookOpen,
+    accent: "var(--gold-700)",
+    accentBg: "var(--gold-50)",
+  },
+  {
+    id: "sof-igko",
+    shortName: "SOF IGKO",
+    fullName: "International General Knowledge Olympiad",
+    organiser: "Science Olympiad Foundation",
+    subject: "General Knowledge",
+    minClass: 1, maxClass: 10,
+    desc: "Tests current affairs, history, geography, civics, and world knowledge.",
+    Icon: Globe,
+    accent: "var(--danger)",
+    accentBg: "var(--danger-bg)",
+  },
+  {
+    id: "ioqm",
+    shortName: "IOQM",
+    fullName: "Indian Olympiad Qualifier in Mathematics",
+    organiser: "HBCSE / MTA",
+    subject: "Mathematics",
+    minClass: 8, maxClass: 12,
+    desc: "Gateway to IMO — advanced number theory, algebra, geometry, and combinatorics.",
+    Icon: Calculator,
+    accent: "oklch(0.32 0.12 259)",
+    accentBg: "oklch(0.96 0.02 259)",
+  },
+  {
+    id: "inmo",
+    shortName: "INMO",
+    fullName: "Indian National Mathematical Olympiad",
+    organiser: "HBCSE",
+    subject: "Mathematics",
+    minClass: 11, maxClass: 12,
+    desc: "National-level selection exam with proof-based olympiad problems of the highest difficulty.",
+    Icon: Trophy,
+    accent: "var(--ink-900)",
+    accentBg: "var(--fill-100)",
+  },
 ];
 
-const RECENT = [
-  { title: "Number System",          score: 87, q: 12 },
-  { title: "Fractions & Decimals",   score: 92, q: 10 },
-  { title: "IMO Mock · Set 3",       score: 64, q: 35 },
-];
+const DIFFICULTIES = ["Easy", "Medium", "Hard", "HOTS"] as const;
+const COUNTS = [10, 20, 30, 40] as const;
+type Difficulty = typeof DIFFICULTIES[number];
+type Step = "select" | "configure";
 
-const DIFF_TONE: Record<string, "green" | "amber" | "red" | "cobalt" | "neutral"> = {
-  Easy: "green", Medium: "amber", Hard: "red", HOTS: "cobalt", Adaptive: "neutral",
-};
-
-const BUILDER_SUBJECTS = ["Mathematics", "Science", "English", "General Knowledge", "Cyber"] as Subject[];
-const BUILDER_DIFFS    = ["Easy", "Medium", "Hard", "Adaptive"];
-
+/* ── Page ────────────────────────────────────────────────────────────── */
 export default function TestsPage() {
   const router  = useRouter();
   const student = useStudent();
 
-  const [type, setType]           = useState("All");
-  const [bSubject, setBSubject]   = useState<Subject>(
-    (student.subjects[0] as Subject) ?? "Mathematics"
-  );
-  const [bTopic, setBTopic]       = useState("");
-  const [bDiff, setBDiff]         = useState("Medium");
-  const [bCount, setBCount]       = useState(15);
+  const [step, setStep]         = useState<Step>("select");
+  const [olympiad, setOlympiad] = useState<Olympiad | null>(null);
+  const [selClass, setSelClass] = useState(student.cls);
+  const [selDiff, setSelDiff]   = useState<Difficulty>("Medium");
+  const [selCount, setSelCount] = useState<number>(20);
 
-  const shown = type === "All" ? TESTS : TESTS.filter((t) => t.kind === type);
+  function selectOlympiad(o: Olympiad) {
+    setOlympiad(o);
+    // Clamp student's class to valid range for this olympiad
+    const clamped = Math.max(o.minClass, Math.min(o.maxClass, student.cls));
+    setSelClass(clamped);
+    setStep("configure");
+  }
 
-  function practiceUrl(subj: Subject, topic: string, diff: string, count: number) {
+  function startTest() {
+    if (!olympiad) return;
+    const topic = `${olympiad.shortName} Class ${selClass} — ${olympiad.subject} Olympiad`;
     const p = new URLSearchParams({
-      subject: subj, topic, difficulty: diff, count: String(count), autostart: "1",
+      subject:    olympiad.subject,
+      topic,
+      difficulty: selDiff,
+      count:      String(selCount),
+      classLevel: String(selClass),
+      autostart:  "1",
     });
-    return `/practice?${p.toString()}`;
+    router.push(`/practice?${p.toString()}`);
   }
 
-  function launchBuilder() {
-    router.push(practiceUrl(bSubject, bTopic || bSubject, bDiff, bCount));
-  }
-
-  return (
-    <AppShell title="Mock tests" subtitle="Take one, or build your own">
-      <div className="px-7 py-6 pb-10">
-        <div className="grid grid-cols-[1fr_300px] gap-5 items-start">
-          <div>
-            {/* Filter chips */}
-            <div className="flex flex-wrap gap-1.5 mb-5">
-              {TYPES.map((ty) => (
-                <button
-                  key={ty}
-                  onClick={() => setType(ty)}
-                  className="text-[13px] font-semibold px-3.5 py-1.5 rounded-full border cursor-pointer transition-all duration-[140ms]"
-                  style={{
-                    borderColor: type === ty ? "var(--brand)" : "var(--line-300)",
-                    background:  type === ty ? "var(--cobalt-500)" : "var(--surface)",
-                    color:       type === ty ? "#fff" : "var(--ink-700)",
-                  }}
-                >
-                  {ty}
-                </button>
-              ))}
+  /* ── Step 1: Olympiad selector ─────────────────────────────────────── */
+  if (step === "select") {
+    return (
+      <AppShell title="Mock tests" subtitle="Choose your Olympiad">
+        <div className="max-w-[860px] mx-auto px-7 py-6 pb-10">
+          <div className="flex items-center gap-3 mb-6">
+            <Trophy size={22} style={{ color: "var(--gold-500)" }} />
+            <div>
+              <h2 className="font-bold text-[20px] tracking-tight" style={{ fontFamily: "var(--font-display)" }}>
+                Select an Olympiad
+              </h2>
+              <p className="text-[13px] mt-0.5" style={{ color: "var(--fg-muted)" }}>
+                AI-generated questions matched to each exam's actual syllabus and question style.
+              </p>
             </div>
+          </div>
 
-            {/* Test grid */}
-            <div className="grid grid-cols-2 gap-3.5">
-              {shown.map((t, i) => (
+          <div className="grid grid-cols-3 gap-4">
+            {OLYMPIADS.map((o) => {
+              const { Icon } = o;
+              const eligible = student.cls >= o.minClass && student.cls <= o.maxClass;
+              return (
                 <button
-                  key={i}
-                  onClick={() => router.push(practiceUrl(t.subj, t.topic, t.diff, t.q))}
-                  className="text-left"
+                  key={o.id}
+                  onClick={() => selectOlympiad(o)}
+                  className="text-left group"
                 >
-                  <OACard hover noPadding className="p-4 flex flex-col gap-3 cursor-pointer">
-                    <div className="flex items-start">
-                      <div className="flex items-center gap-1.5">
-                        <OASubjectDot subject={t.subj} />
-                        <span className="text-[11.5px] font-semibold uppercase tracking-[0.04em]" style={{ color: "var(--fg-muted)" }}>{t.kind}</span>
+                  <OACard
+                    hover
+                    noPadding
+                    className={cn(
+                      "flex flex-col overflow-hidden transition-all duration-[140ms]",
+                      "group-hover:shadow-[var(--shadow-md)]"
+                    )}
+                  >
+                    {/* Accent bar */}
+                    <div className="h-[5px] w-full" style={{ background: o.accent }} />
+
+                    <div className="p-5 flex flex-col gap-3 flex-1">
+                      <div className="flex items-start gap-3">
+                        <div
+                          className="w-10 h-10 rounded-[var(--r-md)] flex items-center justify-center shrink-0"
+                          style={{ background: o.accentBg }}
+                        >
+                          <Icon size={20} style={{ color: o.accent }} />
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="font-bold text-[18px] leading-none tracking-tight"
+                            style={{ fontFamily: "var(--font-display)", color: "var(--ink-900)" }}>
+                            {o.shortName}
+                          </h3>
+                          <p className="text-[11.5px] mt-1 leading-snug" style={{ color: "var(--fg-muted)" }}>
+                            {o.fullName}
+                          </p>
+                        </div>
                       </div>
-                      <span className="flex-1" />
-                      {"star" in t && t.star && <Star size={15} fill="var(--gold-400)" style={{ color: "var(--gold-400)" }} />}
-                    </div>
-                    <h3
-                      className="font-bold text-[16.5px] leading-snug tracking-tight min-h-[40px]"
-                      style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.01em" }}
-                    >
-                      {t.title}
-                    </h3>
-                    <div className="flex items-center gap-3" style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--fg-muted)" }}>
-                      <span className="flex items-center gap-1"><FileText size={13} />{t.q} Q</span>
-                      <span className="flex items-center gap-1"><Clock size={13} />{t.min}m</span>
-                      <span className="flex-1" />
-                      <OABadge tone={DIFF_TONE[t.diff] ?? "neutral"}>{t.diff}</OABadge>
+
+                      <p className="text-[12.5px] leading-[1.55]" style={{ color: "var(--ink-700)" }}>
+                        {o.desc}
+                      </p>
+
+                      <div className="flex items-center gap-2 mt-auto pt-1">
+                        <OABadge tone="neutral" className="gap-1">
+                          <OASubjectDot subject={o.subject} size={7} />
+                          {o.subject}
+                        </OABadge>
+                        <OABadge tone={eligible ? "cobalt" : "neutral"}>
+                          Cl {o.minClass}–{o.maxClass}
+                        </OABadge>
+                        {!eligible && (
+                          <span className="text-[11px] ml-auto" style={{ color: "var(--fg-subtle)" }}>
+                            Cl {o.minClass}–{o.maxClass} only
+                          </span>
+                        )}
+                        {eligible && (
+                          <ArrowRight size={15} className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: o.accent }} />
+                        )}
+                      </div>
                     </div>
                   </OACard>
                 </button>
-              ))}
+              );
+            })}
+          </div>
+        </div>
+      </AppShell>
+    );
+  }
+
+  /* ── Step 2: Configuration ──────────────────────────────────────────── */
+  if (!olympiad) return null;
+  const validClasses = Array.from(
+    { length: olympiad.maxClass - olympiad.minClass + 1 },
+    (_, i) => olympiad.minClass + i
+  );
+
+  return (
+    <AppShell title="Mock tests" subtitle={`${olympiad.shortName} — Configure your test`}>
+      <div className="max-w-[580px] mx-auto px-7 py-6 pb-10 flex flex-col gap-5">
+
+        {/* Back + selected olympiad header */}
+        <button
+          onClick={() => setStep("select")}
+          className="flex items-center gap-1.5 text-[13px] font-semibold w-fit"
+          style={{ color: "var(--brand)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+        >
+          <ArrowLeft size={15} /> Back to Olympiads
+        </button>
+
+        <OACard noPadding className="overflow-hidden">
+          <div className="h-[4px]" style={{ background: olympiad.accent }} />
+          <div className="p-5 flex items-center gap-4">
+            <div
+              className="w-12 h-12 rounded-[var(--r-md)] flex items-center justify-center shrink-0"
+              style={{ background: olympiad.accentBg }}
+            >
+              <olympiad.Icon size={22} style={{ color: olympiad.accent }} />
+            </div>
+            <div>
+              <h2 className="font-bold text-[19px] tracking-tight" style={{ fontFamily: "var(--font-display)" }}>
+                {olympiad.shortName}
+              </h2>
+              <p className="text-[12.5px] mt-0.5" style={{ color: "var(--fg-muted)" }}>
+                {olympiad.fullName} · {olympiad.organiser}
+              </p>
             </div>
           </div>
+        </OACard>
 
-          {/* Right panel */}
-          <div className="flex flex-col gap-5">
-            {/* Custom builder */}
-            <OACard style={{ padding: "18px 20px", border: "1.5px solid var(--cobalt-200)" }}>
-              <div className="flex items-center gap-2 mb-1">
-                <Plus size={18} style={{ color: "var(--brand)" }} />
-                <h3 className="font-bold text-[17px]" style={{ fontFamily: "var(--font-display)" }}>Build a custom test</h3>
-              </div>
-              <p className="text-[12.5px] mb-4" style={{ color: "var(--fg-muted)" }}>Generated fresh from your knowledge graph.</p>
-
-              {/* Subject dropdown */}
-              <div className="mb-3">
-                <p className="text-[12px] font-semibold mb-1.5" style={{ color: "var(--ink-700)" }}>Subject</p>
-                <select
-                  value={bSubject}
-                  onChange={(e) => setBSubject(e.target.value as Subject)}
-                  className="w-full border border-[var(--line-300)] rounded-[var(--r-md)] px-3 py-[9px] text-[13.5px] outline-none focus:border-[var(--cobalt-400)] cursor-pointer"
-                  style={{ background: "var(--surface)", color: "var(--ink-900)" }}
-                >
-                  {BUILDER_SUBJECTS.map((s) => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Topic */}
-              <div className="mb-3">
-                <p className="text-[12px] font-semibold mb-1.5" style={{ color: "var(--ink-700)" }}>Topic <span style={{ fontWeight: 400, color: "var(--fg-muted)" }}>(optional)</span></p>
-                <input
-                  value={bTopic}
-                  onChange={(e) => setBTopic(e.target.value)}
-                  placeholder={`e.g. Fractions, Photosynthesis…`}
-                  className="w-full border border-[var(--line-300)] rounded-[var(--r-md)] px-3 py-[9px] text-[13.5px] outline-none focus:border-[var(--cobalt-400)] transition-colors"
-                  style={{ background: "var(--surface)", color: "var(--ink-900)" }}
-                />
-              </div>
-
-              {/* Difficulty */}
-              <div className="mb-3">
-                <p className="text-[12px] font-semibold mb-1.5" style={{ color: "var(--ink-700)" }}>Difficulty</p>
-                <div className="flex gap-1.5">
-                  {BUILDER_DIFFS.map((d) => (
-                    <button
-                      key={d}
-                      onClick={() => setBDiff(d)}
-                      className="flex-1 py-1.5 rounded-[var(--r-md)] border-[1.5px] text-[12px] font-semibold cursor-pointer transition-all"
-                      style={{
-                        borderColor: bDiff === d ? "var(--cobalt-400)" : "var(--line-300)",
-                        background:  bDiff === d ? "var(--cobalt-50)"  : "var(--surface)",
-                        color:       bDiff === d ? "var(--cobalt-700)" : "var(--ink-700)",
-                      }}
-                    >
-                      {d}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Question count slider */}
-              <div className="mb-4">
-                <p className="text-[12px] font-semibold mb-2" style={{ color: "var(--ink-700)" }}>
-                  Questions: <span style={{ fontFamily: "var(--font-mono)", color: "var(--brand)" }}>{bCount}</span>
-                </p>
-                <input
-                  type="range" min={5} max={30} step={5} value={bCount}
-                  onChange={(e) => setBCount(+e.target.value)}
-                  className="w-full"
-                  style={{ accentColor: "var(--cobalt-500)" }}
-                />
-              </div>
-
+        {/* Class selection */}
+        <OACard style={{ padding: "20px 24px" }}>
+          <p className="text-[12px] font-semibold mb-3 uppercase tracking-[0.05em]" style={{ color: "var(--fg-muted)" }}>
+            Class
+          </p>
+          <div className="grid gap-1.5" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(44px, 1fr))" }}>
+            {validClasses.map((c) => (
               <button
-                onClick={launchBuilder}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-[var(--r-md)] text-[14px] font-semibold text-white border-none cursor-pointer"
-                style={{ background: "var(--cobalt-500)", boxShadow: "var(--shadow-brand)" }}
+                key={c}
+                onClick={() => setSelClass(c)}
+                className="py-2 rounded-[var(--r-md)] border-[1.5px] text-[13px] font-bold cursor-pointer transition-all duration-[140ms]"
+                style={{
+                  fontFamily:  "var(--font-mono)",
+                  borderColor: selClass === c ? olympiad.accent : "var(--line-300)",
+                  background:  selClass === c ? olympiad.accentBg : "var(--surface)",
+                  color:       selClass === c ? olympiad.accent   : "var(--ink-700)",
+                }}
               >
-                <Zap size={16} /> Generate test
+                {c}
               </button>
-            </OACard>
-
-            {/* Recent attempts */}
-            <OACard style={{ padding: "16px 18px" }}>
-              <p className="t-overline mb-3">Recent attempts</p>
-              <div className="flex flex-col gap-3">
-                {RECENT.map((r) => (
-                  <div key={r.title} className="flex items-center gap-2.5 px-1">
-                    <div
-                      className="w-[38px] h-[38px] rounded-[var(--r-md)] shrink-0 flex items-center justify-center"
-                      style={{
-                        background: r.score >= 85 ? "var(--success-bg)" : r.score >= 70 ? "var(--cobalt-50)" : "var(--gold-50)",
-                      }}
-                    >
-                      <span
-                        className="font-bold text-[14px]"
-                        style={{
-                          fontFamily: "var(--font-mono)",
-                          color: r.score >= 85 ? "var(--success-tx)" : r.score >= 70 ? "var(--cobalt-700)" : "var(--gold-700)",
-                        }}
-                      >
-                        {r.score}
-                      </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[13.5px] font-semibold truncate" style={{ color: "var(--ink-900)" }}>{r.title}</p>
-                      <p className="text-[11.5px]" style={{ fontFamily: "var(--font-mono)", color: "var(--fg-muted)" }}>{r.q} questions</p>
-                    </div>
-                    <ChevronRight size={17} style={{ color: "var(--fg-subtle)" }} />
-                  </div>
-                ))}
-              </div>
-            </OACard>
+            ))}
           </div>
+        </OACard>
+
+        {/* Difficulty */}
+        <OACard style={{ padding: "20px 24px" }}>
+          <p className="text-[12px] font-semibold mb-3 uppercase tracking-[0.05em]" style={{ color: "var(--fg-muted)" }}>
+            Difficulty
+          </p>
+          <div className="grid grid-cols-4 gap-2">
+            {DIFFICULTIES.map((d) => (
+              <button
+                key={d}
+                onClick={() => setSelDiff(d)}
+                className="py-2.5 rounded-[var(--r-md)] border-[1.5px] text-[13px] font-semibold cursor-pointer transition-all duration-[140ms]"
+                style={{
+                  borderColor: selDiff === d ? olympiad.accent : "var(--line-300)",
+                  background:  selDiff === d ? olympiad.accentBg : "var(--surface)",
+                  color:       selDiff === d ? olympiad.accent   : "var(--ink-700)",
+                }}
+              >
+                {d}
+              </button>
+            ))}
+          </div>
+          {(olympiad.id === "ioqm" || olympiad.id === "inmo") && (
+            <p className="text-[12px] mt-2.5" style={{ color: "var(--fg-muted)" }}>
+              IOQM/INMO questions are inherently challenging — "Hard" or "HOTS" recommended.
+            </p>
+          )}
+        </OACard>
+
+        {/* Question count */}
+        <OACard style={{ padding: "20px 24px" }}>
+          <p className="text-[12px] font-semibold mb-3 uppercase tracking-[0.05em]" style={{ color: "var(--fg-muted)" }}>
+            Number of questions
+          </p>
+          <div className="grid grid-cols-4 gap-2">
+            {COUNTS.map((c) => (
+              <button
+                key={c}
+                onClick={() => setSelCount(c)}
+                className="py-2.5 rounded-[var(--r-md)] border-[1.5px] text-[14px] font-bold cursor-pointer transition-all duration-[140ms]"
+                style={{
+                  fontFamily:  "var(--font-mono)",
+                  borderColor: selCount === c ? olympiad.accent : "var(--line-300)",
+                  background:  selCount === c ? olympiad.accentBg : "var(--surface)",
+                  color:       selCount === c ? olympiad.accent   : "var(--ink-700)",
+                }}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+        </OACard>
+
+        {/* Summary + start */}
+        <div className="rounded-[var(--r-lg)] border border-[var(--line-200)] p-4 flex items-center gap-4"
+          style={{ background: "var(--paper-2)" }}>
+          <div className="flex-1">
+            <p className="text-[13.5px] font-semibold" style={{ color: "var(--ink-900)" }}>
+              {olympiad.shortName} · Class {selClass} · {selDiff}
+            </p>
+            <p className="text-[12.5px] mt-0.5" style={{ color: "var(--fg-muted)" }}>
+              {selCount} AI-generated questions · Approx {Math.round(selCount * 1.5)} min
+            </p>
+          </div>
+          <button
+            onClick={startTest}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-[var(--r-md)] text-[14px] font-semibold text-white border-none cursor-pointer shrink-0"
+            style={{ background: olympiad.accent, boxShadow: "var(--shadow-brand)" }}
+          >
+            Start test <ArrowRight size={16} />
+          </button>
         </div>
       </div>
     </AppShell>
