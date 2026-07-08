@@ -1,6 +1,6 @@
 "use client";
 
-import { Flame, Target, Zap, Trophy, Route, Crown, Star, Award, TrendingUp, Lock } from "lucide-react";
+import { Flame, Target, Zap, Trophy, Route, Crown, Award, TrendingUp, Lock } from "lucide-react";
 import { AppShell } from "@/components/layout";
 import { OACard, OAAvatar } from "@/components/ui";
 import { useStudent } from "@/contexts/StudentContext";
@@ -37,22 +37,22 @@ export default function AchievementsClient({ earnedKeys, totalPoints, streakDays
 
   return (
     <AppShell title="Achievements" subtitle="Points, badges & your batch leaderboard">
-      <div className="px-7 py-6 pb-10 flex flex-col gap-5">
+      <div className="px-4 sm:px-7 py-6 pb-10 flex flex-col gap-5">
         {/* Hero stats */}
-        <div className="grid grid-cols-3 gap-3.5">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
           <StatHero Icon={Zap}   bg="var(--cobalt-50)"  tone="var(--brand)"    value={totalPoints.toLocaleString()} label="Total points"  note={`Level ${level} · Scholar`} />
           <StatHero Icon={Flame} bg="var(--gold-50)"    tone="var(--gold-700)" value={String(streakDays)}           label="Day streak"    note={streakDays > 0 ? "Keep it going!" : "Start today"} />
           <StatHero Icon={Award} bg="var(--success-bg)" tone="var(--success)"  value={`${earnedCount} / ${BADGE_CATALOG.length}`} label="Badges earned" note={`${BADGE_CATALOG.length - earnedCount} more to unlock`} />
         </div>
 
-        <div className="grid grid-cols-[1fr_300px] gap-5 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-5 items-start">
           {/* Badges */}
           <OACard style={{ padding: "18px 20px" }}>
             <h3 className="font-bold text-[18px] mb-1" style={{ fontFamily: "var(--font-display)" }}>Badges</h3>
             <p className="text-[12.5px] mb-5" style={{ color: "var(--fg-muted)" }}>
               Earned by consistency and improvement — not just answers.
             </p>
-            <div className="grid grid-cols-4 gap-3.5">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
               {BADGE_CATALOG.map((b) => {
                 const earned = earnedKeys.includes(b.key);
                 return (
