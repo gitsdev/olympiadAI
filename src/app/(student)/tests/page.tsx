@@ -140,7 +140,7 @@ export default function TestsPage() {
   if (step === "select") {
     return (
       <AppShell title="Mock tests" subtitle="Choose your Olympiad">
-        <div className="max-w-[860px] mx-auto px-7 py-6 pb-10">
+        <div className="max-w-[860px] mx-auto px-4 sm:px-7 py-6 pb-10">
           <div className="flex items-center gap-3 mb-6">
             <Trophy size={22} style={{ color: "var(--gold-500)" }} />
             <div>
@@ -153,7 +153,7 @@ export default function TestsPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {OLYMPIADS.map((o) => {
               const { Icon } = o;
               const eligible = student.cls >= o.minClass && student.cls <= o.maxClass;
@@ -234,7 +234,7 @@ export default function TestsPage() {
 
   return (
     <AppShell title="Mock tests" subtitle={`${olympiad.shortName} — Configure your test`}>
-      <div className="max-w-[580px] mx-auto px-7 py-6 pb-10 flex flex-col gap-5">
+      <div className="max-w-[580px] mx-auto px-4 sm:px-7 py-6 pb-10 flex flex-col gap-5">
 
         {/* Back + selected olympiad header */}
         <button
@@ -342,7 +342,7 @@ export default function TestsPage() {
         </OACard>
 
         {/* Summary + start */}
-        <div className="rounded-[var(--r-lg)] border border-[var(--line-200)] p-4 flex items-center gap-4"
+        <div className="rounded-[var(--r-lg)] border border-[var(--line-200)] p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4"
           style={{ background: "var(--paper-2)" }}>
           <div className="flex-1">
             <p className="text-[13.5px] font-semibold" style={{ color: "var(--ink-900)" }}>
@@ -354,7 +354,7 @@ export default function TestsPage() {
           </div>
           <button
             onClick={startTest}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-[var(--r-md)] text-[14px] font-semibold text-white border-none cursor-pointer shrink-0"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-[var(--r-md)] text-[14px] font-semibold text-white border-none cursor-pointer"
             style={{ background: olympiad.accent, boxShadow: "var(--shadow-brand)" }}
           >
             Start test <ArrowRight size={16} />
