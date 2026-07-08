@@ -5,6 +5,7 @@ import {
   BookOpen,
 } from "lucide-react";
 import { OAButton, OACard, OARing, OASubjectDot, OAAvatar, type Subject } from "@/components/ui";
+import { Logo } from "@/components/brand";
 import { MktNav } from "./MktNav";
 
 /* ── Hero ────────────────────────────────────────────────────────────── */
