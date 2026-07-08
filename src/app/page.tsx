@@ -1,68 +1,25 @@
 import Link from "next/link";
 import {
   Sparkles, PencilLine, Target, BarChart2, Route, Trophy,
-  ArrowRight, Play, Check, CircleCheck, Star, Download, Users,
-  Lightbulb, BookOpen,
+  ArrowRight, Play, Check, CircleCheck, Star, Users,
+  BookOpen,
 } from "lucide-react";
-import { Logo } from "@/components/brand";
 import { OAButton, OACard, OARing, OASubjectDot, OAAvatar, type Subject } from "@/components/ui";
-
-/* ── Nav ─────────────────────────────────────────────────────────────── */
-function MktNav() {
-  const links = ["Platform", "AI Tutor", "Subjects", "For parents", "Pricing"];
-  return (
-    <header
-      className="sticky top-0 z-30 border-b border-[var(--line-200)]"
-      style={{ background: "oklch(0.992 0.004 95 / 0.80)", backdropFilter: "blur(12px)" }}
-    >
-      <div className="max-w-[1160px] mx-auto px-8 py-[14px] flex items-center gap-8">
-        <Logo size={28} />
-        <nav className="flex gap-6 ml-3">
-          {links.map((l) => (
-            <a
-              key={l}
-              href="#"
-              className="text-[14px] font-medium transition-colors duration-[120ms] hover:text-[var(--ink-900)]"
-              style={{ color: "var(--ink-700)", textDecoration: "none" }}
-            >
-              {l}
-            </a>
-          ))}
-        </nav>
-        <span className="flex-1" />
-        <Link href="/login" className="text-[14px] font-semibold" style={{ color: "var(--ink-900)" }}>
-          Log in
-        </Link>
-        <Link href="/onboarding">
-          <OAButton variant="primary" size="sm">
-            Try for Free <ArrowRight size={14} />
-          </OAButton>
-        </Link>
-      </div>
-    </header>
-  );
-}
+import { MktNav } from "./MktNav";
 
 /* ── Hero ────────────────────────────────────────────────────────────── */
 function Hero() {
   const subjects: Subject[] = ["Mathematics", "Science", "English", "General Knowledge", "Cyber"];
   return (
-    <section
-      className="relative overflow-hidden border-b border-[var(--line-200)]"
-    >
+    <section className="relative overflow-hidden border-b border-[var(--line-200)]">
       <div className="absolute inset-0 graph-bg opacity-70" style={{ backgroundSize: "28px 28px" }} />
       <div
         className="absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(70% 55% at 50% -8%, oklch(0.52 0.195 259 / 0.12), transparent 60%)",
-        }}
+        style={{ background: "radial-gradient(70% 55% at 50% -8%, oklch(0.52 0.195 259 / 0.12), transparent 60%)" }}
       />
-      <div className="relative max-w-[1160px] mx-auto px-8 pt-[72px] pb-16 text-center">
+      <div className="relative max-w-[1160px] mx-auto px-5 sm:px-8 pt-12 sm:pt-[72px] pb-12 sm:pb-16 text-center">
         {/* Badge */}
-        <div
-          className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-[var(--line-300)] bg-[var(--surface)] shadow-[var(--shadow-xs)] mb-6"
-        >
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-[var(--line-300)] bg-[var(--surface)] shadow-[var(--shadow-xs)] mb-6">
           <Sparkles size={14} fill="var(--gold-500)" style={{ color: "var(--gold-500)" }} />
           <span className="text-[13px] font-semibold" style={{ color: "var(--ink-700)" }}>
             AI tutor · adaptive tests · knowledge graph
@@ -74,7 +31,7 @@ function Hero() {
           className="font-black leading-[1.04] tracking-tight max-w-[880px] mx-auto mb-5"
           style={{
             fontFamily: "var(--font-display)",
-            fontSize: "clamp(40px, 5vw, 60px)",
+            fontSize: "clamp(32px, 5vw, 60px)",
             letterSpacing: "-0.03em",
             color: "var(--ink-900)",
           }}
@@ -85,7 +42,7 @@ function Hero() {
         </h1>
 
         <p
-          className="text-[19px] leading-[1.6] max-w-[600px] mx-auto mb-8"
+          className="text-[16px] sm:text-[19px] leading-[1.6] max-w-[600px] mx-auto mb-8"
           style={{ color: "var(--ink-700)" }}
         >
           OlympiadAI builds a personalized path for CBSE &amp; ICSE students — Classes 1–10. An AI
@@ -93,13 +50,13 @@ function Hero() {
           tells you exactly what to fix.
         </p>
 
-        <div className="flex gap-3 justify-center mb-4">
+        <div className="flex flex-col sm:flex-row gap-3 justify-center mb-4">
           <Link href="/onboarding">
-            <OAButton variant="primary" size="lg">
+            <OAButton variant="primary" size="lg" className="w-full sm:w-auto">
               Try for Free <ArrowRight size={18} />
             </OAButton>
           </Link>
-          <OAButton variant="secondary" size="lg">
+          <OAButton variant="secondary" size="lg" className="w-full sm:w-auto">
             <Play size={18} /> See how it works
           </OAButton>
         </div>
@@ -109,7 +66,7 @@ function Hero() {
 
         {/* Hero product panel */}
         <div
-          className="mt-14 max-w-[960px] mx-auto rounded-[var(--r-2xl)] border border-[var(--line-200)] shadow-[var(--shadow-lg)] overflow-hidden text-left"
+          className="mt-10 sm:mt-14 max-w-[960px] mx-auto rounded-[var(--r-2xl)] border border-[var(--line-200)] shadow-[var(--shadow-lg)] overflow-hidden text-left"
           style={{ background: "var(--surface)" }}
         >
           {/* Fake browser bar */}
@@ -120,17 +77,14 @@ function Hero() {
             {[0, 1, 2].map((i) => (
               <span key={i} className="w-[11px] h-[11px] rounded-full" style={{ background: "var(--line-300)" }} />
             ))}
-            <span
-              className="ml-2.5 text-[12px]"
-              style={{ fontFamily: "var(--font-mono)", color: "var(--fg-muted)" }}
-            >
+            <span className="ml-2.5 text-[12px]" style={{ fontFamily: "var(--font-mono)", color: "var(--fg-muted)" }}>
               app.olympiad.ai/learn
             </span>
           </div>
 
-          <div className="grid grid-cols-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2">
             {/* Tutor panel */}
-            <div className="p-7 border-r border-[var(--line-200)]">
+            <div className="p-5 sm:p-7 border-b sm:border-b-0 sm:border-r border-[var(--line-200)]">
               <p className="t-overline mb-3.5">Ask your tutor</p>
               <div className="flex gap-2.5 mb-3.5">
                 <div
@@ -150,27 +104,22 @@ function Hero() {
               >
                 <BookOpen size={15} style={{ color: "var(--brand)" }} />
                 <span className="text-[12.5px] font-semibold flex-1">Fractions &amp; Decimals</span>
-                <span
-                  className="text-[11px]"
-                  style={{ fontFamily: "var(--font-mono)", color: "var(--fg-muted)" }}
-                >
+                <span className="text-[11px]" style={{ fontFamily: "var(--font-mono)", color: "var(--fg-muted)" }}>
                   CBSE · Cl 7
                 </span>
               </div>
             </div>
 
             {/* Readiness panel */}
-            <div className="p-7 flex items-center gap-5">
-              <OARing value={87} size={92} stroke={9}>
+            <div className="p-5 sm:p-7 flex items-center gap-5">
+              <OARing value={87} size={88} stroke={9}>
                 <span
                   className="font-bold leading-none"
-                  style={{ fontFamily: "var(--font-mono)", fontSize: 25, color: "var(--ink-900)" }}
+                  style={{ fontFamily: "var(--font-mono)", fontSize: 24, color: "var(--ink-900)" }}
                 >
                   87
                 </span>
-                <span
-                  style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--fg-subtle)" }}
-                >
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--fg-subtle)" }}>
                   / 100
                 </span>
               </OARing>
@@ -202,24 +151,24 @@ function Hero() {
 
 /* ── Features ────────────────────────────────────────────────────────── */
 const FEATURES = [
-  { Icon: Sparkles,  title: "AI Tutor (RAG)",       desc: "Ask anything. The tutor retrieves your syllabus knowledge first, then explains — never guesses from memory." },
-  { Icon: PencilLine,title: "Unlimited practice",   desc: "Original questions generated per concept: MCQ, HOTS, reasoning, and true Olympiad-style problems." },
-  { Icon: Target,    title: "Adaptive mock tests",  desc: "Difficulty adjusts to your answers in real time to pinpoint your true mastery level." },
-  { Icon: BarChart2, title: "Weakness detection",   desc: "Every wrong answer, slow response, and skip becomes a precise, fixable focus area." },
-  { Icon: Route,     title: "Personalized plans",   desc: "Daily, weekly, and monthly plans built from your knowledge graph — and re-built as you improve." },
-  { Icon: Trophy,    title: "Readiness & rank",     desc: "A 0–100 readiness score, predicted percentile, and award probability from real platform data." },
+  { Icon: Sparkles,   title: "AI Tutor (RAG)",      desc: "Ask anything. The tutor retrieves your syllabus knowledge first, then explains — never guesses from memory." },
+  { Icon: PencilLine, title: "Unlimited practice",  desc: "Original questions generated per concept: MCQ, HOTS, reasoning, and true Olympiad-style problems." },
+  { Icon: Target,     title: "Adaptive mock tests", desc: "Difficulty adjusts to your answers in real time to pinpoint your true mastery level." },
+  { Icon: BarChart2,  title: "Weakness detection",  desc: "Every wrong answer, slow response, and skip becomes a precise, fixable focus area." },
+  { Icon: Route,      title: "Personalized plans",  desc: "Daily, weekly, and monthly plans built from your knowledge graph — and re-built as you improve." },
+  { Icon: Trophy,     title: "Readiness & rank",    desc: "A 0–100 readiness score, predicted percentile, and award probability from real platform data." },
 ];
 
 function Features() {
   return (
-    <section className="py-20 px-8" style={{ background: "var(--paper)" }}>
+    <section className="py-12 sm:py-20 px-5 sm:px-8" style={{ background: "var(--paper)" }}>
       <div className="max-w-[1160px] mx-auto">
         <SectionHead
           eyebrow="The platform"
           title="Six engines. One coach."
           sub="OlympiadAI stores knowledge, not content — discovering, structuring, and teaching from a living knowledge graph of the curriculum."
         />
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {FEATURES.map(({ Icon, title, desc }) => (
             <OACard key={title} hover style={{ padding: "22px 22px 24px" }}>
               <div
@@ -247,30 +196,30 @@ function Features() {
 
 /* ── How it works ────────────────────────────────────────────────────── */
 const HOW_STEPS = [
-  { n: "01", title: "Take a 10-minute diagnostic",    desc: "A quick adaptive test maps what you know across every chapter." },
-  { n: "02", title: "Get your knowledge graph",       desc: "We pinpoint gaps and link them along the right learning path." },
-  { n: "03", title: "Follow your daily plan",         desc: "Learn, practice, and test — the plan adapts every single day." },
-  { n: "04", title: "Watch readiness climb",          desc: "Track your score, mastery, and predicted rank all the way to the exam." },
+  { n: "01", title: "Take a 10-minute diagnostic",  desc: "A quick adaptive test maps what you know across every chapter." },
+  { n: "02", title: "Get your knowledge graph",     desc: "We pinpoint gaps and link them along the right learning path." },
+  { n: "03", title: "Follow your daily plan",       desc: "Learn, practice, and test — the plan adapts every single day." },
+  { n: "04", title: "Watch readiness climb",        desc: "Track your score, mastery, and predicted rank all the way to the exam." },
 ];
 
 function HowItWorks() {
   return (
     <section
-      className="py-20 px-8 relative overflow-hidden"
+      className="py-12 sm:py-20 px-5 sm:px-8 relative overflow-hidden"
       style={{ background: "var(--cobalt-700)" }}
     >
       <div className="absolute inset-0 graph-bg opacity-35" style={{ backgroundSize: "28px 28px" }} />
       <div className="relative max-w-[1160px] mx-auto">
-        <div className="text-center max-w-[620px] mx-auto mb-12">
+        <div className="text-center max-w-[620px] mx-auto mb-10 sm:mb-12">
           <p className="t-overline mb-3" style={{ color: "var(--gold-400)" }}>How it works</p>
           <h2
-            className="font-bold text-[38px] leading-[1.12] tracking-tight text-white"
-            style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.025em" }}
+            className="font-bold leading-[1.12] tracking-tight text-white"
+            style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.025em", fontSize: "clamp(26px, 4vw, 38px)" }}
           >
             From &ldquo;I&apos;m not sure&rdquo; to exam-ready.
           </h2>
         </div>
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {HOW_STEPS.map(({ n, title, desc }) => (
             <div
               key={n}
@@ -307,12 +256,12 @@ function HowItWorks() {
 /* ── Audiences ───────────────────────────────────────────────────────── */
 const AUDIENCE_CARDS = [
   {
-    Icon: Users,     who: "For parents",     accent: "var(--brand)",    bg: "var(--cobalt-50)",
+    Icon: Users,    who: "For parents",    accent: "var(--brand)",    bg: "var(--cobalt-50)",
     title: "See real progress, not vanity badges.",
     pts: ["Weekly progress reports", "Practice time & test results", "Honest weak-area insights"],
   },
   {
-    Icon: Sparkles,  who: "Fully AI-driven", accent: "var(--gold-700)", bg: "var(--gold-50)",
+    Icon: Sparkles, who: "Fully AI-driven", accent: "var(--gold-700)", bg: "var(--gold-50)",
     title: "A whole coaching team, in one tutor.",
     pts: ["No tuition centre, no timetable", "Tutor, planner & examiner in one", "Available the moment you have a doubt"],
   },
@@ -320,10 +269,10 @@ const AUDIENCE_CARDS = [
 
 function Audiences() {
   return (
-    <section className="py-20 px-8" style={{ background: "var(--paper)" }}>
-      <div className="max-w-[1160px] mx-auto grid grid-cols-2 gap-5">
-        {AUDIENCE_CARDS.map(({ Icon, who, accent, bg, title, pts }, i) => (
-          <OACard key={who} style={{ padding: "28px 28px 30px", position: "relative", overflow: "hidden" }}>
+    <section className="py-12 sm:py-20 px-5 sm:px-8" style={{ background: "var(--paper)" }}>
+      <div className="max-w-[1160px] mx-auto grid grid-cols-1 sm:grid-cols-2 gap-5">
+        {AUDIENCE_CARDS.map(({ Icon, who, accent, bg, title, pts }) => (
+          <OACard key={who} style={{ padding: "24px 24px 26px", position: "relative", overflow: "hidden" }}>
             <div
               className="absolute -top-5 -right-5 w-[120px] h-[120px] rounded-full opacity-70"
               style={{ background: bg }}
@@ -334,7 +283,7 @@ function Audiences() {
                 <span className="t-overline">{who}</span>
               </div>
               <h3
-                className="font-bold text-[25px] tracking-tight mb-4 max-w-[320px] leading-snug"
+                className="font-bold text-[22px] sm:text-[25px] tracking-tight mb-4 leading-snug"
                 style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.02em" }}
               >
                 {title}
@@ -358,17 +307,18 @@ function Audiences() {
 /* ── Testimonial ─────────────────────────────────────────────────────── */
 function Testimonial() {
   return (
-    <section className="px-8 pt-10 pb-20" style={{ background: "var(--paper)" }}>
+    <section className="px-5 sm:px-8 pt-10 pb-12 sm:pb-20" style={{ background: "var(--paper)" }}>
       <div className="max-w-[820px] mx-auto text-center">
         <div className="flex gap-1 justify-center mb-5">
-          {[0, 1, 2, 3, 4].map((i) => (
+          {[0, 1, 2, 3, 4].map((_, i) => (
             <Star key={i} size={20} fill="var(--gold-400)" style={{ color: "var(--gold-400)" }} />
           ))}
         </div>
         <blockquote
-          className="font-semibold text-[28px] leading-[1.35] tracking-tight mb-6"
+          className="font-semibold leading-[1.35] tracking-tight mb-6"
           style={{
             fontFamily: "var(--font-display)",
+            fontSize: "clamp(20px, 3.5vw, 28px)",
             letterSpacing: "-0.02em",
             color: "var(--ink-900)",
           }}
@@ -410,7 +360,7 @@ const PLANS = [
 function Pricing() {
   return (
     <section
-      className="py-20 px-8 border-t border-[var(--line-200)]"
+      className="py-12 sm:py-20 px-5 sm:px-8 border-t border-[var(--line-200)]"
       style={{ background: "var(--paper-2)" }}
     >
       <div className="max-w-[1160px] mx-auto">
@@ -419,7 +369,7 @@ function Pricing() {
           title="Coaching-grade prep, without the coaching price."
           sub="Start free. Upgrade when you're ready to go all in."
         />
-        <div className="grid grid-cols-3 gap-4 items-start">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start">
           {PLANS.map(({ name, price, per, desc, cta, featured, feats }) => (
             <div
               key={name}
@@ -428,12 +378,11 @@ function Pricing() {
                 background: "var(--surface)",
                 border: featured ? "1.5px solid var(--cobalt-500)" : "1px solid var(--line-200)",
                 boxShadow: featured ? "var(--shadow-lg)" : "var(--shadow-sm)",
-                transform: featured ? "translateY(-8px)" : "none",
               }}
             >
               {featured && (
                 <div
-                  className="absolute -top-3 left-1/2 -translate-x-1/2 text-[11.5px] font-bold px-3 py-1 rounded-full"
+                  className="absolute -top-3 left-1/2 -translate-x-1/2 text-[11.5px] font-bold px-3 py-1 rounded-full whitespace-nowrap"
                   style={{ background: "var(--gold-400)", color: "var(--ink-900)", letterSpacing: "0.02em" }}
                 >
                   MOST POPULAR
@@ -474,27 +423,25 @@ function Pricing() {
 /* ── CTA banner ──────────────────────────────────────────────────────── */
 function CTABanner() {
   return (
-    <section className="px-8 pb-20 pt-10" style={{ background: "var(--paper-2)" }}>
+    <section className="px-5 sm:px-8 pb-12 sm:pb-20 pt-10" style={{ background: "var(--paper-2)" }}>
       <div
-        className="max-w-[1000px] mx-auto relative overflow-hidden rounded-[var(--r-2xl)] px-10 py-14 text-center"
+        className="max-w-[1000px] mx-auto relative overflow-hidden rounded-[var(--r-2xl)] px-6 py-10 sm:px-10 sm:py-14 text-center"
         style={{ background: "var(--cobalt-700)" }}
       >
         <div className="absolute inset-0 graph-bg opacity-40" style={{ backgroundSize: "26px 26px" }} />
         <div
           className="absolute inset-0"
-          style={{
-            background: "radial-gradient(80% 80% at 50% 120%, oklch(0.81 0.13 80 / 0.22), transparent 55%)",
-          }}
+          style={{ background: "radial-gradient(80% 80% at 50% 120%, oklch(0.81 0.13 80 / 0.22), transparent 55%)" }}
         />
         <div className="relative">
           <h2
-            className="font-black text-[42px] leading-[1.08] tracking-tight text-white max-w-[620px] mx-auto mb-4"
-            style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.03em" }}
+            className="font-black leading-[1.08] tracking-tight text-white max-w-[620px] mx-auto mb-4"
+            style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.03em", fontSize: "clamp(26px, 4vw, 42px)" }}
           >
             Find out how exam-ready you really are.
           </h2>
           <p
-            className="text-[17px] max-w-[460px] mx-auto mb-8"
+            className="text-[15px] sm:text-[17px] max-w-[460px] mx-auto mb-8"
             style={{ color: "oklch(0.9 0.04 258)" }}
           >
             Take the free 10-minute diagnostic and get your readiness score today.
@@ -520,16 +467,13 @@ const FOOTER_COLS = [
 
 function Footer() {
   return (
-    <footer className="px-8 pt-14 pb-8" style={{ background: "var(--ink-900)" }}>
+    <footer className="px-5 sm:px-8 pt-12 sm:pt-14 pb-8" style={{ background: "var(--ink-900)" }}>
       <div className="max-w-[1160px] mx-auto">
-        <div
-          className="grid gap-7 pb-9 border-b"
-          style={{
-            gridTemplateColumns: "1.4fr repeat(4, 1fr)",
-            borderColor: "oklch(1 0 0 / 0.10)",
-          }}
-        >
-          <div>
+        {/* Brand column + link columns */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-[1.4fr_repeat(4,1fr)] gap-7 pb-9 border-b"
+          style={{ borderColor: "oklch(1 0 0 / 0.10)" }}>
+          {/* Brand — full width on mobile, spans first row */}
+          <div className="col-span-2 sm:col-span-3 lg:col-span-1">
             <Logo size={26} mono className="[&_span]:text-white" />
             <p
               className="text-[13.5px] leading-[1.6] mt-3.5 max-w-[240px]"
@@ -562,11 +506,11 @@ function Footer() {
           ))}
         </div>
         <div
-          className="flex items-center pt-5 text-[12.5px]"
+          className="flex flex-col sm:flex-row items-start sm:items-center gap-1.5 pt-5 text-[12.5px]"
           style={{ color: "oklch(0.6 0.02 264)" }}
         >
           <span>© 2026 OlympiadAI. Knowledge, not content.</span>
-          <span className="flex-1" />
+          <span className="hidden sm:block flex-1" />
           <span style={{ fontFamily: "var(--font-mono)" }}>Made for ambitious students.</span>
         </div>
       </div>
@@ -577,15 +521,15 @@ function Footer() {
 /* ── Helper ──────────────────────────────────────────────────────────── */
 function SectionHead({ eyebrow, title, sub }: { eyebrow: string; title: string; sub?: string }) {
   return (
-    <div className="text-center max-w-[640px] mx-auto mb-11">
+    <div className="text-center max-w-[640px] mx-auto mb-9 sm:mb-11">
       <p className="t-overline mb-3" style={{ color: "var(--brand)" }}>{eyebrow}</p>
       <h2
-        className="font-bold text-[38px] leading-[1.12] tracking-tight mb-3.5"
-        style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.025em", color: "var(--ink-900)" }}
+        className="font-bold leading-[1.12] tracking-tight mb-3.5"
+        style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.025em", color: "var(--ink-900)", fontSize: "clamp(26px, 4vw, 38px)" }}
       >
         {title}
       </h2>
-      {sub && <p className="text-[17px] leading-[1.6]" style={{ color: "var(--ink-700)" }}>{sub}</p>}
+      {sub && <p className="text-[15px] sm:text-[17px] leading-[1.6]" style={{ color: "var(--ink-700)" }}>{sub}</p>}
     </div>
   );
 }
