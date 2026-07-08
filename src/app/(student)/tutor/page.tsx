@@ -150,6 +150,8 @@ export default function TutorPage() {
     setRefs((prev) => [...prev.map((r) => ({ ...r, fresh: false })), ...incoming]);
   }
 
+  const [mobileView, setMobileView] = useState<"chat" | "refs">("chat");
+
   const REF_TYPES: (RefType | "All")[] = ["All", "video", "concept", "example", "practice", "source"];
   const filtered = filter === "All" ? refs : refs.filter((r) => r.type === filter);
   const grouped = filtered.reduce<Record<string, Ref[]>>((acc, r) => {
@@ -157,116 +159,158 @@ export default function TutorPage() {
     return acc;
   }, {});
 
+  // Switch to refs tab when new refs arrive on mobile
+  useEffect(() => {
+    if (refs.some((r) => r.fresh)) setMobileView("chat");
+  }, [refs]);
+
   return (
     <AppShell title="AI Tutor" subtitle="Grounded in your knowledge graph" noScroll>
-      <div className="flex h-full min-h-0">
-        {/* ── Chat column ── */}
-        <div className="flex-1 min-w-0 flex flex-col">
-          <div ref={scrollRef} className="oa-scroll flex-1 overflow-y-auto py-6">
-            <div className="max-w-[660px] mx-auto px-7 flex flex-col gap-5">
-              {msgs.map((m, i) => (
-                <Bubble key={i} m={m} userName={user.name} onFollow={send} />
-              ))}
-              {thinking && <Thinking />}
-            </div>
-          </div>
+      <div className="flex flex-col h-full min-h-0">
 
-          {/* Composer */}
-          <div className="border-t border-[var(--line-200)] bg-[var(--surface)] py-3.5 pb-4">
-            <div className="max-w-[660px] mx-auto px-7">
-              {msgs.length <= 1 && (
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {CHIPS.map((c) => (
-                    <button
-                      key={c}
-                      onClick={() => send(c)}
-                      className="text-[13px] font-medium px-3 py-1.5 rounded-full border border-[var(--line-300)] bg-[var(--surface)] cursor-pointer transition-colors duration-[140ms] hover:bg-[var(--fill-100)]"
-                      style={{ color: "var(--ink-700)" }}
-                    >
-                      {c}
-                    </button>
-                  ))}
-                </div>
+        {/* ── Mobile tab bar ── */}
+        <div className="lg:hidden flex border-b border-[var(--line-200)] shrink-0" style={{ background: "var(--surface)" }}>
+          {(["chat", "refs"] as const).map((v) => (
+            <button
+              key={v}
+              onClick={() => setMobileView(v)}
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 text-[13.5px] font-semibold border-none cursor-pointer transition-colors"
+              style={{
+                background: "transparent",
+                color: mobileView === v ? "var(--cobalt-600)" : "var(--fg-muted)",
+                borderBottom: mobileView === v ? "2px solid var(--cobalt-500)" : "2px solid transparent",
+              }}
+            >
+              {v === "chat" ? (
+                <><Sparkles size={14} /> Chat</>
+              ) : (
+                <><Layers size={14} /> References{refs.length > 0 && <span className="ml-1 text-[11px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "var(--cobalt-100)", color: "var(--cobalt-700)", fontFamily: "var(--font-mono)" }}>{refs.length}</span>}</>
               )}
-              <div className="flex items-end gap-2.5 border border-[var(--line-300)] rounded-[var(--r-lg)] px-4 py-2 shadow-[var(--shadow-sm)]">
-                <input
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && send()}
-                  placeholder="Ask your tutor anything…"
-                  className="flex-1 border-none outline-none bg-transparent text-[14.5px] py-1.5"
-                  style={{ fontFamily: "var(--font-sans)", color: "var(--ink-900)" }}
-                />
-                <button
-                  onClick={() => send()}
-                  className="w-[38px] h-[38px] rounded-[var(--r-md)] border-none flex items-center justify-center cursor-pointer shrink-0"
-                  style={{ background: "var(--cobalt-500)", boxShadow: "var(--shadow-brand)" }}
-                >
-                  <ArrowUp size={19} color="#fff" />
-                </button>
-              </div>
-              <div className="flex items-center justify-center gap-1.5 mt-2" style={{ color: "var(--fg-subtle)", fontSize: 11.5 }}>
-                <CheckCircle2 size={13} style={{ color: "var(--success)" }} />
-                Grounded in OlympiadAI&apos;s knowledge graph — never invented.
-              </div>
-            </div>
-          </div>
+            </button>
+          ))}
         </div>
 
-        {/* ── References rail ── */}
-        <aside className="w-[344px] shrink-0 border-l border-[var(--line-200)] flex flex-col min-h-0" style={{ background: "var(--paper-2)" }}>
-          <div className="px-[18px] py-4 border-b border-[var(--line-200)]">
-            <div className="flex items-center gap-2">
-              <Layers size={17} style={{ color: "var(--brand)" }} />
-              <h3 className="font-bold text-[16px]" style={{ fontFamily: "var(--font-display)" }}>References</h3>
-              <span className="flex-1" />
-              {refs.length > 0 && <OABadge tone="cobalt">{refs.length} found</OABadge>}
-            </div>
-            {refs.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-3">
-                {REF_TYPES.map((t) => {
-                  const count = t === "All" ? refs.length : refs.filter((r) => r.type === t).length;
-                  if (t !== "All" && count === 0) return null;
-                  const on = filter === t;
-                  return (
-                    <button
-                      key={t}
-                      onClick={() => setFilter(t)}
-                      className="inline-flex items-center gap-1.5 text-[11.5px] font-semibold px-2.5 py-1 rounded-full border cursor-pointer transition-all duration-[120ms]"
-                      style={{
-                        borderColor: on ? "var(--cobalt-500)" : "var(--line-300)",
-                        background: on ? "var(--cobalt-500)" : "var(--surface)",
-                        color: on ? "#fff" : "var(--ink-700)",
-                      }}
-                    >
-                      {t === "All" ? "All" : REF_META[t as RefType].label.replace(/s$/, "")}
-                      <span style={{ fontFamily: "var(--font-mono)", opacity: 0.7 }}>{count}</span>
-                    </button>
-                  );
-                })}
+        {/* ── Content row ── */}
+        <div className="flex flex-1 min-h-0">
+
+          {/* Chat column */}
+          <div className={cn(
+            "flex-1 min-w-0 flex flex-col",
+            mobileView === "refs" ? "hidden lg:flex" : "flex",
+          )}>
+            <div ref={scrollRef} className="oa-scroll flex-1 overflow-y-auto py-5 sm:py-6">
+              <div className="max-w-[660px] mx-auto px-4 sm:px-7 flex flex-col gap-5">
+                {msgs.map((m, i) => (
+                  <Bubble key={i} m={m} userName={user.name} onFollow={send} />
+                ))}
+                {thinking && <Thinking />}
               </div>
-            )}
+            </div>
+
+            {/* Composer */}
+            <div className="border-t border-[var(--line-200)] bg-[var(--surface)] py-3 pb-4">
+              <div className="max-w-[660px] mx-auto px-4 sm:px-7">
+                {msgs.length <= 1 && (
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {CHIPS.map((c) => (
+                      <button
+                        key={c}
+                        onClick={() => send(c)}
+                        className="text-[13px] font-medium px-3 py-1.5 rounded-full border border-[var(--line-300)] bg-[var(--surface)] cursor-pointer transition-colors duration-[140ms] hover:bg-[var(--fill-100)]"
+                        style={{ color: "var(--ink-700)" }}
+                      >
+                        {c}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="flex items-end gap-2.5 border border-[var(--line-300)] rounded-[var(--r-lg)] px-4 py-2 shadow-[var(--shadow-sm)]">
+                  <input
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && send()}
+                    placeholder="Ask your tutor anything…"
+                    className="flex-1 border-none outline-none bg-transparent text-[14.5px] py-1.5"
+                    style={{ fontFamily: "var(--font-sans)", color: "var(--ink-900)" }}
+                  />
+                  <button
+                    onClick={() => send()}
+                    className="w-[38px] h-[38px] rounded-[var(--r-md)] border-none flex items-center justify-center cursor-pointer shrink-0"
+                    style={{ background: "var(--cobalt-500)", boxShadow: "var(--shadow-brand)" }}
+                  >
+                    <ArrowUp size={19} color="#fff" />
+                  </button>
+                </div>
+                <div className="flex items-center justify-center gap-1.5 mt-2" style={{ color: "var(--fg-subtle)", fontSize: 11.5 }}>
+                  <CheckCircle2 size={13} style={{ color: "var(--success)" }} />
+                  Grounded in OlympiadAI&apos;s knowledge graph — never invented.
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="oa-scroll flex-1 overflow-y-auto px-4 py-3.5 pb-6">
-            {refs.length === 0 && !thinking && <RefsEmpty />}
-            {thinking && refs.length === 0 && <RefsSkeleton />}
-            {(Object.keys(grouped) as RefType[]).map((type) => (
-              <div key={type} className="mb-4">
-                <div
-                  className="t-overline flex items-center gap-1.5 mb-2"
-                  style={{ fontSize: 10, color: REF_META[type].color }}
-                >
-                  {React.createElement(REF_META[type].Icon, { size: 13 })}
-                  {REF_META[type].label}
-                </div>
-                <div className="flex flex-col gap-2">
-                  {grouped[type].map((r) => <RefCard key={r.id} r={r} onVideoClick={setVideoModal} />)}
-                </div>
+          {/* References rail */}
+          <aside
+            className={cn(
+              "border-l border-[var(--line-200)] flex flex-col min-h-0",
+              "w-full lg:w-[344px] lg:shrink-0",
+              mobileView === "refs" ? "flex" : "hidden lg:flex",
+            )}
+            style={{ background: "var(--paper-2)" }}
+          >
+            <div className="px-[18px] py-4 border-b border-[var(--line-200)]">
+              <div className="flex items-center gap-2">
+                <Layers size={17} style={{ color: "var(--brand)" }} />
+                <h3 className="font-bold text-[16px]" style={{ fontFamily: "var(--font-display)" }}>References</h3>
+                <span className="flex-1" />
+                {refs.length > 0 && <OABadge tone="cobalt">{refs.length} found</OABadge>}
               </div>
-            ))}
-          </div>
-        </aside>
+              {refs.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-3">
+                  {REF_TYPES.map((t) => {
+                    const count = t === "All" ? refs.length : refs.filter((r) => r.type === t).length;
+                    if (t !== "All" && count === 0) return null;
+                    const on = filter === t;
+                    return (
+                      <button
+                        key={t}
+                        onClick={() => setFilter(t)}
+                        className="inline-flex items-center gap-1.5 text-[11.5px] font-semibold px-2.5 py-1 rounded-full border cursor-pointer transition-all duration-[120ms]"
+                        style={{
+                          borderColor: on ? "var(--cobalt-500)" : "var(--line-300)",
+                          background:  on ? "var(--cobalt-500)" : "var(--surface)",
+                          color:       on ? "#fff"              : "var(--ink-700)",
+                        }}
+                      >
+                        {t === "All" ? "All" : REF_META[t as RefType].label.replace(/s$/, "")}
+                        <span style={{ fontFamily: "var(--font-mono)", opacity: 0.7 }}>{count}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="oa-scroll flex-1 overflow-y-auto px-4 py-3.5 pb-6">
+              {refs.length === 0 && !thinking && <RefsEmpty />}
+              {thinking && refs.length === 0 && <RefsSkeleton />}
+              {(Object.keys(grouped) as RefType[]).map((type) => (
+                <div key={type} className="mb-4">
+                  <div
+                    className="t-overline flex items-center gap-1.5 mb-2"
+                    style={{ fontSize: 10, color: REF_META[type].color }}
+                  >
+                    {React.createElement(REF_META[type].Icon, { size: 13 })}
+                    {REF_META[type].label}
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    {grouped[type].map((r) => <RefCard key={r.id} r={r} onVideoClick={setVideoModal} />)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </aside>
+        </div>
       </div>
       {videoModal && <VideoModal r={videoModal} onClose={() => setVideoModal(null)} />}
     </AppShell>
