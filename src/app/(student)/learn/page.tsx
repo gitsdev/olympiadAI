@@ -37,17 +37,18 @@ const pos = Object.fromEntries(NODES.map((n) => [n.id, n]));
 export default function LearnPage() {
   return (
     <AppShell title="Learning paths" subtitle="Your curriculum knowledge graph">
-      <div className="px-7 py-6 pb-10">
-        <div className="grid grid-cols-[1fr_300px] gap-5 items-start">
+      <div className="px-4 sm:px-7 py-6 pb-10">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-5 items-start">
           {/* Knowledge graph */}
           <OACard noPadding className="overflow-hidden">
-            <div className="flex items-center gap-2.5 px-5 py-4 border-b border-[var(--line-200)]">
+            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-2 px-4 sm:px-5 py-4 border-b border-[var(--line-200)]">
               <OABadge tone="cobalt" className="gap-1.5">
                 <OASubjectDot subject="Mathematics" size={8} /> Mathematics
               </OABadge>
               <span className="text-[13px]" style={{ color: "var(--fg-muted)" }}>Number System · Class 7</span>
               <span className="flex-1" />
-              <div className="flex gap-3.5">
+              {/* Legend — hidden on mobile, too cramped */}
+              <div className="hidden sm:flex gap-3.5">
                 {(Object.entries(ST) as [NodeState, typeof ST[NodeState]][]).map(([k, v]) => (
                   <span key={k} className="inline-flex items-center gap-1.5 text-[11.5px]" style={{ color: "var(--fg-muted)" }}>
                     <span
