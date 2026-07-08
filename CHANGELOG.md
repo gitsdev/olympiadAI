@@ -1,5 +1,14 @@
 # Changelog — Automated Modifications
 
+## 09/07/2026
+**Request:** Change "Try for free" button to "Register Now"
+
+**Files Modified:**
+- src/app/MktNav.tsx
+
+**Status:** ✅ Done
+
+---
 ## 01/07/2026, 00:16
 **Request:** modification: change the Start free button at top to Register Now
 
