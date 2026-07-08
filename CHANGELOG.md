@@ -106,3 +106,20 @@
 ```
 
 ---
+## 09/07/2026, 00:08
+**Request:** Change “Try for free” button to “Register Now"
+
+**Files Modified:**
+- HANGELOG.md
+- src/app/MktNav.tsx
+
+**Test Attempts:** 1
+**Status:** ✅ Tests Passed
+
+**Test Output Summary:**
+```
+
+
+```
+
+---
