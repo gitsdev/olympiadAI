@@ -55,32 +55,68 @@ export async function POST(req: NextRequest) {
     ].join("\n\n---\n\n");
 
     const systemPrompt = `You are OlympiadAI, an expert tutor for CBSE & ICSE students preparing for Olympiads (Class ${studentClass}).
-Your tone is warm, precise, and encouraging — like a mentor who believes every student can master the material.
+Your tone is warm, precise, and encouraging — like a skilled human teacher who makes every concept click.
 
 KNOWLEDGE CONTEXT (retrieved from the knowledge graph):
 ${ragContext || "No specific knowledge retrieved — answer from general curriculum knowledge."}
 
-Rules:
-- Ground every answer in the retrieved knowledge context above.
-- Use concrete numbers and step-by-step reasoning.
-- End answers with a short follow-up suggestion.
-- Keep responses focused and under 200 words unless a detailed derivation is needed.
+Teaching style:
+- Hook the student with a relatable analogy or surprising fact.
+- Explain using concrete numbers and a clear worked example.
+- Break every solution into atomic steps (no "just" or "simply").
+- End with a memorable key insight — one sentence that the student will not forget.
 - Use sentence case, not ALL-CAPS.
 
-RESPONSE FORMAT — always reply with a single JSON object (no markdown fences):
+RESPONSE FORMAT — always reply with a single valid JSON object (no markdown fences):
 {
-  "answer": "your full explanation here",
+  "answer": "Warm, direct 2–4 paragraph explanation with a concrete worked example. Write as a teacher speaking to the student.",
+  "keyInsight": "One memorable sentence starting with 'Key idea:' or 'Remember:' — the single most important takeaway.",
+  "visual": {
+    "type": "fraction | number_line | percentage | geometry | bar_chart | none",
+    "data": { ... type-specific fields shown below ... }
+  },
+  "steps": [
+    "First atomic step — exact operation, no hand-waving",
+    "Second step",
+    "Final step with a verify/check"
+  ],
+  "tryIt": {
+    "q": "A short practice question different from the worked example",
+    "options": ["option A", "option B", "option C", "option D"],
+    "correct": 0,
+    "why": "Brief explanation of why option A is correct"
+  },
+  "followUps": [
+    "Natural follow-up question 1",
+    "Natural follow-up question 2",
+    "Natural follow-up question 3"
+  ],
   "videos": [
     { "title": "descriptive video title", "channel": "YouTube channel name", "videoId": "youtubeVideoId11", "query": "fallback youtube search query" }
   ]
 }
-Suggest 2–3 real YouTube videos from well-known educational channels (Khan Academy, Math Antics, Veritasium, Physics Wallah, Unacademy, BYJU's, 3Blue1Brown, Numberphile, or similar). Match the topic and class level exactly.
-- "videoId": the actual 11-character YouTube video ID (e.g. "dQw4w9WgXcQ"). Only provide IDs you are confident are real and match the topic.
-- "query": a fallback YouTube search string used if the videoId cannot play.`;
+
+Visual data format by type — pick the type that BEST helps a student visualise the concept:
+- fraction:    { "n": 3, "d": 4 }                                   (numerator n, denominator d ≤ 12)
+- number_line: { "min": 0, "max": 2, "points": [{"value": 0.5, "label": "½", "highlight": true}] }
+- percentage:  { "value": 75, "label": "75 out of 100" }
+- geometry:    { "shape": "triangle|circle|rectangle|square", "dims": {"base": 6, "height": 4} }
+- bar_chart:   { "bars": [{"label": "Mon", "value": 30}, {"label": "Tue", "value": 70}] }
+- none:        {}
+
+Rules for visual:
+- Choose "none" ONLY for pure language / grammar / spelling topics with zero mathematical content.
+- For every maths, science, or data topic — always choose a visual that aids understanding.
+- Keep denominator d ≤ 12 for fractions; keep bar count ≤ 6 for bar charts.
+
+Video rules:
+- Suggest 2–3 real YouTube videos from Khan Academy, Math Antics, Veritasium, Physics Wallah, BYJU's, 3Blue1Brown, or Numberphile.
+- "videoId": the actual 11-character YouTube ID — only include IDs you are confident are real and match the topic exactly.
+- "query": a fallback YouTube search string if the videoId cannot play.`;
 
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-6",
-      max_tokens: 1024,
+      max_tokens: 2048,
       system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
       messages: [
         ...conversationHistory,
@@ -91,16 +127,28 @@ Suggest 2–3 real YouTube videos from well-known educational channels (Khan Aca
     const raw = response.content[0].type === "text" ? response.content[0].text : "{}";
 
     let answer = raw;
+    let keyInsight: string | undefined;
+    let visual: { type: string; data: Record<string, unknown> } | undefined;
+    let steps: string[] = [];
+    let tryIt: { q: string; options: string[]; correct: number; why: string } | undefined;
+    let followUps: string[] = [];
     let videoSuggestions: { title: string; channel: string; videoId?: string; query: string }[] = [];
     try {
       const cleaned = raw.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
       const parsed = JSON.parse(cleaned);
       if (parsed.answer) {
-        answer = parsed.answer;
+        answer     = parsed.answer;
+        keyInsight = typeof parsed.keyInsight === "string" ? parsed.keyInsight : undefined;
+        if (parsed.visual?.type && parsed.visual.type !== "none") {
+          visual = { type: parsed.visual.type, data: parsed.visual.data ?? {} };
+        }
+        steps      = Array.isArray(parsed.steps)     ? parsed.steps     : [];
+        tryIt      = parsed.tryIt?.q                  ? parsed.tryIt     : undefined;
+        followUps  = Array.isArray(parsed.followUps)  ? parsed.followUps : [];
         videoSuggestions = Array.isArray(parsed.videos) ? parsed.videos : [];
       }
     } catch {
-      // Claude returned plain text — use as-is, no videos from this call
+      // Claude returned plain text — use as-is
     }
 
     const tutorRefs: TutorReference[] = [
@@ -172,6 +220,11 @@ Suggest 2–3 real YouTube videos from well-known educational channels (Khan Aca
 
     return NextResponse.json({
       answer,
+      keyInsight,
+      visual,
+      steps,
+      tryIt,
+      followUps,
       references:     tutorRefs,
       usage:          response.usage,
       conversationId: returnedConvId,

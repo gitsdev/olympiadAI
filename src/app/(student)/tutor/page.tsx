@@ -9,6 +9,7 @@ import {
 import { AppShell } from "@/components/layout";
 import { OABadge, OAAvatar } from "@/components/ui";
 import { useStudent } from "@/contexts/StudentContext";
+import { VisualAid, type VisualSpec } from "@/components/tutor/VisualAid";
 import type { TutorReference } from "@/types/database";
 import { cn } from "@/lib/utils";
 
@@ -56,6 +57,8 @@ interface StudentMsg  { role: "student"; text: string }
 interface TutorIntro  { role: "tutor"; kind: "intro"; text: string }
 interface TutorAnswer {
   role: "tutor"; kind: "answer"; text: string;
+  keyInsight?: string;
+  visual?: VisualSpec;
   steps: string[];
   tryIt: { q: string; options: string[]; correct: number; why: string };
   follows: string[];
@@ -119,16 +122,21 @@ export default function TutorPage() {
       });
 
       if (res.ok) {
-        const { answer, references: apiRefs, conversationId: newConvId } = await res.json();
+        const {
+          answer, keyInsight, visual, steps, tryIt, followUps,
+          references: apiRefs, conversationId: newConvId,
+        } = await res.json();
         if (newConvId) setConversationId(newConvId);
         setThinking(false);
         setMsgs((m) => [...m, {
           role: "tutor", kind: "answer",
-          text: answer,
-          steps: [],
-          tryIt: { q: "", options: [], correct: 0, why: "" },
-          follows: ["Show me a worked example", "Practice 5 questions", "What's the next topic?"],
-          newRefs: (apiRefs ?? []).length,
+          text:       answer,
+          keyInsight: keyInsight ?? undefined,
+          visual:     visual?.type && visual.type !== "none" ? (visual as VisualSpec) : undefined,
+          steps:      Array.isArray(steps)    ? steps    : [],
+          tryIt:      tryIt ?? { q: "", options: [], correct: 0, why: "" },
+          follows:    Array.isArray(followUps) ? followUps : ["Show me a worked example", "Practice 5 questions", "What's the next topic?"],
+          newRefs:    (apiRefs ?? []).length,
         }]);
         const incoming = (apiRefs ?? []).map((r: TutorReference, i: number) => ({
           ...r, id: r.id ?? Date.now() + i, fresh: true,
@@ -348,11 +356,15 @@ function Bubble({ m, userName, onFollow }: { m: Message; userName: string; onFol
 
         {m.role === "tutor" && m.kind === "answer" && (
           <div className="mt-2.5 flex flex-col gap-2.5">
-            <StepsBlock steps={m.steps} />
-            <TryItBlock t={m.tryIt} />
-            <div className="inline-flex items-center gap-1.5 self-start text-[12px] font-semibold px-3 py-1.5 rounded-full" style={{ color: "var(--brand)", background: "var(--cobalt-50)" }}>
-              <Layers size={13} /> {m.newRefs} new references added →
-            </div>
+            {m.keyInsight && <KeyInsightBlock text={m.keyInsight} />}
+            {m.visual && <VisualAid spec={m.visual} />}
+            {m.steps.length > 0 && <StepsBlock steps={m.steps} />}
+            {m.tryIt.q && m.tryIt.options.length > 0 && <TryItBlock t={m.tryIt} />}
+            {m.newRefs > 0 && (
+              <div className="inline-flex items-center gap-1.5 self-start text-[12px] font-semibold px-3 py-1.5 rounded-full" style={{ color: "var(--brand)", background: "var(--cobalt-50)" }}>
+                <Layers size={13} /> {m.newRefs} new references added →
+              </div>
+            )}
             <div className="flex flex-wrap gap-2 mt-0.5">
               {m.follows.map((f) => (
                 <button
@@ -367,6 +379,20 @@ function Bubble({ m, userName, onFollow }: { m: Message; userName: string; onFol
             </div>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function KeyInsightBlock({ text }: { text: string }) {
+  return (
+    <div className="flex rounded-[var(--r-md)] overflow-hidden border border-[var(--cobalt-200)]">
+      <div className="w-[3px] shrink-0" style={{ background: "var(--cobalt-500)" }} />
+      <div className="flex items-start gap-2.5 px-3.5 py-3">
+        <Lightbulb size={15} className="shrink-0 mt-0.5" style={{ color: "var(--cobalt-600)" }} />
+        <p className="text-[13.5px] leading-[1.55] font-semibold" style={{ color: "var(--cobalt-800)" }}>
+          {text}
+        </p>
       </div>
     </div>
   );
@@ -617,21 +643,57 @@ function Thinking() {
 
 /* ── Helper ──────────────────────────────────────────────────────────── */
 function buildAnswer(isFollow: boolean): TutorAnswer {
+  if (isFollow) {
+    return {
+      role: "tutor", kind: "answer",
+      text: "Great question! On a number line, we mark equal divisions between 0 and 1. For fractions like ¼, ½, and ¾, each division is one-quarter of the space between 0 and 1. Plotting them helps you see at a glance which fraction is larger.",
+      keyInsight: "Key idea: fractions closer to 1 on the number line are larger — the further right, the bigger the value.",
+      visual: {
+        type: "number_line",
+        data: {
+          min: 0, max: 1,
+          points: [
+            { value: 0.25, label: "¼",   highlight: false },
+            { value: 0.5,  label: "½",   highlight: true  },
+            { value: 0.75, label: "¾",   highlight: false },
+          ],
+        },
+      },
+      steps: [
+        "Draw a line from 0 to 1 and mark it into equal parts.",
+        "Count denominator divisions: for quarters, mark 4 equal sections.",
+        "Plot the fraction: ½ lands exactly in the middle.",
+      ],
+      tryIt: {
+        q: "Which fraction is closest to 1 on the number line?",
+        options: ["⅓", "¾", "½", "¼"],
+        correct: 1,
+        why: "¾ = 0.75, which is closest to 1 compared to ⅓ ≈ 0.33, ½ = 0.5, and ¼ = 0.25.",
+      },
+      follows: ["What are recurring decimals?", "Practice 5 questions", "Explain ratio next"],
+      newRefs: FOLLOWUP_REFS.length,
+    };
+  }
   return {
     role: "tutor", kind: "answer",
-    text: "A fraction shows part of a whole. To turn it into a decimal, divide the numerator by the denominator — for 5⁄8 that's 5 ÷ 8 = 0.625. The denominator tells you how many equal parts the whole is split into.",
+    text: "A fraction shows part of a whole — the denominator says how many equal parts the whole is cut into, and the numerator says how many of those parts you have. To convert to a decimal, just divide: 5 ÷ 8 = 0.625. Think of it like slicing a pizza into 8 equal slices and taking 5.",
+    keyInsight: "Key idea: to convert any fraction to a decimal, divide the top number by the bottom number.",
+    visual: {
+      type: "fraction",
+      data: { n: 5, d: 8 },
+    },
     steps: [
-      "Write the fraction as a division: 5⁄8 means 5 ÷ 8.",
-      "Divide: 8 goes into 5.000 → 0.625.",
-      "Check: 0.625 × 8 = 5. ✓",
+      "Write the division: 5⁄8 means 5 ÷ 8.",
+      "Long divide: 8 goes into 5.000 → 0.625.",
+      "Verify: 0.625 × 8 = 5. ✓",
     ],
     tryIt: {
-      q: "Now you try — convert 7⁄20 to a decimal:",
+      q: "Convert 7⁄20 to a decimal:",
       options: ["0.35", "0.27", "0.72", "0.035"],
       correct: 0,
-      why: "7 ÷ 20 = 0.35. Multiply top & bottom by 5 → 35⁄100 = 0.35.",
+      why: "7 ÷ 20 = 0.35. Or multiply top & bottom by 5 to get 35⁄100 = 0.35.",
     },
     follows: ["Show me on a number line", "Practice 5 questions", "What about recurring decimals?"],
-    newRefs: isFollow ? FOLLOWUP_REFS.length : FRACTIONS_REFS.length,
+    newRefs: FRACTIONS_REFS.length,
   };
 }
