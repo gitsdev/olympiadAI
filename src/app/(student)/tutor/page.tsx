@@ -1,6 +1,17 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import dynamic from "next/dynamic";
+
+const VirtualTeacher = dynamic(
+  () => import("@/components/tutor/VirtualTeacher"),
+  {
+    ssr:     false,
+    loading: () => (
+      <div className="h-[72px] rounded-[var(--r-xl)] border border-[var(--cobalt-200)] oa-shimmer" />
+    ),
+  }
+);
 import {
   Sparkles, Search, Layers, BookOpen, Play, PencilLine,
   Target, Globe, ArrowUp, CheckCircle2, Route, ChevronDown,
@@ -328,7 +339,8 @@ export default function TutorPage() {
 /* ── Sub-components ──────────────────────────────────────────────────── */
 
 function Bubble({ m, userName, onFollow }: { m: Message; userName: string; onFollow: (t: string) => void }) {
-  const isTutor = m.role === "tutor";
+  const isTutor  = m.role === "tutor";
+  const [vtOpen, setVtOpen] = useState(false);
   return (
     <div className={cn("flex gap-3", isTutor ? "flex-row" : "flex-row-reverse")}>
       {isTutor ? (
@@ -377,6 +389,28 @@ function Bubble({ m, userName, onFollow }: { m: Message; userName: string; onFol
                 </button>
               ))}
             </div>
+
+            {/* ── Virtual Teacher activation ── */}
+            {!vtOpen && (
+              <button
+                onClick={() => setVtOpen(true)}
+                className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-[var(--r-lg)] border border-[var(--cobalt-200)] text-[13.5px] font-semibold cursor-pointer transition-all duration-[180ms] hover:shadow-[var(--shadow-md)] hover:-translate-y-0.5 active:translate-y-0"
+                style={{
+                  background: "linear-gradient(135deg, var(--cobalt-50), oklch(0.96 0.03 280))",
+                  color:      "var(--cobalt-700)",
+                  boxShadow:  "var(--shadow-sm)",
+                }}
+              >
+                <span className="text-[18px] leading-none">🎓</span>
+                Learn with Virtual Teacher
+                <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "var(--cobalt-100)", color: "var(--cobalt-600)" }}>
+                  New
+                </span>
+              </button>
+            )}
+            {vtOpen && (
+              <VirtualTeacher lesson={m} onClose={() => setVtOpen(false)} />
+            )}
           </div>
         )}
       </div>
