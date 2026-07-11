@@ -3,14 +3,9 @@
 import React, { useState, useRef, useEffect } from "react";
 import dynamic from "next/dynamic";
 
-const VirtualTeacher = dynamic(
-  () => import("@/components/tutor/VirtualTeacher"),
-  {
-    ssr:     false,
-    loading: () => (
-      <div className="h-[72px] rounded-[var(--r-xl)] border border-[var(--cobalt-200)] oa-shimmer" />
-    ),
-  }
+const FloatingTeacher = dynamic(
+  () => import("@/components/tutor/FloatingTeacher"),
+  { ssr: false }
 );
 import {
   Sparkles, Search, Layers, BookOpen, Play, PencilLine,
@@ -409,7 +404,7 @@ function Bubble({ m, userName, onFollow }: { m: Message; userName: string; onFol
               </button>
             )}
             {vtOpen && (
-              <VirtualTeacher lesson={m} onClose={() => setVtOpen(false)} />
+              <FloatingTeacher lesson={m} onClose={() => setVtOpen(false)} />
             )}
           </div>
         )}
