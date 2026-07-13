@@ -12,25 +12,9 @@ export interface VRMCanvasHandle {
   setSpeaking(on: boolean): void;
 }
 
-/* ── Phoneme → VRM viseme ── */
-const VOWEL_MAP: Record<string, string> = {
-  a:"aa", á:"aa", à:"aa", â:"aa", ä:"aa",
-  e:"ee", é:"ee", è:"ee", ê:"ee", ë:"ee",
-  i:"ih", í:"ih", ì:"ih", î:"ih", ï:"ih", y:"ih",
-  o:"oh", ó:"oh", ò:"oh", ô:"oh", ö:"oh",
-  u:"ou", ú:"ou", ù:"ou", û:"ou", ü:"ou", w:"ou",
-};
-
-function dominantViseme(word: string): string {
-  for (const ch of word.toLowerCase()) {
-    if (VOWEL_MAP[ch]) return VOWEL_MAP[ch];
-  }
-  return "aa"; // default open-mouth for consonant-heavy words
-}
-
-/* ── Free CDN-hosted VRM (Alicia Solid, CC0) ── */
+/* ── CDN fallback VRM (three-vrm example model, MIT licensed) ── */
 const DEFAULT_VRM_URL =
-  "https://raw.githubusercontent.com/vrm-c/vrm-specification/master/samples/Alicia/VRM/AliciaSolid.vrm";
+  "https://raw.githubusercontent.com/pixiv/three-vrm/dev/packages/three-vrm/examples/models/VRM1_Constraint_Twist_Sample.vrm";
 
 /* ═══════════════════════════════════════ COMPONENT ══ */
 
@@ -85,27 +69,47 @@ const VRMCanvas = forwardRef<VRMCanvasHandle, Props>(
       fill.position.set(-2, 1, 1);
       scene.add(fill);
 
-      /* ── Load VRM ── */
+      /* ── Load VRM (tries url first, falls back to CDN if local 404) ── */
       const loader = new GLTFLoader();
       loader.register(parser => new VRMLoaderPlugin(parser));
 
-      loader.load(
-        url,
-        gltf => {
-          const vrm = gltf.userData.vrm as VRM;
-          if (!vrm) { setErrMsg("VRM data missing in GLTF"); setStatus("error"); return; }
-          vrmRef.current = vrm;
-          vrm.scene.rotation.y = Math.PI; // face camera
-          scene.add(vrm.scene);
-          setStatus("ready");
-        },
-        undefined,
-        err => {
-          console.error("[VRMCanvas] load error:", err);
-          setErrMsg("Could not load VRM model");
-          setStatus("error");
-        },
-      );
+      const onLoaded = (gltf: { userData: { vrm?: VRM } }) => {
+        const vrm = gltf.userData.vrm as VRM | undefined;
+        if (!vrm) { setErrMsg("VRM data missing in GLTF"); setStatus("error"); return; }
+        vrmRef.current = vrm;
+        vrm.scene.rotation.y = Math.PI;
+        scene.add(vrm.scene);
+        setStatus("ready");
+      };
+
+      const loadUrl = async () => {
+        // If a local path is given, HEAD-check it first so we avoid a noisy 404 in the loader.
+        let resolvedUrl = url;
+        if (url.startsWith("/")) {
+          const probe = await fetch(url, { method: "HEAD" }).catch(() => null);
+          if (!probe?.ok) resolvedUrl = DEFAULT_VRM_URL;
+        }
+        loader.load(
+          resolvedUrl,
+          onLoaded,
+          undefined,
+          err => {
+            console.error("[VRMCanvas] load error:", err);
+            if (resolvedUrl !== DEFAULT_VRM_URL) {
+              // retry with CDN fallback
+              loader.load(DEFAULT_VRM_URL, onLoaded, undefined, () => {
+                setErrMsg("Could not load VRM model");
+                setStatus("error");
+              });
+            } else {
+              setErrMsg("Could not load VRM model");
+              setStatus("error");
+            }
+          },
+        );
+      };
+
+      loadUrl();
 
       /* ── Animation state ── */
       let blinkTimer  = 2 + Math.random() * 3; // seconds until next blink
@@ -115,12 +119,14 @@ const VRMCanvas = forwardRef<VRMCanvasHandle, Props>(
       let speakAnim   = 0; // 0–1 speaking intensity
       const PREV_VISEMES = new Map<string, number>(); // current weights for smooth reset
 
-      const clock  = new THREE.Clock();
-      let   rafId  = 0;
+      let   lastTime = performance.now();
+      let   rafId    = 0;
 
       const loop = () => {
-        rafId  = requestAnimationFrame(loop);
-        const dt  = clock.getDelta();
+        rafId         = requestAnimationFrame(loop);
+        const now     = performance.now();
+        const dt      = (now - lastTime) / 1000;
+        lastTime      = now;
         const vrm = vrmRef.current;
         if (!vrm) { renderer.render(scene, camera); return; }
 
