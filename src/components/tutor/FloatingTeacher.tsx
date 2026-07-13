@@ -1,12 +1,16 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import dynamic from "next/dynamic";
 import {
   X, Minus, Maximize2,
   Volume2, VolumeX, Play, Pause, RotateCcw, SkipForward, SkipBack,
   Check, List, ExternalLink, Wifi, WifiOff,
 } from "lucide-react";
 import type { AvatarCapabilities, AvatarProvider } from "./avatar/types";
+import type { VRMCanvasHandle } from "./avatar/VRMCanvas";
+
+const VRMCanvas = dynamic(() => import("./avatar/VRMCanvas"), { ssr: false });
 
 /* ══════════════════════════════════════════════ LESSON TYPES ══ */
 
@@ -358,9 +362,13 @@ export default function FloatingTeacher({ lesson, onClose }: {
   const [minimized,  setMinimized]  = useState(false);
   const [chapOpen,   setChapOpen]   = useState(false);
 
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const engine   = useTeachingEngine(slides, provider, muted, rate);
+  const videoRef  = useRef<HTMLVideoElement>(null);
+  const vrmRef    = useRef<VRMCanvasHandle>(null);
+  const engine    = useTeachingEngine(slides, provider, muted, rate);
   const { ref, style: dragStyle, onMouseDown, onTouchStart } = useDrag();
+
+  /* sync speaking state to VRM */
+  useEffect(() => { vrmRef.current?.setSpeaking(engine.speaking); }, [engine.speaking]);
 
   /* ── Step 1: fetch provider capabilities ── */
   useEffect(() => {
@@ -386,7 +394,7 @@ export default function FloatingTeacher({ lesson, onClose }: {
         p = new OpenAIVoiceProvider();
       } else {
         const { WebSpeechProvider }    = await import("./avatar/WebSpeechProvider");
-        p = new WebSpeechProvider();
+        p = new WebSpeechProvider((name, weight) => vrmRef.current?.setViseme(name, weight));
       }
 
       await p.initialize(videoRef.current);
@@ -402,7 +410,7 @@ export default function FloatingTeacher({ lesson, onClose }: {
       setProvStatus("error");
       /* Fallback: try WebSpeech */
       import("./avatar/WebSpeechProvider").then(({ WebSpeechProvider }) => {
-        const fallback = new WebSpeechProvider();
+        const fallback = new WebSpeechProvider((name, weight) => vrmRef.current?.setViseme(name, weight));
         fallback.initialize().then(() => {
           if (!active) { fallback.destroy(); return; }
           setProvider(fallback);
@@ -462,10 +470,9 @@ export default function FloatingTeacher({ lesson, onClose }: {
               style={{ background: provStatus==="ready" ? (hasVideo?"#22c55e":"var(--cobalt-500)") : provStatus==="error" ? "var(--danger)" : "var(--line-300)" }}
               title={provStatus==="ready" ? (provider?.displayName ?? "") : provStatus==="error" ? provError : "Connecting…"} />
             <span className="text-[12.5px] font-bold flex-1 truncate" style={{ color:"var(--cobalt-700)" }}>
-              {provStatus === "loading" ? "Connecting teacher…"
-               : provStatus === "error"  ? "AI Teacher (voice only)"
-               : hasVideo               ? "AI Human Teacher"
-               : "AI Teacher"}
+              {provStatus === "loading" ? "Loading teacher…"
+               : hasVideo              ? "AI Human Teacher"
+               : "3D AI Teacher"}
             </span>
             <button onClick={() => setMinimized(m => !m)} title={minimized?"Expand":"Minimise"}
               className="w-6 h-6 rounded-full border-none cursor-pointer flex items-center justify-center hover:bg-[var(--cobalt-100)] transition-colors"
@@ -481,10 +488,9 @@ export default function FloatingTeacher({ lesson, onClose }: {
 
           {minimized ? (
             <div className="flex items-center gap-3 px-3 py-2.5">
-              <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+              <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-[18px]"
                 style={{ background:"var(--cobalt-100)" }}>
-                {hasVideo ? <Wifi size={14} style={{ color:"var(--cobalt-600)" }} />
-                          : <Volume2 size={14} style={{ color:"var(--cobalt-600)" }} />}
+                {hasVideo ? <Wifi size={14} style={{ color:"var(--cobalt-600)" }} /> : "🧑‍🏫"}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 mb-1">
@@ -506,9 +512,9 @@ export default function FloatingTeacher({ lesson, onClose }: {
             <>
               {/* ── Avatar stage ── */}
               <div className="relative overflow-hidden"
-                style={{ background: hasVideo ? "#000" : "radial-gradient(ellipse at 50% 35%, oklch(0.96 0.04 256) 0%, oklch(0.90 0.04 260) 100%)" }}>
+                style={{ background: hasVideo ? "#000" : "transparent" }}>
 
-                {/* HeyGen video element — always in DOM, visible only when hasVideo */}
+                {/* HeyGen video — shown only when live video is active */}
                 <video
                   ref={videoRef}
                   autoPlay playsInline
@@ -522,25 +528,14 @@ export default function FloatingTeacher({ lesson, onClose }: {
                   }}
                 />
 
-                {/* Voice-only stage (shown when no video) */}
+                {/* 3D VRM teacher — shown when no HeyGen video */}
                 {!hasVideo && (
-                  <div className="flex flex-col items-center justify-center gap-3 py-8">
-                    <div className="w-16 h-16 rounded-full flex items-center justify-center"
-                      style={{ background:"var(--cobalt-100)" }}>
-                      <Volume2 size={28} style={{ color:"var(--cobalt-500)" }} />
-                    </div>
-                    <Waveform active={engine.speaking} />
-                    {provStatus === "loading" && (
-                      <p className="text-[11px] font-semibold ft-pulse" style={{ color:"var(--fg-muted)" }}>
-                        Connecting…
-                      </p>
-                    )}
-                    {provStatus === "error" && caps?.video === "none" && (
-                      <p className="text-[10.5px] text-center px-4 leading-snug" style={{ color:"var(--fg-muted)" }}>
-                        Voice only mode
-                      </p>
-                    )}
-                  </div>
+                  <VRMCanvas
+                    ref={vrmRef}
+                    url="/teacher.vrm"
+                    width={284}
+                    height={220}
+                  />
                 )}
 
                 {/* Overlay badges */}
@@ -574,8 +569,8 @@ export default function FloatingTeacher({ lesson, onClose }: {
                   style={{ width:`${progress}%`, background:"var(--cobalt-400)", transition:"width 400ms ease" }} />
               </div>
 
-              {/* ── Setup guide (shown when no video provider configured) ── */}
-              {caps?.video === "none" && !provError && <ProviderSetupGuide />}
+              {/* ── Setup guide (shown only when HeyGen is explicitly configured but errored) ── */}
+              {provError && caps?.video === "heygen" && <ProviderSetupGuide />}
 
               {/* ── Slide text ── */}
               <div className="px-3.5 py-3 border-b border-[var(--line-200)]" style={{ background:"var(--surface)" }}>
