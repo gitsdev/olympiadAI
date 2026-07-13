@@ -406,6 +406,7 @@ export default function FloatingTeacher({ lesson, onClose }: {
         fallback.initialize().then(() => {
           if (!active) { fallback.destroy(); return; }
           setProvider(fallback);
+          setProvStatus("ready");
         });
       });
     });

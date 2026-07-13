@@ -19,12 +19,13 @@ export async function GET() {
     );
   }
 
-  /* HeyGen Live Avatar — create a new session and get a session token.
-     The token is a short-lived JWT passed to LiveAvatarSession() on the client. */
+  /* HeyGen / LiveAvatar — create a session token.
+     The SDK (api.liveavatar.com) uses this token as a Bearer JWT.
+     Endpoint: POST https://api.liveavatar.com/v1/sessions/token  (x-api-key auth) */
   const body: Record<string, unknown> = { avatar_id: avatarId };
   if (voiceId) body.voice_id = voiceId;
 
-  const resp = await fetch("https://api.heygen.com/v1/live_avatar.session.new", {
+  const resp = await fetch("https://api.liveavatar.com/v1/sessions/token", {
     method:  "POST",
     headers: {
       "Content-Type": "application/json",
@@ -42,12 +43,23 @@ export async function GET() {
     );
   }
 
-  const data = await resp.json() as { data?: { session_token?: string }; token?: string };
+  const data = await resp.json() as Record<string, unknown>;
+  console.log("[heygen-token] raw response:", JSON.stringify(data));
 
-  /* Different HeyGen API versions may return the token under different keys */
-  const token = data?.data?.session_token ?? (data as { token?: string })?.token;
+  /* HeyGen Live Avatar API returns the token at one of these paths */
+  const inner = data?.data as Record<string, unknown> | undefined;
+  const token =
+    (inner?.session_token as string | undefined) ??
+    (inner?.token         as string | undefined) ??
+    (data?.token          as string | undefined) ??
+    (data?.session_token  as string | undefined);
+
   if (!token) {
-    return NextResponse.json({ error: "No token in HeyGen response" }, { status: 500 });
+    console.error("[heygen-token] could not find token in response. Full response:", JSON.stringify(data));
+    return NextResponse.json(
+      { error: "No token in HeyGen response", response: data },
+      { status: 500 },
+    );
   }
 
   return NextResponse.json({ token });
