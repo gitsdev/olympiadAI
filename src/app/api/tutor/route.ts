@@ -54,69 +54,21 @@ export async function POST(req: NextRequest) {
       ...resources.map((r) => `RESOURCE: ${r.title} (${r.source_name})\n${r.ai_summary ?? ""}`),
     ].join("\n\n---\n\n");
 
-    const systemPrompt = `You are OlympiadAI, an expert tutor for CBSE & ICSE students preparing for Olympiads (Class ${studentClass}).
-Your tone is warm, precise, and encouraging — like a skilled human teacher who makes every concept click.
+    const systemPrompt = `You are OlympiadAI, an expert tutor for CBSE & ICSE students (Class ${studentClass}). Warm, precise, encouraging.
 
-KNOWLEDGE CONTEXT (retrieved from the knowledge graph):
-${ragContext || "No specific knowledge retrieved — answer from general curriculum knowledge."}
+KNOWLEDGE CONTEXT:
+${ragContext || "Answer from general curriculum knowledge."}
 
-Teaching style:
-- Hook the student with a relatable analogy or surprising fact.
-- Explain using concrete numbers and a clear worked example.
-- Break every solution into atomic steps (no "just" or "simply").
-- End with a memorable key insight — one sentence that the student will not forget.
-- Use sentence case, not ALL-CAPS.
+Reply with a single valid JSON object (no markdown fences):
+{"answer":"2–3 paragraph explanation with a worked example","keyInsight":"One key sentence starting with Key idea: or Remember:","visual":{"type":"fraction|number_line|percentage|geometry|bar_chart|none","data":{}},"steps":["step 1","step 2","step 3"],"tryIt":{"q":"short practice question","options":["A","B","C","D"],"correct":0,"why":"why A is correct"},"followUps":["follow-up 1","follow-up 2","follow-up 3"],"videos":[{"title":"title","channel":"channel","videoId":"11charId","query":"search query"}]}
 
-RESPONSE FORMAT — always reply with a single valid JSON object (no markdown fences):
-{
-  "answer": "Warm, direct 2–4 paragraph explanation with a concrete worked example. Write as a teacher speaking to the student.",
-  "keyInsight": "One memorable sentence starting with 'Key idea:' or 'Remember:' — the single most important takeaway.",
-  "visual": {
-    "type": "fraction | number_line | percentage | geometry | bar_chart | none",
-    "data": { ... type-specific fields shown below ... }
-  },
-  "steps": [
-    "First atomic step — exact operation, no hand-waving",
-    "Second step",
-    "Final step with a verify/check"
-  ],
-  "tryIt": {
-    "q": "A short practice question different from the worked example",
-    "options": ["option A", "option B", "option C", "option D"],
-    "correct": 0,
-    "why": "Brief explanation of why option A is correct"
-  },
-  "followUps": [
-    "Natural follow-up question 1",
-    "Natural follow-up question 2",
-    "Natural follow-up question 3"
-  ],
-  "videos": [
-    { "title": "descriptive video title", "channel": "YouTube channel name", "videoId": "youtubeVideoId11", "query": "fallback youtube search query" }
-  ]
-}
-
-Visual data format by type — pick the type that BEST helps a student visualise the concept:
-- fraction:    { "n": 3, "d": 4 }                                   (numerator n, denominator d ≤ 12)
-- number_line: { "min": 0, "max": 2, "points": [{"value": 0.5, "label": "½", "highlight": true}] }
-- percentage:  { "value": 75, "label": "75 out of 100" }
-- geometry:    { "shape": "triangle|circle|rectangle|square", "dims": {"base": 6, "height": 4} }
-- bar_chart:   { "bars": [{"label": "Mon", "value": 30}, {"label": "Tue", "value": 70}] }
-- none:        {}
-
-Rules for visual:
-- Choose "none" ONLY for pure language / grammar / spelling topics with zero mathematical content.
-- For every maths, science, or data topic — always choose a visual that aids understanding.
-- Keep denominator d ≤ 12 for fractions; keep bar count ≤ 6 for bar charts.
-
-Video rules:
-- Suggest 2–3 real YouTube videos from Khan Academy, Math Antics, Veritasium, Physics Wallah, BYJU's, 3Blue1Brown, or Numberphile.
-- "videoId": the actual 11-character YouTube ID — only include IDs you are confident are real and match the topic exactly.
-- "query": a fallback YouTube search string if the videoId cannot play.`;
+Visual types: fraction:{n,d} | number_line:{min,max,points:[{value,label,highlight}]} | percentage:{value,label} | geometry:{shape,dims} | bar_chart:{bars:[{label,value}]} | none:{}
+Use none only for pure language topics. For maths/science always include a visual.
+Videos: 1–2 real YouTube videos (Khan Academy, Math Antics, Physics Wallah). Only include videoId if you are certain it is correct.`;
 
     const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 2048,
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 1024,
       system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
       messages: [
         ...conversationHistory,
@@ -188,34 +140,32 @@ Video rules:
       })),
     ];
 
-    // Persist conversation (non-fatal if it fails)
-    let returnedConvId: string | null = conversationId ?? null;
+    // Persist conversation in background — does not block the response
     if (user) {
-      try {
-        const { data: rawStudent } = await supabase
-          .from("students").select("id").eq("profile_id", user.id).single();
-        const student = asStudent(rawStudent);
-        if (student) {
-          const allMessages = [
-            ...conversationHistory,
-            { role: "user",      content: question },
-            { role: "assistant", content: answer   },
-          ];
-          if (conversationId) {
-            await supabase.from("ai_conversations")
-              .update({ messages: allMessages })
-              .eq("id", conversationId);
-          } else {
-            const { data: conv } = await supabase.from("ai_conversations")
-              .insert({ student_id: student.id, messages: allMessages })
-              .select("id")
-              .single();
-            returnedConvId = (conv as { id: string } | null)?.id ?? null;
+      (async () => {
+        try {
+          const { data: rawStudent } = await supabase
+            .from("students").select("id").eq("profile_id", user.id).single();
+          const student = asStudent(rawStudent);
+          if (student) {
+            const allMessages = [
+              ...conversationHistory,
+              { role: "user",      content: question },
+              { role: "assistant", content: answer   },
+            ];
+            if (conversationId) {
+              await supabase.from("ai_conversations")
+                .update({ messages: allMessages })
+                .eq("id", conversationId);
+            } else {
+              await supabase.from("ai_conversations")
+                .insert({ student_id: student.id, messages: allMessages });
+            }
           }
+        } catch {
+          // Non-fatal
         }
-      } catch {
-        // Non-fatal
-      }
+      })();
     }
 
     return NextResponse.json({
@@ -227,7 +177,7 @@ Video rules:
       followUps,
       references:     tutorRefs,
       usage:          response.usage,
-      conversationId: returnedConvId,
+      conversationId: conversationId ?? null,
     });
 
   } catch (err) {
