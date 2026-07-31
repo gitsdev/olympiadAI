@@ -42,7 +42,7 @@ export function MktNav() {
         </Link>
         <Link href="/onboarding" className="hidden sm:block">
           <OAButton variant="primary" size="sm">
-            Try for Free <ArrowRight size={14} />
+            Register Now <ArrowRight size={14} />
           </OAButton>
         </Link>
 
@@ -87,7 +87,7 @@ export function MktNav() {
           </Link>
           <Link href="/onboarding" onClick={() => setOpen(false)}>
             <OAButton variant="primary" size="md" className="w-full mt-1">
-              Try for Free <ArrowRight size={15} />
+              Register Now <ArrowRight size={15} />
             </OAButton>
           </Link>
         </div>
