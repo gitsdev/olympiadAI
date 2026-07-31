@@ -8,13 +8,17 @@ const anthropic = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY });
 
 export async function POST(req: NextRequest) {
   try {
-    const { question, conversationHistory, studentClass, studentBoard, conversationId } = await req.json() as {
+    const { question, conversationHistory, studentClass, studentBoard, conversationId, outputMode } = await req.json() as {
       question: string;
       conversationHistory: { role: "user" | "assistant"; content: string }[];
       studentClass: number;
       studentBoard: Board;
       conversationId?: string | null;
+      outputMode?: "fast" | "normal";
     };
+
+    const model      = outputMode === "normal" ? "claude-sonnet-4-6"        : "claude-haiku-4-5-20251001";
+    const maxTokens  = outputMode === "normal" ? 2048                        : 1024;
 
     if (!question?.trim()) {
       return NextResponse.json({ error: "Question is required" }, { status: 400 });
@@ -67,8 +71,8 @@ Use none only for pure language topics. For maths/science always include a visua
 Videos: 1–2 real YouTube videos (Khan Academy, Math Antics, Physics Wallah). Only include videoId if you are certain it is correct.`;
 
     const response = await anthropic.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 1024,
+      model,
+      max_tokens: maxTokens,
       system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
       messages: [
         ...conversationHistory,

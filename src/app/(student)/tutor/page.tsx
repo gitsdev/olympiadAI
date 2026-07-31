@@ -10,7 +10,7 @@ const FloatingTeacher = dynamic(
 import {
   Sparkles, Search, Layers, BookOpen, Play, PencilLine,
   Target, Globe, ArrowUp, CheckCircle2, Route, ChevronDown,
-  Zap, Check, X, Lightbulb,
+  Zap, Check, X, Lightbulb, Mic, MicOff,
 } from "lucide-react";
 import { AppShell } from "@/components/layout";
 import { OABadge, OAAvatar } from "@/components/ui";
@@ -79,6 +79,56 @@ const CHIPS = [
   "What should I revise?",
 ];
 
+/* ── Voice input hook ────────────────────────────────────────────────── */
+type VoiceState = "idle" | "listening" | "unsupported";
+
+function useVoiceInput(onResult: (text: string) => void) {
+  const [state, setState] = useState<VoiceState>("idle");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recRef = useRef<any>(null);
+
+  const supported = typeof window !== "undefined" &&
+    ("SpeechRecognition" in window || "webkitSpeechRecognition" in window);
+
+  const start = () => {
+    if (!supported || state === "listening") return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const w = window as any;
+    const SR = w.SpeechRecognition ?? w.webkitSpeechRecognition;
+    if (!SR) return;
+
+    const rec = new SR();
+    rec.lang           = "en-IN";
+    rec.interimResults = true;
+    rec.maxAlternatives = 1;
+    recRef.current = rec;
+
+    rec.onstart  = () => setState("listening");
+    rec.onend    = () => setState("idle");
+    rec.onerror  = () => setState("idle");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    rec.onresult = (e: any) => {
+      const transcript = Array.from(e.results as ArrayLike<SpeechRecognitionResult>)
+        .map((r) => r[0].transcript)
+        .join("");
+      onResult(transcript);
+      if ((e.results as SpeechRecognitionResultList)[e.results.length - 1].isFinal) {
+        setState("idle");
+      }
+    };
+    rec.start();
+  };
+
+  const stop = () => {
+    recRef.current?.stop();
+    setState("idle");
+  };
+
+  useEffect(() => () => { recRef.current?.abort(); }, []);
+
+  return { state, supported, start, stop };
+}
+
 /* ── Page ────────────────────────────────────────────────────────────── */
 export default function TutorPage() {
   const user = useStudent();
@@ -94,6 +144,8 @@ export default function TutorPage() {
   const [filter, setFilter] = useState<RefType | "All">("All");
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [videoModal, setVideoModal] = useState<Ref | null>(null);
+  const [outputMode, setOutputMode] = useState<"fast" | "normal">("fast");
+  const voice = useVoiceInput((text) => setInput(text));
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -124,6 +176,7 @@ export default function TutorPage() {
           studentClass: user.cls,
           studentBoard: user.board,
           conversationId,
+          outputMode,
         }),
       });
 
@@ -180,6 +233,12 @@ export default function TutorPage() {
 
   return (
     <AppShell title="AI Tutor" subtitle="Grounded in your knowledge graph" noScroll>
+      <style>{`
+        @keyframes mic-pulse {
+          0%,100% { box-shadow: 0 0 0 0   oklch(0.55 0.22 18 / 0.5); }
+          50%      { box-shadow: 0 0 0 6px oklch(0.55 0.22 18 / 0);   }
+        }
+      `}</style>
       <div className="flex flex-col h-full min-h-0">
 
         {/* ── Mobile tab bar ── */}
@@ -238,26 +297,75 @@ export default function TutorPage() {
                     ))}
                   </div>
                 )}
-                <div className="flex items-end gap-2.5 border border-[var(--line-300)] rounded-[var(--r-lg)] px-4 py-2 shadow-[var(--shadow-sm)]">
+                <div
+                  className="flex items-end gap-2.5 border rounded-[var(--r-lg)] px-4 py-2 shadow-[var(--shadow-sm)] transition-colors duration-150"
+                  style={{
+                    borderColor: voice.state === "listening" ? "var(--danger)" : "var(--line-300)",
+                    background:  voice.state === "listening" ? "oklch(1 0 0 / 0.02)" : undefined,
+                  }}
+                >
                   <input
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && send()}
-                    placeholder="Ask your tutor anything…"
+                    onKeyDown={(e) => e.key === "Enter" && !thinking && send()}
+                    placeholder={voice.state === "listening" ? "Listening…" : "Ask your tutor anything…"}
                     className="flex-1 border-none outline-none bg-transparent text-[14.5px] py-1.5"
                     style={{ fontFamily: "var(--font-sans)", color: "var(--ink-900)" }}
                   />
+
+                  {/* Mic button — shown only when speech is supported */}
+                  {voice.supported && (
+                    <button
+                      onClick={() => voice.state === "listening" ? voice.stop() : voice.start()}
+                      title={voice.state === "listening" ? "Stop recording" : "Speak your question"}
+                      className="w-[34px] h-[34px] rounded-full border flex items-center justify-center cursor-pointer shrink-0 transition-all duration-150"
+                      style={{
+                        borderColor: voice.state === "listening" ? "var(--danger)"    : "var(--line-300)",
+                        background:  voice.state === "listening" ? "var(--danger)"    : "var(--surface)",
+                        animation:   voice.state === "listening" ? "mic-pulse 1.2s ease-in-out infinite" : "none",
+                      }}
+                    >
+                      {voice.state === "listening"
+                        ? <MicOff size={14} color="white" />
+                        : <Mic    size={14} style={{ color: "var(--fg-muted)" }} />}
+                    </button>
+                  )}
+
                   <button
                     onClick={() => send()}
-                    className="w-[38px] h-[38px] rounded-[var(--r-md)] border-none flex items-center justify-center cursor-pointer shrink-0"
+                    disabled={thinking}
+                    className="w-[38px] h-[38px] rounded-[var(--r-md)] border-none flex items-center justify-center cursor-pointer shrink-0 disabled:opacity-50"
                     style={{ background: "var(--cobalt-500)", boxShadow: "var(--shadow-brand)" }}
                   >
                     <ArrowUp size={19} color="#fff" />
                   </button>
                 </div>
-                <div className="flex items-center justify-center gap-1.5 mt-2" style={{ color: "var(--fg-subtle)", fontSize: 11.5 }}>
-                  <CheckCircle2 size={13} style={{ color: "var(--success)" }} />
-                  Grounded in OlympiadAI&apos;s knowledge graph — never invented.
+                <div className="flex items-center gap-2 mt-2">
+                  {/* Output mode toggle */}
+                  <button
+                    onClick={() => setOutputMode(m => m === "fast" ? "normal" : "fast")}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border cursor-pointer transition-all duration-[150ms] shrink-0"
+                    style={{
+                      fontSize: 11,
+                      fontFamily: "var(--font-mono)",
+                      fontWeight: 600,
+                      borderColor: outputMode === "fast" ? "var(--cobalt-300)" : "var(--line-300)",
+                      background:  outputMode === "fast" ? "var(--cobalt-50)"  : "var(--surface)",
+                      color:       outputMode === "fast" ? "var(--cobalt-700)" : "var(--fg-muted)",
+                    }}
+                    title={outputMode === "fast"
+                      ? "Fast · Haiku 4.5 — click for Normal · Sonnet 4.6"
+                      : "Normal · Sonnet 4.6 — click for Fast · Haiku 4.5"}
+                  >
+                    {outputMode === "fast" ? "⚡ Fast · Haiku 4.5" : "🎯 Normal · Sonnet 4.6"}
+                  </button>
+
+                  <span className="flex-1" />
+
+                  <div className="flex items-center gap-1.5" style={{ color: "var(--fg-subtle)", fontSize: 11.5 }}>
+                    <CheckCircle2 size={13} style={{ color: "var(--success)" }} />
+                    Grounded in OlympiadAI&apos;s knowledge graph — never invented.
+                  </div>
                 </div>
               </div>
             </div>
