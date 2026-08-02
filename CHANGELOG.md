@@ -139,3 +139,25 @@
 ```
 
 ---
+## 31/07/2026, 08:19
+**Request:** change the "Try for free" button at the top bar to "Register Now"
+
+
+
+-- 
+Regards
+Sudipto Mukherjee
+
+**Files Modified:**
+- rc/app/MktNav.tsx
+
+**Test Attempts:** 1
+**Status:** ✅ Tests Passed
+
+**Test Output Summary:**
+```
+
+
+```
+
+---
