@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { Target, Clock, Zap, Route, ArrowRight, CircleCheck } from "lucide-react";
+import { Target, Clock, Zap, Route, ArrowRight, CircleCheck, ClipboardList } from "lucide-react";
 import { AppShell } from "@/components/layout";
-import { OABadge, OACard, OAProgressBar, OARing, OASubjectDot, type Subject } from "@/components/ui";
+import { OABadge, OAButton, OACard, OAProgressBar, OARing, OASubjectDot, type Subject } from "@/components/ui";
 import type { TestAttemptRow, PerformanceMetricRow } from "@/types/database";
 
 
@@ -26,14 +26,71 @@ interface Props {
   metrics: PerformanceMetricRow[];
 }
 
+function MasteryCard({ metrics }: { metrics: PerformanceMetricRow[] }) {
+  return (
+    <OACard style={{ padding: "18px 20px" }}>
+      <h3 className="font-bold text-[17px] mb-1" style={{ fontFamily: "var(--font-display)" }}>Concept mastery</h3>
+      <p className="text-[12.5px] mb-4" style={{ color: "var(--fg-muted)" }}>
+        {metrics.length > 0 ? "Your weakest topics — focus here next." : "Complete more tests to see mastery data."}
+      </p>
+      <div className="flex flex-col gap-4">
+        {metrics.length > 0 ? metrics.map((m) => (
+          <div key={m.id}>
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <OASubjectDot subject={m.subject as Subject} />
+              <span className="text-[13.5px] font-semibold flex-1" style={{ color: "var(--ink-900)" }}>{m.topic_name}</span>
+              <span className="text-[12px] w-8 text-right" style={{ fontFamily: "var(--font-mono)", color: "var(--fg-muted)" }}>
+                {Math.round(Number(m.mastery_score))}%
+              </span>
+            </div>
+            <OAProgressBar
+              value={Math.round(Number(m.mastery_score))}
+              tone={Number(m.mastery_score) < 50 ? "gold" : Number(m.mastery_score) > 85 ? "green" : "brand"}
+              height={6}
+            />
+          </div>
+        )) : (
+          <p className="text-[13px]" style={{ color: "var(--fg-muted)" }}>No mastery data yet.</p>
+        )}
+      </div>
+    </OACard>
+  );
+}
+
 export default function ResultsClient({ attempt, metrics }: Props) {
-  const accuracy  = attempt ? Math.round(Number(attempt.accuracy)) : 92;
-  const avgTime   = attempt?.avg_time_per_question_seconds ?? 47;
-  const totalTime = attempt ? formatTime(attempt.total_time_seconds) : "9:24";
-  const correct   = attempt?.questions_correct ?? 11;
-  const total     = attempt?.questions_attempted ?? 12;
-  const readiness = attempt ? Math.round(Number(attempt.readiness_score_after)) : 87;
-  const topic     = attempt?.topic_name ?? "Number System";
+  if (!attempt) {
+    return (
+      <AppShell title="Your progress" subtitle="Complete a test to see your results">
+        <div className="max-w-[860px] mx-auto px-4 sm:px-7 py-6 pb-11 flex flex-col gap-5">
+          <OACard noPadding className="overflow-hidden relative" style={{ background: "var(--paper-2)" }}>
+            <div className="absolute inset-0 graph-bg opacity-40" style={{ backgroundSize: "22px 22px" }} />
+            <div className="relative p-6 sm:p-8 flex flex-col items-center text-center gap-3">
+              <ClipboardList size={28} style={{ color: "var(--fg-subtle)" }} />
+              <h3 className="font-bold text-[19px]" style={{ fontFamily: "var(--font-display)" }}>No results yet</h3>
+              <p className="text-[13.5px] max-w-[380px]" style={{ color: "var(--fg-muted)" }}>
+                Take a practice test or mock exam and your accuracy, speed, and readiness score will show up here.
+              </p>
+              <Link href="/tests">
+                <OAButton variant="primary" size="md" className="mt-1">
+                  Start a test <ArrowRight size={16} />
+                </OAButton>
+              </Link>
+            </div>
+          </OACard>
+
+          <MasteryCard metrics={metrics} />
+        </div>
+      </AppShell>
+    );
+  }
+
+  const accuracy  = Math.round(Number(attempt.accuracy));
+  const avgTime   = attempt.avg_time_per_question_seconds;
+  const totalTime = formatTime(attempt.total_time_seconds);
+  const correct   = attempt.questions_correct;
+  const total     = attempt.questions_attempted;
+  const readiness = Math.round(Number(attempt.readiness_score_after));
+  const topic     = attempt.topic_name ?? "General";
   const subtitle  = `${topic} · adaptive test`;
 
   const STATS = [
@@ -53,9 +110,9 @@ export default function ResultsClient({ attempt, metrics }: Props) {
           </span>
         </div>
 
-        {/* Readiness + rank prediction */}
-        <OACard noPadding className="overflow-hidden grid grid-cols-1 sm:grid-cols-2">
-          <div className="p-5 sm:p-6 border-b sm:border-b-0 sm:border-r border-[var(--line-200)] flex items-center gap-5">
+        {/* Readiness */}
+        <OACard noPadding className="overflow-hidden">
+          <div className="p-5 sm:p-6 flex items-center gap-5">
             <OARing value={readiness} size={100} stroke={10}>
               <span className="font-bold leading-none" style={{ fontFamily: "var(--font-mono)", fontSize: 26, color: "var(--ink-900)" }}>{readiness}</span>
               <span className="mt-0.5" style={{ fontFamily: "var(--font-mono)", fontSize: 9.5, color: "var(--fg-subtle)", letterSpacing: "0.06em" }}>/ 100</span>
@@ -64,25 +121,6 @@ export default function ResultsClient({ attempt, metrics }: Props) {
               <p className="t-overline mb-1.5">Olympiad readiness</p>
               <h3 className="font-bold text-[19px] sm:text-[20px] tracking-tight" style={{ fontFamily: "var(--font-display)" }}>{readinessLabel(readiness)}</h3>
             </div>
-          </div>
-
-          <div className="p-5 sm:p-6 graph-bg" style={{ backgroundSize: "22px 22px" }}>
-            <p className="t-overline mb-3">Predicted IMO performance</p>
-            <div className="flex gap-6">
-              <div>
-                <p className="font-bold text-[24px] sm:text-[26px] tracking-tight" style={{ fontFamily: "var(--font-mono)", letterSpacing: "-0.02em", color: "var(--ink-900)" }}>#120–180</p>
-                <p className="text-[12px] mt-0.5" style={{ color: "var(--fg-muted)" }}>Expected rank range</p>
-              </div>
-              <div>
-                <p className="font-bold text-[24px] sm:text-[26px] tracking-tight" style={{ fontFamily: "var(--font-mono)", letterSpacing: "-0.02em", color: "var(--gold-700)" }}>
-                  {Math.min(99, Math.round(accuracy * 0.85))}<span className="text-[15px]">%</span>
-                </p>
-                <p className="text-[12px] mt-0.5" style={{ color: "var(--fg-muted)" }}>Award probability</p>
-              </div>
-            </div>
-            <p className="text-[11.5px] mt-3.5 leading-snug" style={{ color: "var(--fg-subtle)" }}>
-              Based on accuracy, speed &amp; mastery vs. historical platform data · 82% confidence
-            </p>
           </div>
         </OACard>
 
@@ -104,33 +142,7 @@ export default function ResultsClient({ attempt, metrics }: Props) {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-5 items-start">
-          {/* Concept mastery */}
-          <OACard style={{ padding: "18px 20px" }}>
-            <h3 className="font-bold text-[17px] mb-1" style={{ fontFamily: "var(--font-display)" }}>Concept mastery</h3>
-            <p className="text-[12.5px] mb-4" style={{ color: "var(--fg-muted)" }}>
-              {metrics.length > 0 ? "Your weakest topics — focus here next." : "Complete more tests to see mastery data."}
-            </p>
-            <div className="flex flex-col gap-4">
-              {metrics.length > 0 ? metrics.map((m) => (
-                <div key={m.id}>
-                  <div className="flex items-center gap-1.5 mb-1.5">
-                    <OASubjectDot subject={m.subject as Subject} />
-                    <span className="text-[13.5px] font-semibold flex-1" style={{ color: "var(--ink-900)" }}>{m.topic_name}</span>
-                    <span className="text-[12px] w-8 text-right" style={{ fontFamily: "var(--font-mono)", color: "var(--fg-muted)" }}>
-                      {Math.round(Number(m.mastery_score))}%
-                    </span>
-                  </div>
-                  <OAProgressBar
-                    value={Math.round(Number(m.mastery_score))}
-                    tone={Number(m.mastery_score) < 50 ? "gold" : Number(m.mastery_score) > 85 ? "green" : "brand"}
-                    height={6}
-                  />
-                </div>
-              )) : (
-                <p className="text-[13px]" style={{ color: "var(--fg-muted)" }}>No mastery data yet.</p>
-              )}
-            </div>
-          </OACard>
+          <MasteryCard metrics={metrics} />
 
           {/* 3-day plan */}
           <OACard noPadding className="overflow-hidden relative p-5" style={{ background: "var(--cobalt-700)", border: "none" }}>
