@@ -85,6 +85,32 @@ export async function updatePassword(formData: FormData) {
   redirect("/dashboard");
 }
 
+export async function changePassword(formData: FormData) {
+  const currentPassword = formData.get("current_password") as string;
+  const password = formData.get("password") as string;
+  const confirmPassword = formData.get("confirm_password") as string;
+
+  if (password !== confirmPassword) return { error: "New passwords don't match." };
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user?.email) return { error: "Not signed in." };
+
+  // Re-verify identity with the current password before allowing the change —
+  // updateUser() alone doesn't check it, so a hijacked/left-open session could
+  // otherwise silently lock the real owner out.
+  const { error: verifyError } = await supabase.auth.signInWithPassword({
+    email: user.email,
+    password: currentPassword,
+  });
+  if (verifyError) return { error: "Current password is incorrect." };
+
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) return { error: error.message };
+
+  return { error: "" };
+}
+
 export async function logout() {
   const supabase = await createClient();
   await supabase.auth.signOut();

@@ -3,11 +3,11 @@
 import { useState } from "react";
 import {
   BookOpen, Target, Bell, Mail, Users, Globe,
-  PencilLine, LogOut, Zap, Check, X, Loader2, Save,
+  PencilLine, LogOut, Zap, Check, X, Loader2, Save, Lock,
 } from "lucide-react";
 import { AppShell } from "@/components/layout";
 import { OABadge, OACard, OAAvatar, OAButton, OASubjectDot, type Subject } from "@/components/ui";
-import { logout } from "@/actions/auth";
+import { logout, changePassword } from "@/actions/auth";
 import { updateProfile } from "@/actions/student";
 import { useStudent } from "@/contexts/StudentContext";
 import type { Board } from "@/types/database";
@@ -33,6 +33,45 @@ export default function SettingsPage() {
   const [goal, setGoal]         = useState(30);
   const [saving, setSaving]     = useState(false);
   const [error, setError]       = useState("");
+
+  /* ── change password state ── */
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [currentPassword, setCurrentPassword]   = useState("");
+  const [newPassword, setNewPassword]           = useState("");
+  const [confirmPassword, setConfirmPassword]   = useState("");
+  const [pwSaving, setPwSaving]                 = useState(false);
+  const [pwError, setPwError]                   = useState("");
+  const [pwSuccess, setPwSuccess]               = useState(false);
+
+  function openPasswordChange() {
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setPwError("");
+    setPwSuccess(false);
+    setChangingPassword(true);
+  }
+
+  function cancelPasswordChange() {
+    setChangingPassword(false);
+    setPwError("");
+  }
+
+  async function submitPasswordChange() {
+    if (newPassword.length < 6) { setPwError("New password must be at least 6 characters."); return; }
+    if (newPassword !== confirmPassword) { setPwError("New passwords don't match."); return; }
+    setPwSaving(true);
+    setPwError("");
+    const formData = new FormData();
+    formData.set("current_password", currentPassword);
+    formData.set("password", newPassword);
+    formData.set("confirm_password", confirmPassword);
+    const result = await changePassword(formData);
+    setPwSaving(false);
+    if (result.error) { setPwError(result.error); return; }
+    setPwSuccess(true);
+    setChangingPassword(false);
+  }
 
   function openEdit() {
     setName(user.name);
@@ -198,6 +237,78 @@ export default function SettingsPage() {
               );
             })}
           </div>
+        </OACard>
+
+        {/* ── Change password ── */}
+        <OACard style={{ padding: "20px 24px" }}>
+          <SettingHeader Icon={Lock} title="Password" sub="Change the password you use to sign in." />
+
+          {pwSuccess && !changingPassword && (
+            <p className="text-[13px] px-3 py-2 rounded-[var(--r-md)] mt-3.5 max-w-[360px]" style={{ background: "var(--success-bg)", color: "var(--success-tx)" }}>
+              Password updated.
+            </p>
+          )}
+
+          {!changingPassword ? (
+            <OAButton variant="secondary" size="sm" onClick={openPasswordChange} className="mt-3.5">
+              <Lock size={14} /> Change password
+            </OAButton>
+          ) : (
+            <div className="flex flex-col gap-3.5 mt-4 max-w-[360px]">
+              <div>
+                <p className="text-[12px] font-semibold mb-1.5" style={{ color: "var(--ink-700)" }}>Current password</p>
+                <input
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full border border-[var(--line-300)] rounded-[var(--r-md)] px-3 py-[9px] text-[14px] outline-none focus:border-[var(--cobalt-400)] focus:ring-2 focus:ring-[var(--cobalt-500)]/20 transition-colors"
+                  style={{ background: "var(--surface)", color: "var(--ink-900)" }}
+                />
+              </div>
+              <div>
+                <p className="text-[12px] font-semibold mb-1.5" style={{ color: "var(--ink-700)" }}>New password</p>
+                <input
+                  type="password"
+                  minLength={6}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="At least 6 characters"
+                  className="w-full border border-[var(--line-300)] rounded-[var(--r-md)] px-3 py-[9px] text-[14px] outline-none focus:border-[var(--cobalt-400)] focus:ring-2 focus:ring-[var(--cobalt-500)]/20 transition-colors"
+                  style={{ background: "var(--surface)", color: "var(--ink-900)" }}
+                />
+              </div>
+              <div>
+                <p className="text-[12px] font-semibold mb-1.5" style={{ color: "var(--ink-700)" }}>Confirm new password</p>
+                <input
+                  type="password"
+                  minLength={6}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Re-enter new password"
+                  className="w-full border border-[var(--line-300)] rounded-[var(--r-md)] px-3 py-[9px] text-[14px] outline-none focus:border-[var(--cobalt-400)] focus:ring-2 focus:ring-[var(--cobalt-500)]/20 transition-colors"
+                  style={{ background: "var(--surface)", color: "var(--ink-900)" }}
+                />
+              </div>
+
+              {pwError && (
+                <p className="text-[13px] px-3 py-2 rounded-[var(--r-md)]" style={{ background: "var(--danger-bg)", color: "var(--danger-tx)" }}>
+                  {pwError}
+                </p>
+              )}
+
+              <div className="flex gap-2 pt-1">
+                <OAButton variant="ghost" size="sm" onClick={cancelPasswordChange} disabled={pwSaving}>
+                  <X size={14} /> Cancel
+                </OAButton>
+                <span className="flex-1" />
+                <OAButton variant="primary" size="sm" onClick={submitPasswordChange} disabled={pwSaving}>
+                  {pwSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                  {pwSaving ? "Updating…" : "Update password"}
+                </OAButton>
+              </div>
+            </div>
+          )}
         </OACard>
 
         {/* ── Daily goal ── */}
