@@ -340,7 +340,12 @@ function Testimonial() {
 }
 
 /* ── Pricing ─────────────────────────────────────────────────────────── */
-const PLANS = [
+/**
+ * Paid tiers — parked, not deleted. We're running fully free for now (see
+ * FREE_FEATS + Pricing() below); re-enable this structure when paid plans
+ * come back by swapping the render in Pricing() back to PAID_PLANS.map(...).
+ */
+const PAID_PLANS = [
   {
     name: "Explorer", price: "₹0", per: "forever",
     desc: "Get started and find your gaps.", cta: "Start free", featured: false,
@@ -357,6 +362,12 @@ const PLANS = [
     feats: ["Everything in Pro", "Bulk student seats", "Cohort progress overview", "Admin & RBAC controls"],
   },
 ];
+void PAID_PLANS; // kept as backup reference for the future paid rollout — see comment above
+
+const FREE_FEATS = [
+  "10-min diagnostic", "Unlimited AI tutor & practice", "Unlimited adaptive mock tests",
+  "Daily personalized study plans", "Rank prediction & analytics", "Parent progress reports",
+];
 
 function Pricing() {
   return (
@@ -367,54 +378,63 @@ function Pricing() {
       <div className="max-w-[1160px] mx-auto">
         <SectionHead
           eyebrow="Pricing"
-          title="Coaching-grade prep, without the coaching price."
-          sub="Start free. Upgrade when you're ready to go all in."
+          title="Free for everyone. No catch."
+          sub="We're opening every feature to every student while we build out the full experience together."
         />
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start">
-          {PLANS.map(({ name, price, per, desc, cta, featured, feats }) => (
+
+        <div
+          className="max-w-[620px] mx-auto relative overflow-hidden rounded-[var(--r-2xl)] px-6 py-10 sm:px-10 sm:py-12 text-center"
+          style={{ background: "var(--cobalt-700)", boxShadow: "var(--shadow-lg)" }}
+        >
+          <div className="absolute inset-0 graph-bg opacity-40" style={{ backgroundSize: "24px 24px" }} />
+          <div
+            className="absolute inset-0"
+            style={{ background: "radial-gradient(80% 70% at 50% -10%, oklch(0.81 0.13 80 / 0.25), transparent 60%)" }}
+          />
+
+          <div className="relative">
             <div
-              key={name}
-              className="relative rounded-[var(--r-xl)] p-6"
-              style={{
-                background: "var(--surface)",
-                border: featured ? "1.5px solid var(--cobalt-500)" : "1px solid var(--line-200)",
-                boxShadow: featured ? "var(--shadow-lg)" : "var(--shadow-sm)",
-              }}
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full mb-6"
+              style={{ background: "var(--gold-400)" }}
             >
-              {featured && (
-                <div
-                  className="absolute -top-3 left-1/2 -translate-x-1/2 text-[11.5px] font-bold px-3 py-1 rounded-full whitespace-nowrap"
-                  style={{ background: "var(--gold-400)", color: "var(--ink-900)", letterSpacing: "0.02em" }}
-                >
-                  MOST POPULAR
-                </div>
-              )}
-              <h3 className="font-bold text-[19px] mb-1" style={{ fontFamily: "var(--font-display)" }}>{name}</h3>
-              <p className="text-[13px] mb-4" style={{ color: "var(--fg-muted)" }}>{desc}</p>
-              <div className="flex items-baseline gap-1.5 mb-5">
-                <span
-                  className="font-bold text-[34px] tracking-tight"
-                  style={{ fontFamily: "var(--font-mono)", letterSpacing: "-0.03em" }}
-                >
-                  {price}
-                </span>
-                <span className="text-[13px]" style={{ color: "var(--fg-muted)" }}>/ {per}</span>
-              </div>
-              <Link href={featured ? "/onboarding" : "#"}>
-                <OAButton variant={featured ? "primary" : "secondary"} size="md" className="w-full mb-5">
-                  {cta}
-                </OAButton>
-              </Link>
-              <div className="flex flex-col gap-2.5">
-                {feats.map((f) => (
-                  <div key={f} className="flex items-start gap-2">
-                    <Check size={17} style={{ color: "var(--brand)", flexShrink: 0, marginTop: 1 }} />
-                    <span className="text-[13.5px] leading-snug" style={{ color: "var(--ink-700)" }}>{f}</span>
-                  </div>
-                ))}
-              </div>
+              <Sparkles size={14} style={{ color: "var(--ink-900)" }} />
+              <span className="text-[12px] font-bold" style={{ color: "var(--ink-900)", letterSpacing: "0.03em" }}>
+                FREE FOR EVERYONE
+              </span>
             </div>
-          ))}
+
+            <div className="flex items-baseline justify-center gap-2 mb-2">
+              <span
+                className="font-black text-[52px] sm:text-[60px] tracking-tight text-white"
+                style={{ fontFamily: "var(--font-mono)", letterSpacing: "-0.03em" }}
+              >
+                ₹0
+              </span>
+              <span className="text-[15px]" style={{ color: "oklch(0.9 0.04 258)" }}>/ every feature, on us</span>
+            </div>
+
+            <p
+              className="text-[15px] sm:text-[16.5px] leading-[1.6] max-w-[440px] mx-auto mb-7"
+              style={{ color: "oklch(0.92 0.03 258)" }}
+            >
+              AI tutor, unlimited mock tests, rank prediction, parent reports — everything, unlocked, for every student. No trial, no card required.
+            </p>
+
+            <Link href="/onboarding">
+              <OAButton variant="gold" size="lg">
+                Start learning free <ArrowRight size={18} />
+              </OAButton>
+            </Link>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5 mt-9 text-left max-w-[440px] mx-auto">
+              {FREE_FEATS.map((f) => (
+                <div key={f} className="flex items-start gap-2">
+                  <Check size={16} style={{ color: "var(--gold-400)", flexShrink: 0, marginTop: 2 }} />
+                  <span className="text-[13.5px] leading-snug" style={{ color: "oklch(0.92 0.03 258)" }}>{f}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </section>
