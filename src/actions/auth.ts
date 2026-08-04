@@ -29,7 +29,7 @@ export async function signup(formData: FormData) {
     password,
     options: {
       data: { full_name: fullName, role: "student" },
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/auth/callback`,
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/onboarding`,
     },
   });
 
@@ -64,7 +64,7 @@ export async function requestPasswordReset(formData: FormData) {
   const email = (formData.get("email") as string).trim();
 
   await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/auth/callback?next=/reset-password`,
+    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/reset-password`,
   });
 
   // Always report success, whether or not the email is registered — avoids leaking which emails exist.
