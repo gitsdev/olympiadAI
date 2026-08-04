@@ -6,7 +6,13 @@ import { ArrowRight, Menu, X } from "lucide-react";
 import { Logo } from "@/components/brand";
 import { OAButton } from "@/components/ui";
 
-const NAV_LINKS = ["Platform", "AI Tutor", "Subjects", "For parents", "Pricing"];
+const NAV_LINKS = [
+  { label: "Platform",    href: "#platform" },
+  { label: "AI Tutor",    href: "#ai-tutor" },
+  { label: "Subjects",    href: "#subjects" },
+  { label: "For parents", href: "#parents" },
+  { label: "Pricing",     href: "#pricing" },
+];
 
 export function MktNav() {
   const [open, setOpen] = useState(false);
@@ -22,14 +28,14 @@ export function MktNav() {
 
         {/* Desktop nav */}
         <nav className="hidden md:flex gap-6 ml-3">
-          {NAV_LINKS.map((l) => (
+          {NAV_LINKS.map(({ label, href }) => (
             <a
-              key={l}
-              href="#"
+              key={label}
+              href={href}
               className="text-[14px] font-medium transition-colors duration-[120ms] hover:text-[var(--ink-900)]"
               style={{ color: "var(--ink-700)", textDecoration: "none" }}
             >
-              {l}
+              {label}
             </a>
           ))}
         </nav>
@@ -63,15 +69,15 @@ export function MktNav() {
           className="md:hidden border-t border-[var(--line-200)] px-5 py-4 flex flex-col gap-1"
           style={{ background: "var(--surface)" }}
         >
-          {NAV_LINKS.map((l) => (
+          {NAV_LINKS.map(({ label, href }) => (
             <a
-              key={l}
-              href="#"
+              key={label}
+              href={href}
               onClick={() => setOpen(false)}
               className="text-[15px] font-medium py-2.5 px-3 rounded-[var(--r-md)] transition-colors hover:bg-[var(--fill-100)]"
               style={{ color: "var(--ink-800)", textDecoration: "none" }}
             >
-              {l}
+              {label}
             </a>
           ))}
 

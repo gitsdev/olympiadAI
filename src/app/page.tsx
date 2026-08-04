@@ -2,9 +2,9 @@ import Link from "next/link";
 import {
   Sparkles, PencilLine, Target, BarChart2, Route, Trophy,
   ArrowRight, Play, Check, CircleCheck, Star, Users,
-  BookOpen,
+  BookOpen, Sigma, FlaskConical, Globe2, ShieldCheck,
 } from "lucide-react";
-import { OAButton, OACard, OARing, OASubjectDot, OAAvatar, type Subject } from "@/components/ui";
+import { OAButton, OACard, OARing, OASubjectDot, OAAvatar, SUBJECT_COLORS, type Subject } from "@/components/ui";
 import { Logo } from "@/components/brand";
 import { MktNav } from "./MktNav";
 
@@ -152,7 +152,7 @@ function Hero() {
 
 /* ── Features ────────────────────────────────────────────────────────── */
 const FEATURES = [
-  { Icon: Sparkles,   title: "AI Tutor (RAG)",      desc: "Ask anything. The tutor retrieves your syllabus knowledge first, then explains — never guesses from memory." },
+  { id: "ai-tutor", Icon: Sparkles,   title: "AI Tutor (RAG)",      desc: "Ask anything. The tutor retrieves your syllabus knowledge first, then explains — never guesses from memory." },
   { Icon: PencilLine, title: "Unlimited practice",  desc: "Original questions generated per concept: MCQ, HOTS, reasoning, and true Olympiad-style problems." },
   { Icon: Target,     title: "Adaptive mock tests", desc: "Difficulty adjusts to your answers in real time to pinpoint your true mastery level." },
   { Icon: BarChart2,  title: "Weakness detection",  desc: "Every wrong answer, slow response, and skip becomes a precise, fixable focus area." },
@@ -162,7 +162,7 @@ const FEATURES = [
 
 function Features() {
   return (
-    <section className="py-12 sm:py-20 px-5 sm:px-8" style={{ background: "var(--paper)" }}>
+    <section id="platform" className="scroll-mt-20 py-12 sm:py-20 px-5 sm:px-8" style={{ background: "var(--paper)" }}>
       <div className="max-w-[1160px] mx-auto">
         <SectionHead
           eyebrow="The platform"
@@ -170,8 +170,8 @@ function Features() {
           sub="OlympiadAI stores knowledge, not content — discovering, structuring, and teaching from a living knowledge graph of the curriculum."
         />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {FEATURES.map(({ Icon, title, desc }) => (
-            <OACard key={title} hover style={{ padding: "22px 22px 24px" }}>
+          {FEATURES.map(({ id, Icon, title, desc }) => (
+            <OACard key={title} id={id} hover className="scroll-mt-20" style={{ padding: "22px 22px 24px" }}>
               <div
                 className="w-11 h-11 rounded-[var(--r-md)] flex items-center justify-center mb-4"
                 style={{ background: "var(--cobalt-50)" }}
@@ -187,6 +187,45 @@ function Features() {
               <p className="text-[14.5px] leading-[1.6]" style={{ color: "var(--ink-700)" }}>
                 {desc}
               </p>
+            </OACard>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ── Subjects ────────────────────────────────────────────────────────── */
+const SUBJECT_INFO: { subject: Subject; Icon: React.ElementType; desc: string }[] = [
+  { subject: "Mathematics",         Icon: Sigma,        desc: "Arithmetic to algebra — real Olympiad-style problem-solving." },
+  { subject: "Science",             Icon: FlaskConical, desc: "Physics, chemistry & biology, explained and applied." },
+  { subject: "English",             Icon: BookOpen,     desc: "Grammar, comprehension & vocabulary, Olympiad-style." },
+  { subject: "General Knowledge",   Icon: Globe2,       desc: "Current affairs, reasoning & general awareness." },
+  { subject: "Cyber",               Icon: ShieldCheck,  desc: "Computer basics, safe use & digital literacy." },
+];
+
+function Subjects() {
+  return (
+    <section id="subjects" className="scroll-mt-20 py-12 sm:py-20 px-5 sm:px-8 border-t border-[var(--line-200)]" style={{ background: "var(--paper-2)" }}>
+      <div className="max-w-[1160px] mx-auto">
+        <SectionHead
+          eyebrow="Subjects"
+          title="Every subject your Olympiad needs."
+          sub="CBSE & ICSE, Classes 1–10 — one coach across every subject you're tested on."
+        />
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+          {SUBJECT_INFO.map(({ subject, Icon, desc }) => (
+            <OACard key={subject} hover style={{ padding: "20px 18px" }}>
+              <div
+                className="w-10 h-10 rounded-[var(--r-md)] flex items-center justify-center mb-3.5"
+                style={{ background: "var(--fill-100)" }}
+              >
+                <Icon size={19} style={{ color: SUBJECT_COLORS[subject] }} />
+              </div>
+              <h3 className="font-bold text-[15px] mb-1.5 tracking-tight" style={{ fontFamily: "var(--font-display)" }}>
+                {subject}
+              </h3>
+              <p className="text-[12.5px] leading-[1.5]" style={{ color: "var(--ink-700)" }}>{desc}</p>
             </OACard>
           ))}
         </div>
@@ -257,6 +296,7 @@ function HowItWorks() {
 /* ── Audiences ───────────────────────────────────────────────────────── */
 const AUDIENCE_CARDS = [
   {
+    id: "parents",
     Icon: Users,    who: "For parents",    accent: "var(--brand)",    bg: "var(--cobalt-50)",
     title: "See real progress, not vanity badges.",
     pts: ["Weekly progress reports", "Practice time & test results", "Honest weak-area insights"],
@@ -272,8 +312,8 @@ function Audiences() {
   return (
     <section className="py-12 sm:py-20 px-5 sm:px-8" style={{ background: "var(--paper)" }}>
       <div className="max-w-[1160px] mx-auto grid grid-cols-1 sm:grid-cols-2 gap-5">
-        {AUDIENCE_CARDS.map(({ Icon, who, accent, bg, title, pts }) => (
-          <OACard key={who} style={{ padding: "24px 24px 26px", position: "relative", overflow: "hidden" }}>
+        {AUDIENCE_CARDS.map(({ id, Icon, who, accent, bg, title, pts }) => (
+          <OACard key={who} id={id} className="scroll-mt-20" style={{ padding: "24px 24px 26px", position: "relative", overflow: "hidden" }}>
             <div
               className="absolute -top-5 -right-5 w-[120px] h-[120px] rounded-full opacity-70"
               style={{ background: bg }}
@@ -372,7 +412,8 @@ const FREE_FEATS = [
 function Pricing() {
   return (
     <section
-      className="py-12 sm:py-20 px-5 sm:px-8 border-t border-[var(--line-200)]"
+      id="pricing"
+      className="scroll-mt-20 py-12 sm:py-20 px-5 sm:px-8 border-t border-[var(--line-200)]"
       style={{ background: "var(--paper-2)" }}
     >
       <div className="max-w-[1160px] mx-auto">
@@ -562,6 +603,7 @@ export default function MarketingPage() {
       <MktNav />
       <Hero />
       <Features />
+      <Subjects />
       <HowItWorks />
       <Audiences />
       <Testimonial />
