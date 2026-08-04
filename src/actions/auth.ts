@@ -59,6 +59,32 @@ export async function signup(formData: FormData) {
   redirect("/onboarding");
 }
 
+export async function requestPasswordReset(formData: FormData) {
+  const supabase = await createClient();
+  const email = (formData.get("email") as string).trim();
+
+  await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/auth/callback?next=/reset-password`,
+  });
+
+  // Always report success, whether or not the email is registered — avoids leaking which emails exist.
+  return { error: "" };
+}
+
+export async function updatePassword(formData: FormData) {
+  const password = formData.get("password") as string;
+  const confirmPassword = formData.get("confirm_password") as string;
+
+  if (password !== confirmPassword) return { error: "Passwords don't match." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) return { error: error.message };
+
+  revalidatePath("/", "layout");
+  redirect("/dashboard");
+}
+
 export async function logout() {
   const supabase = await createClient();
   await supabase.auth.signOut();

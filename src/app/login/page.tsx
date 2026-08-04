@@ -66,9 +66,14 @@ export default function LoginPage() {
           style={{ background: "var(--surface)", color: "var(--ink-900)" }}
         />
 
-        <label className="text-[12px] font-semibold" style={{ color: "var(--ink-700)" }}>
-          Password
-        </label>
+        <div className="flex items-center justify-between">
+          <label className="text-[12px] font-semibold" style={{ color: "var(--ink-700)" }}>
+            Password
+          </label>
+          <Link href="/forgot-password" className="text-[12px] font-semibold" style={{ color: "var(--brand)" }}>
+            Forgot password?
+          </Link>
+        </div>
         <input
           name="password"
           type="password"
