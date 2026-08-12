@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 
 const FloatingTeacher = dynamic(
@@ -130,7 +131,8 @@ function useVoiceInput(onResult: (text: string) => void) {
 }
 
 /* ── Page ────────────────────────────────────────────────────────────── */
-export default function TutorPage() {
+function TutorInner() {
+  const params = useSearchParams();
   const user = useStudent();
   const firstName = user.name.split(" ")[0];
 
@@ -216,6 +218,20 @@ export default function TutorPage() {
     }));
     setRefs((prev) => [...prev.map((r) => ({ ...r, fresh: false })), ...incoming]);
   }
+
+  // Deep-linked from elsewhere (e.g. a "Today's plan" item) with a question to ask immediately.
+  // Guarded with a ref (not just an empty dep array) because React Strict Mode
+  // double-invokes effects in dev, which would otherwise send the question twice.
+  const askedRef = useRef(false);
+  useEffect(() => {
+    if (askedRef.current) return;
+    const q = params.get("q");
+    if (q) {
+      askedRef.current = true;
+      send(q);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [mobileView, setMobileView] = useState<"chat" | "refs">("chat");
 
@@ -833,4 +849,12 @@ function buildAnswer(isFollow: boolean): TutorAnswer {
     follows: ["Show me on a number line", "Practice 5 questions", "What about recurring decimals?"],
     newRefs: FRACTIONS_REFS.length,
   };
+}
+
+export default function TutorPage() {
+  return (
+    <Suspense>
+      <TutorInner />
+    </Suspense>
+  );
 }

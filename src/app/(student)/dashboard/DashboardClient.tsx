@@ -187,9 +187,39 @@ export default function DashboardClient({ student, plan, weakTopics }: Props) {
   );
 }
 
+// Strip the leading verb label ("Review: ", "Watch: ", …) so the remainder
+// reads as a clean topic/question, e.g. "Review: Equivalent fractions" -> "Equivalent fractions".
+function planTopic(p: StudyPlanItem) {
+  return p.topic_name || p.title.replace(/^(Review|Watch|Read|Practice|Adaptive test):\s*/i, "");
+}
+
+function planHref(p: StudyPlanItem) {
+  const topic = planTopic(p);
+
+  // Learn-flavored items (concepts to review, resources to watch) go to the
+  // AI Tutor with the question pre-asked — Learning paths is a static mockup
+  // with no deep-linking, so the tutor is the only page that can actually
+  // teach an arbitrary topic on demand.
+  if (p.kind === "Concept" || p.kind === "Resource") {
+    return `/tutor?q=${encodeURIComponent(`Teach me about ${topic}.`)}`;
+  }
+
+  // Practice-flavored items (drills, adaptive mock tests) go straight into a
+  // matching practice session.
+  const params = new URLSearchParams({
+    subject:    p.subject,
+    topic,
+    difficulty: p.kind === "Mock test" ? "Adaptive" : "Medium",
+    count:      p.kind === "Mock test" ? "15" : "10",
+    autostart:  "1",
+  });
+  return `/practice?${params.toString()}`;
+}
+
 function PlanRow({ p }: { p: StudyPlanItem }) {
   return (
-    <div
+    <Link
+      href={planHref(p)}
       className="flex items-center gap-3 px-3 py-[11px] rounded-[var(--r-md)] border border-[var(--line-200)] transition-colors hover:bg-[var(--fill-100)]"
       style={{ background: p.done ? "var(--paper-2)" : "var(--surface)" }}
     >
@@ -211,8 +241,8 @@ function PlanRow({ p }: { p: StudyPlanItem }) {
         </div>
         <p className="text-[12px] mt-0.5" style={{ color: "var(--fg-muted)" }}>{p.kind} · {p.minutes} min</p>
       </div>
-      {!p.done && <ChevronRight size={18} style={{ color: "var(--fg-subtle)" }} />}
-    </div>
+      <ChevronRight size={18} style={{ color: "var(--fg-subtle)" }} />
+    </Link>
   );
 }
 
