@@ -23,11 +23,30 @@ const jetbrains = JetBrains_Mono({
   display: "swap",
 });
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.olympiadai.in";
+const TITLE = "OlympiadAI — Your personal Olympiad coach";
+const DESCRIPTION =
+  "AI-powered Olympiad preparation for CBSE & ICSE students, Classes 1–10. An AI tutor grounded in your syllabus, adaptive mock tests, and a readiness score that tells you exactly what to fix — free for everyone.";
+
 export const metadata: Metadata = {
-  title: "OlympiadAI — Your personal Olympiad coach",
-  description:
-    "AI-powered Olympiad preparation for CBSE & ICSE students. Learn concepts, practice questions, take mock tests, and track your improvement.",
+  metadataBase: new URL(SITE_URL),
+  title: TITLE,
+  description: DESCRIPTION,
   keywords: ["olympiad", "CBSE", "ICSE", "AI tutor", "math olympiad", "science olympiad"],
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    url: "/",
+    siteName: "OlympiadAI",
+    title: TITLE,
+    description: DESCRIPTION,
+  },
+  twitter: {
+    card: "summary",
+    title: TITLE,
+    description: DESCRIPTION,
+  },
+  verification: { google: "o5Qs5U5BAg-PxtX9cfeyRRhkU6lZtOuyRL-3Pd4rsWI" },
 };
 
 export default function RootLayout({
