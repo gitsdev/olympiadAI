@@ -6,6 +6,29 @@ import type { Board, TutorReference } from "@/types/database";
 
 const anthropic = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY });
 
+// Finds the first balanced {...} object in text, tolerating any leading/trailing
+// prose or stray markdown the model adds around the JSON payload.
+function extractJsonObject(text: string): string | null {
+  const start = text.indexOf("{");
+  if (start === -1) return null;
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (escape) { escape = false; continue; }
+    if (ch === "\\") { escape = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === "{") depth++;
+    else if (ch === "}") {
+      depth--;
+      if (depth === 0) return text.slice(start, i + 1);
+    }
+  }
+  return null;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { question, conversationHistory, studentClass, studentBoard, conversationId, outputMode } = await req.json() as {
@@ -89,9 +112,18 @@ Videos: 1–2 real YouTube videos (Khan Academy, Math Antics, Physics Wallah). O
     let tryIt: { q: string; options: string[]; correct: number; why: string } | undefined;
     let followUps: string[] = [];
     let videoSuggestions: { title: string; channel: string; videoId?: string; query: string }[] = [];
+    let parsedOk = false;
     try {
       const cleaned = raw.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
-      const parsed = JSON.parse(cleaned);
+      let parsed;
+      try {
+        parsed = JSON.parse(cleaned);
+      } catch {
+        // Model added prose/commentary around the JSON — pull out the object itself.
+        const extracted = extractJsonObject(cleaned) ?? extractJsonObject(raw);
+        if (!extracted) throw new Error("No JSON object found in response");
+        parsed = JSON.parse(extracted);
+      }
       if (parsed.answer) {
         answer     = parsed.answer;
         keyInsight = typeof parsed.keyInsight === "string" ? parsed.keyInsight : undefined;
@@ -102,9 +134,15 @@ Videos: 1–2 real YouTube videos (Khan Academy, Math Antics, Physics Wallah). O
         tryIt      = parsed.tryIt?.q                  ? parsed.tryIt     : undefined;
         followUps  = Array.isArray(parsed.followUps)  ? parsed.followUps : [];
         videoSuggestions = Array.isArray(parsed.videos) ? parsed.videos : [];
+        parsedOk = true;
       }
     } catch {
-      // Claude returned plain text — use as-is
+      // Genuinely unparseable — fall through to the friendly fallback below.
+    }
+
+    if (!parsedOk) {
+      // Never show the raw/broken JSON payload to the student.
+      answer = "Sorry, I had trouble putting that answer together — could you try rephrasing your question?";
     }
 
     const tutorRefs: TutorReference[] = [
