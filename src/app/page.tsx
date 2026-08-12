@@ -571,7 +571,7 @@ function Footer() {
           className="flex flex-col sm:flex-row items-start sm:items-center gap-1.5 pt-5 text-[12.5px]"
           style={{ color: "oklch(0.6 0.02 264)" }}
         >
-          <span>© 2026 OlympiadAI. Knowledge, not content.</span>
+          <span>© 2026 Guild IT Solutions. All Rights Reserved. | OlympiadAI</span>
           <span className="hidden sm:block flex-1" />
           <span style={{ fontFamily: "var(--font-mono)" }}>Made for ambitious students.</span>
         </div>
