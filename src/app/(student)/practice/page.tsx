@@ -315,13 +315,13 @@ function PracticeInner() {
             </span>
           </div>
 
-          {/* Progress dots */}
+          {/* Progress dots — answered/current/upcoming only, no correctness reveal mid-exam */}
           <div className="flex gap-1.5 mb-6">
             {questions.map((_, i) => (
               <div key={i} className="flex-1 h-[5px] rounded-full transition-colors"
                 style={{
                   background: i < idx
-                    ? answers[i]?.isCorrect ? "var(--success)" : "var(--danger)"
+                    ? "var(--cobalt-300)"
                     : i === idx ? "var(--brand)" : "var(--fill-200)",
                 }} />
             ))}
