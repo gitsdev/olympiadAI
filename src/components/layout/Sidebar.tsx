@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Home, Sparkles, PencilLine, BarChart2,
-  Route, FileText, Trophy, Flame, X,
+  Route, FileText, Trophy, Flame, X, Zap,
 } from "lucide-react";
 import { Logo } from "@/components/brand";
 import { OAAvatar } from "@/components/ui";
@@ -18,9 +18,10 @@ const NAV_ITEMS = [
 ];
 
 const LIBRARY_ITEMS = [
-  { href: "/learn",        label: "Learning paths", Icon: Route },
-  { href: "/tests",        label: "Mock tests",     Icon: FileText },
-  { href: "/achievements", label: "Achievements",   Icon: Trophy },
+  { href: "/learn",         label: "Learning paths", Icon: Route },
+  { href: "/tests",         label: "Mock tests",     Icon: FileText },
+  { href: "/maths-tricks",  label: "Maths Tricks",   Icon: Zap },
+  { href: "/achievements",  label: "Achievements",   Icon: Trophy },
 ];
 
 interface SidebarProps {
