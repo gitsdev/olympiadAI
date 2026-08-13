@@ -215,7 +215,7 @@ export default function SettingsPage() {
 
         {/* ── Subjects ── */}
         <OACard style={{ padding: "20px 24px" }}>
-          <SettingHeader Icon={BookOpen} title="Subjects" sub="Choose what OlympiadAI prepares you for." />
+          <SettingHeader Icon={BookOpen} title="Subjects" sub="Choose what OlympiadIQ prepares you for." />
           <div className="flex flex-wrap gap-2.5 mt-3.5">
             {ALL_SUBJECTS.map((s) => {
               const on = subjects.includes(s);

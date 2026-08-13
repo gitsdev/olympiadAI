@@ -21,7 +21,7 @@ export function Logo({
     <div className={cn("flex items-center gap-2.5", className)}>
       <Image
         src={mono ? "/assets/logo-mark-mono.svg" : "/assets/logo-mark.svg"}
-        alt="OlympiadAI"
+        alt="OlympiadIQ"
         width={size}
         height={size}
         style={{ borderRadius: Math.round(size * 0.234), flexShrink: 0 }}
@@ -35,11 +35,14 @@ export function Logo({
             fontSize: size * 0.75,
             letterSpacing: "-0.02em",
             lineHeight: 1,
-            color: "var(--fg)",
+            // mono is used on dark/inverted backgrounds (e.g. the footer) —
+            // an inline color here can't be beaten by an external className,
+            // so the light/dark choice has to live inside the component.
+            color: mono ? "#fff" : "var(--fg)",
           }}
         >
           Olympiad
-          <span style={{ color: "var(--brand)" }}>AI</span>
+          <span style={{ color: "var(--brand)" }}>IQ</span>
         </span>
       )}
     </div>

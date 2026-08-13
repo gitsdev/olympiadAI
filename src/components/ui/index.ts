@@ -1,4 +1,4 @@
-// OlympiadAI UI primitives
+// OlympiadIQ UI primitives
 export * from "./oa-button";
 export * from "./oa-badge";
 export * from "./oa-card";

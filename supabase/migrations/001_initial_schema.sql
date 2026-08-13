@@ -1,4 +1,4 @@
--- OlympiadAI — Initial schema
+-- OlympiadIQ — Initial schema
 -- Run this via Supabase SQL editor or supabase db push
 
 -- Enable required extensions

@@ -380,7 +380,7 @@ function TutorInner() {
 
                   <div className="flex items-center gap-1.5" style={{ color: "var(--fg-subtle)", fontSize: 11.5 }}>
                     <CheckCircle2 size={13} style={{ color: "var(--success)" }} />
-                    Grounded in OlympiadAI&apos;s knowledge graph — never invented.
+                    Grounded in OlympiadIQ&apos;s knowledge graph — never invented.
                   </div>
                 </div>
               </div>
@@ -679,7 +679,7 @@ function VideoModal({ r, onClose }: { r: Ref; onClose: () => void }) {
         {/* Footer */}
         <div className="flex items-center justify-between px-4 py-2.5" style={{ background: "var(--ink-900)" }}>
           <p className="text-[11.5px]" style={{ color: "oklch(0.55 0.02 264)" }}>
-            Suggested by OlympiadAI tutor
+            Suggested by OlympiadIQ tutor
           </p>
           {(r.searchUrl ?? r.url) && (
             <a

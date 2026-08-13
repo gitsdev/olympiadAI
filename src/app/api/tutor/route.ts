@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
       ...resources.map((r) => `RESOURCE: ${r.title} (${r.source_name})\n${r.ai_summary ?? ""}`),
     ].join("\n\n---\n\n");
 
-    const systemPrompt = `You are OlympiadAI, an expert tutor for CBSE & ICSE students (Class ${studentClass}). Warm, precise, encouraging.
+    const systemPrompt = `You are OlympiadIQ, an expert tutor for CBSE & ICSE students (Class ${studentClass}). Warm, precise, encouraging.
 
 KNOWLEDGE CONTEXT:
 ${ragContext || "Answer from general curriculum knowledge."}

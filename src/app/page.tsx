@@ -46,7 +46,7 @@ function Hero() {
           className="text-[16px] sm:text-[19px] leading-[1.6] max-w-[600px] mx-auto mb-8"
           style={{ color: "var(--ink-700)" }}
         >
-          OlympiadAI builds a personalized path for CBSE &amp; ICSE students — Classes 1–10. An AI
+          OlympiadIQ builds a personalized path for CBSE &amp; ICSE students — Classes 1–10. An AI
           tutor that actually knows your syllabus, adaptive mock tests, and a readiness score that
           tells you exactly what to fix.
         </p>
@@ -79,7 +79,7 @@ function Hero() {
               <span key={i} className="w-[11px] h-[11px] rounded-full" style={{ background: "var(--line-300)" }} />
             ))}
             <span className="ml-2.5 text-[12px]" style={{ fontFamily: "var(--font-mono)", color: "var(--fg-muted)" }}>
-              app.olympiad.ai/learn
+              app.olympiadiq.in/learn
             </span>
           </div>
 
@@ -167,7 +167,7 @@ function Features() {
         <SectionHead
           eyebrow="The platform"
           title="Six engines. One coach."
-          sub="OlympiadAI stores knowledge, not content — discovering, structuring, and teaching from a living knowledge graph of the curriculum."
+          sub="OlympiadIQ stores knowledge, not content — discovering, structuring, and teaching from a living knowledge graph of the curriculum."
         />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {FEATURES.map(({ id, Icon, title, desc }) => (
@@ -536,7 +536,7 @@ function Footer() {
           style={{ borderColor: "oklch(1 0 0 / 0.10)" }}>
           {/* Brand — full width on mobile, spans first row */}
           <div className="col-span-2 sm:col-span-3 lg:col-span-1">
-            <Logo size={26} mono className="[&_span]:text-white" />
+            <Logo size={26} mono />
             <p
               className="text-[13.5px] leading-[1.6] mt-3.5 max-w-[240px]"
               style={{ color: "oklch(0.72 0.02 264)" }}
@@ -571,7 +571,7 @@ function Footer() {
           className="flex flex-col sm:flex-row items-start sm:items-center gap-1.5 pt-5 text-[12.5px]"
           style={{ color: "oklch(0.6 0.02 264)" }}
         >
-          <span>© 2026 Guild IT Solutions. All Rights Reserved. | OlympiadAI</span>
+          <span>© 2026 Guild IT Solutions. All Rights Reserved. | OlympiadIQ</span>
           <span className="hidden sm:block flex-1" />
           <span style={{ fontFamily: "var(--font-mono)" }}>Made for ambitious students.</span>
         </div>

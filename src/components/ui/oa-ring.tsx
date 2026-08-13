@@ -15,7 +15,7 @@ interface OARingProps {
 }
 
 /**
- * Readiness ring — the signature OlympiadAI SVG ring metric.
+ * Readiness ring — the signature OlympiadIQ SVG ring metric.
  * Renders an animated circular progress ring with children centred inside.
  */
 function OARing({
