@@ -139,8 +139,7 @@ function PracticeInner() {
   }
 
   function choose(i: number) {
-    if (picked !== null) return; // already answered
-    setPicked(i);
+    setPicked(i); // stays changeable until "Next question" is clicked
   }
 
   async function advance() {
@@ -343,7 +342,7 @@ function PracticeInner() {
             {cur.question_text}
           </h2>
 
-          {/* Options — no reveal, just selection highlight */}
+          {/* Options — changeable until "Next question", no correctness reveal */}
           <div className="flex flex-col gap-2.5">
             {cur.options.map((o, i) => {
               const isSelected = i === picked;
@@ -351,13 +350,10 @@ function PracticeInner() {
                 <button
                   key={i}
                   onClick={() => choose(i)}
-                  disabled={picked !== null}
                   className={cn(
                     "flex items-center gap-3 text-left w-full px-4 py-3.5 rounded-[var(--r-md)] border-[1.5px] transition-all duration-[120ms]",
-                    picked === null && "cursor-pointer hover:border-[var(--cobalt-400)] hover:bg-[var(--cobalt-50)] active:scale-[0.995]",
-                    isSelected && "border-[var(--cobalt-400)] bg-[var(--cobalt-50)]",
-                    !isSelected && "border-[var(--line-300)] bg-[var(--surface)]",
-                    picked !== null && !isSelected && "cursor-default opacity-60",
+                    "cursor-pointer hover:border-[var(--cobalt-400)] hover:bg-[var(--cobalt-50)] active:scale-[0.995]",
+                    isSelected ? "border-[var(--cobalt-400)] bg-[var(--cobalt-50)]" : "border-[var(--line-300)] bg-[var(--surface)]",
                   )}>
                   <span
                     className="w-7 h-7 rounded-[8px] shrink-0 flex items-center justify-center font-bold text-[13px]"
