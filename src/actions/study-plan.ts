@@ -2,11 +2,32 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenAI, Type } from "@google/genai";
+import { withRetry } from "@/lib/ai-retry";
 import { asStudent, asMetrics } from "@/lib/supabase/types-helper";
 import type { Subject, StudyPlanItem } from "@/types/database";
 
-const anthropic = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY });
+const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+// flash-lite: fixed-shape schema output — fast and reliable under free-tier
+// load. See api/questions/route.ts for the same choice and why.
+const MODEL = "gemini-3.5-flash-lite";
+
+const STUDY_PLAN_SCHEMA = {
+  type: Type.ARRAY,
+  items: {
+    type: Type.OBJECT,
+    properties: {
+      id:      { type: Type.STRING },
+      title:   { type: Type.STRING, description: "Brief task description" },
+      subject: { type: Type.STRING },
+      subj:    { type: Type.STRING, description: "Same value as subject" },
+      kind:    { type: Type.STRING, enum: ["Concept", "Practice", "Resource", "Mock test"] },
+      minutes: { type: Type.INTEGER },
+      done:    { type: Type.BOOLEAN },
+    },
+    required: ["id", "title", "subject", "subj", "kind", "minutes", "done"],
+  },
+};
 
 export async function generateStudyPlan() {
   try {
@@ -37,38 +58,25 @@ export async function generateStudyPlan() {
       ? metrics.map((m) => `- ${m.subject}: ${m.topic_name} (mastery ${Math.round(Number(m.mastery_score))}%)`).join("\n")
       : `Subjects enrolled: ${subjects.join(", ") || "Mathematics, Science"}`;
 
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 1024,
-      messages: [{
-        role: "user",
-        content: `You are an Olympiad study coach. Generate a focused daily study plan for a ${student.board} Class ${student.class_level} student.
+    const response = await withRetry(() => genai.models.generateContent({
+      model: MODEL,
+      contents: `You are an Olympiad study coach. Generate a focused daily study plan for a ${student.board} Class ${student.class_level} student.
 
 Weak topics to prioritise:
 ${weakSection}
 
-Return ONLY a valid JSON array of 4–5 study tasks (no markdown):
-[{
-  "id": "1",
-  "title": "Brief task description",
-  "subject": "Mathematics",
-  "subj": "Mathematics",
-  "kind": "Concept",
-  "minutes": 10,
-  "done": false
-}]
+Generate 4–5 study tasks. Mix kinds. Keep total minutes ≤ 60.`,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: STUDY_PLAN_SCHEMA,
+      },
+    }));
 
-kind must be one of: Concept, Practice, Resource, Mock test.
-Mix types. Keep total ≤ 60 min.`,
-      }],
-    });
-
-    const raw = response.content[0].type === "text" ? response.content[0].text : "[]";
-    const jsonStr = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+    const raw = response.text ?? "[]";
 
     let items: StudyPlanItem[];
     try {
-      items = JSON.parse(jsonStr);
+      items = JSON.parse(raw);
       if (!Array.isArray(items) || items.length === 0) return null;
     } catch {
       return null;

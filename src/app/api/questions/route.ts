@@ -1,15 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenAI, Type } from "@google/genai";
 
-export const maxDuration = 60; // seconds — needed for parallel batch generation
+export const maxDuration = 60; // seconds — needed for sequential batch generation
 import { createClient } from "@/lib/supabase/server";
 import { asConcepts } from "@/lib/supabase/types-helper";
+import { withRetry } from "@/lib/ai-retry";
 import type { Board, Subject, Difficulty } from "@/types/database";
 
-const anthropic = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY });
+const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+// flash-lite: fixed-shape schema output at high volume — fast and reliable
+// under free-tier load. The flagship "gemini-3.7-flash" was intermittently
+// 503ing under demand when tested; revisit once that settles.
+const MODEL = "gemini-3.5-flash-lite";
 
-// Max questions per single Claude call — keeps each response well within 8 192 token budget
+// Max questions per single Gemini call — keeps each response well within budget
 const BATCH_SIZE = 12;
+
+// Fixed-shape JSON schema for RawQuestion[] — Gemini is constrained to match
+// this exactly, so there's no need for regex-based JSON extraction/fallback.
+const QUESTIONS_SCHEMA = {
+  type: Type.ARRAY,
+  items: {
+    type: Type.OBJECT,
+    properties: {
+      q: { type: Type.STRING, description: "Question text" },
+      o: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Exactly 4 answer options" },
+      a: { type: Type.INTEGER, description: "Index (0-3) of the correct option" },
+      e: { type: Type.STRING, description: "2-3 sentence explanation" },
+    },
+    required: ["q", "o", "a", "e"],
+  },
+};
 
 export interface GeneratedQuestion {
   question_text: string;
@@ -21,7 +42,7 @@ export interface GeneratedQuestion {
   estimated_time_seconds: number;
 }
 
-// Compact schema Claude must return (redundant fields filled server-side)
+// Compact schema the model must return (redundant fields filled server-side)
 interface RawQuestion {
   q: string;          // question text
   o: string[];        // 4 options
@@ -68,14 +89,24 @@ async function generateBatch(
   systemPrompt: string,
   userMsg: string,
 ): Promise<RawQuestion[]> {
-  const response = await anthropic.messages.create({
-    model:      "claude-sonnet-4-6",
-    max_tokens: 8192,
-    system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
-    messages: [{ role: "user", content: userMsg }],
-  });
+  const response = await withRetry(() => genai.models.generateContent({
+    model: MODEL,
+    contents: userMsg,
+    config: {
+      systemInstruction: systemPrompt,
+      responseMimeType: "application/json",
+      responseSchema: QUESTIONS_SCHEMA,
+    },
+  }));
 
-  const raw = response.content[0].type === "text" ? response.content[0].text : "[]";
+  const raw = response.text ?? "[]";
+  // Schema-constrained output should already be valid JSON matching the
+  // schema; extractQuestions is a defensive fallback (e.g. a safety block
+  // or truncated response), not the primary parsing path.
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed.slice(0, n);
+  } catch { /* fall through to the robust extractor */ }
   return extractQuestions(raw).slice(0, n);
 }
 

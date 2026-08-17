@@ -370,10 +370,10 @@ function TutorInner() {
                       color:       outputMode === "fast" ? "var(--cobalt-700)" : "var(--fg-muted)",
                     }}
                     title={outputMode === "fast"
-                      ? "Fast · Haiku 4.5 — click for Normal · Sonnet 4.6"
-                      : "Normal · Sonnet 4.6 — click for Fast · Haiku 4.5"}
+                      ? "Fast · Groq — click for Normal · Gemini"
+                      : "Normal · Gemini — click for Fast · Groq"}
                   >
-                    {outputMode === "fast" ? "⚡ Fast · Haiku 4.5" : "🎯 Normal · Sonnet 4.6"}
+                    {outputMode === "fast" ? "⚡ Fast · Groq" : "🎯 Normal · Gemini"}
                   </button>
 
                   <span className="flex-1" />

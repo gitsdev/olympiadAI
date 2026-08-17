@@ -1,10 +1,66 @@
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenAI } from "@google/genai";
+import Groq from "groq-sdk";
 import { createClient } from "@/lib/supabase/server";
 import { asConcepts, asResources, asStudent } from "@/lib/supabase/types-helper";
+import { withRetry } from "@/lib/ai-retry";
 import type { Board, TutorReference } from "@/types/database";
 
-const anthropic = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY });
+const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const groq  = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
+// "Fast" mode -> Groq (fast inference, decent instruction-following).
+// "Normal" mode -> Gemini (stronger reasoning for harder questions).
+const GROQ_MODEL   = "openai/gpt-oss-120b";
+// "gemini-3.7-flash" (the flagship) was intermittently 503ing under
+// free-tier demand when tested; 3.5-flash is stable and still strong.
+const GEMINI_MODEL = "gemini-3.5-flash";
+
+type ChatTurn = { role: "user" | "assistant"; content: string };
+
+async function generateTutorReply(
+  outputMode: "fast" | "normal" | undefined,
+  systemPrompt: string,
+  conversationHistory: ChatTurn[],
+  question: string,
+): Promise<{ text: string; usage: unknown }> {
+  if (outputMode === "fast") {
+    const completion = await withRetry(() => groq.chat.completions.create({
+      model: GROQ_MODEL,
+      max_completion_tokens: 1024,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: systemPrompt },
+        ...conversationHistory,
+        { role: "user", content: question },
+      ],
+    }));
+    return { text: completion.choices[0]?.message?.content ?? "{}", usage: completion.usage };
+  }
+
+  // Gemini uses role "model" (not "assistant") for prior turns.
+  const contents = [
+    ...conversationHistory.map((m) => ({
+      role: m.role === "assistant" ? "model" : "user",
+      parts: [{ text: m.content }],
+    })),
+    { role: "user", parts: [{ text: question }] },
+  ];
+
+  const response = await withRetry(() => genai.models.generateContent({
+    model: GEMINI_MODEL,
+    contents,
+    config: {
+      systemInstruction: systemPrompt,
+      responseMimeType: "application/json",
+      // Gemini's "thinking" tokens count against this budget too (not just
+      // the visible JSON answer), so this needs real headroom — 2048 was
+      // truncating responses mid-JSON.
+      maxOutputTokens: 4096,
+    },
+  }));
+  return { text: response.text ?? "{}", usage: response.usageMetadata };
+}
 
 // Finds the first balanced {...} object in text, tolerating any leading/trailing
 // prose or stray markdown the model adds around the JSON payload.
@@ -39,9 +95,6 @@ export async function POST(req: NextRequest) {
       conversationId?: string | null;
       outputMode?: "fast" | "normal";
     };
-
-    const model      = outputMode === "normal" ? "claude-sonnet-4-6"        : "claude-haiku-4-5-20251001";
-    const maxTokens  = outputMode === "normal" ? 2048                        : 1024;
 
     if (!question?.trim()) {
       return NextResponse.json({ error: "Question is required" }, { status: 400 });
@@ -93,17 +146,9 @@ Visual types: fraction:{n,d} | number_line:{min,max,points:[{value,label,highlig
 Use none only for pure language topics. For maths/science always include a visual.
 Videos: 1–2 real YouTube videos (Khan Academy, Math Antics, Physics Wallah). Only include videoId if you are certain it is correct.`;
 
-    const response = await anthropic.messages.create({
-      model,
-      max_tokens: maxTokens,
-      system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
-      messages: [
-        ...conversationHistory,
-        { role: "user", content: question },
-      ],
-    });
-
-    const raw = response.content[0].type === "text" ? response.content[0].text : "{}";
+    const { text: raw, usage } = await generateTutorReply(
+      outputMode, systemPrompt, conversationHistory, question
+    );
 
     let answer = raw;
     let keyInsight: string | undefined;
@@ -146,7 +191,7 @@ Videos: 1–2 real YouTube videos (Khan Academy, Math Antics, Physics Wallah). O
     }
 
     const tutorRefs: TutorReference[] = [
-      // YouTube video suggestions from Claude
+      // YouTube video suggestions from the model
       ...videoSuggestions.map((v, i) => ({
         id:        `yt-${Date.now()}-${i}`,
         type:      "video" as const,
@@ -218,7 +263,7 @@ Videos: 1–2 real YouTube videos (Khan Academy, Math Antics, Physics Wallah). O
       tryIt,
       followUps,
       references:     tutorRefs,
-      usage:          response.usage,
+      usage,
       conversationId: conversationId ?? null,
     });
 
