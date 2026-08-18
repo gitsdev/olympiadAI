@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Home, Sparkles, PencilLine, BarChart2,
-  Route, FileText, Trophy, Flame, X, Zap,
+  Route, FileText, Trophy, Flame, X, Zap, Brain,
 } from "lucide-react";
 import { Logo } from "@/components/brand";
 import { OAAvatar } from "@/components/ui";
@@ -22,6 +22,7 @@ const LIBRARY_ITEMS = [
   { href: "/tests",         label: "Mock tests",     Icon: FileText },
   { href: "/maths-tricks",  label: "Maths Tricks",   Icon: Zap },
   { href: "/achievements",  label: "Achievements",   Icon: Trophy },
+  { href: "/brain-booster", label: "Brain Booster",  Icon: Brain },
 ];
 
 interface SidebarProps {
