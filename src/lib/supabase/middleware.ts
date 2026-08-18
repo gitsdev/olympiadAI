@@ -33,7 +33,9 @@ export async function updateSession(request: NextRequest) {
     "/", "/login", "/signup", "/signup/confirm", "/onboarding", "/auth/callback", "/auth/confirm",
     "/forgot-password", "/reset-password",
   ];
-  const isPublic = PUBLIC.some((p) => pathname === p || pathname.startsWith("/api/"));
+  const isPublic = PUBLIC.some((p) => pathname === p)
+    || pathname.startsWith("/api/")
+    || pathname.startsWith("/brain-booster");
 
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();

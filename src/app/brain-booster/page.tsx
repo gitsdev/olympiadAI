@@ -1,9 +1,8 @@
-"use client";
-
 import Link from "next/link";
 import { Brain, Gauge, Eye, Timer, Lock, ArrowRight } from "lucide-react";
-import { AppShell } from "@/components/layout";
+import { createClient } from "@/lib/supabase/server";
 import { OACard } from "@/components/ui";
+import { BrainBoosterHeader } from "./BrainBoosterHeader";
 
 const BENEFITS = [
   { Icon: Gauge, title: "Faster processing", desc: "Short, timed challenges train the brain to recognise patterns and react quicker." },
@@ -25,10 +24,27 @@ const GAMES: Game[] = [
   { slug: "pattern-blitz", title: "Pattern Blitz",  emoji: "🔷", desc: "Spot the next shape in the sequence before time runs out.", live: false },
 ];
 
-export default function BrainBoosterPage() {
+export default async function BrainBoosterPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
   return (
-    <AppShell title="Brain Booster" subtitle="Quick games that sharpen focus, speed & memory">
-      <div className="max-w-[1000px] mx-auto px-4 sm:px-7 py-6 pb-10">
+    <div className="min-h-screen" style={{ background: "var(--paper)" }}>
+      <BrainBoosterHeader loggedIn={!!user} />
+
+      <div className="max-w-[1000px] mx-auto px-4 sm:px-7 py-8 pb-14">
+        <div className="mb-7">
+          <h1
+            className="font-black tracking-tight mb-1.5"
+            style={{ fontFamily: "var(--font-display)", fontSize: "clamp(26px, 4vw, 36px)", letterSpacing: "-0.02em", color: "var(--ink-900)" }}
+          >
+            Brain Booster
+          </h1>
+          <p className="text-[14.5px]" style={{ color: "var(--fg-muted)" }}>
+            Quick games that sharpen focus, speed &amp; memory — free for everyone, no login required.
+          </p>
+        </div>
+
         {/* Intro */}
         <OACard className="mb-7 flex flex-col sm:flex-row gap-5 sm:items-center">
           <div
@@ -120,6 +136,6 @@ export default function BrainBoosterPage() {
           })}
         </div>
       </div>
-    </AppShell>
+    </div>
   );
 }

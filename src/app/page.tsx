@@ -3,6 +3,7 @@ import {
   Sparkles, PencilLine, Target, BarChart2, Route, Trophy,
   ArrowRight, Play, Check, CircleCheck, Star, Users,
   BookOpen, Sigma, FlaskConical, Globe2, ShieldCheck,
+  Brain, Gauge, Eye,
 } from "lucide-react";
 import { OAButton, OACard, OARing, OASubjectDot, OAAvatar, SUBJECT_COLORS, type Subject } from "@/components/ui";
 import { Logo } from "@/components/brand";
@@ -228,6 +229,73 @@ function Subjects() {
               <p className="text-[12.5px] leading-[1.5]" style={{ color: "var(--ink-700)" }}>{desc}</p>
             </OACard>
           ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ── Brain Booster ───────────────────────────────────────────────────── */
+const BOOSTER_POINTS = [
+  { Icon: Gauge, text: "Trains faster mental processing" },
+  { Icon: Eye,   text: "Builds sharper focus & attention" },
+  { Icon: Brain, text: "Free for everyone — no login needed" },
+];
+
+function BrainBoosterPromo() {
+  return (
+    <section className="py-12 sm:py-20 px-5 sm:px-8 border-t border-[var(--line-200)]" style={{ background: "var(--paper)" }}>
+      <div className="max-w-[1160px] mx-auto">
+        <div
+          className="rounded-[var(--r-2xl)] border border-[var(--line-200)] overflow-hidden grid grid-cols-1 lg:grid-cols-2"
+          style={{ background: "var(--surface)", boxShadow: "var(--shadow-lg)" }}
+        >
+          <div className="p-7 sm:p-10 flex flex-col justify-center">
+            <p className="t-overline mb-3" style={{ color: "var(--brand)" }}>Beyond the syllabus</p>
+            <h2
+              className="font-bold leading-[1.14] tracking-tight mb-3.5"
+              style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.025em", color: "var(--ink-900)", fontSize: "clamp(24px, 3.5vw, 34px)" }}
+            >
+              Brain Booster: quick games for a sharper mind.
+            </h2>
+            <p className="text-[15px] leading-[1.6] mb-6" style={{ color: "var(--ink-700)" }}>
+              Real exams reward focus and speed, not just knowledge. Brain Booster is a growing set of short,
+              playful cognitive games — starting with Number Ninja — that build the mental sharpness curriculum
+              study alone doesn&apos;t reach.
+            </p>
+            <div className="flex flex-col gap-2.5 mb-7">
+              {BOOSTER_POINTS.map(({ Icon, text }) => (
+                <div key={text} className="flex items-center gap-2.5">
+                  <Icon size={16} style={{ color: "var(--brand)", flexShrink: 0 }} />
+                  <span className="text-[14px]" style={{ color: "var(--ink-700)" }}>{text}</span>
+                </div>
+              ))}
+            </div>
+            <Link href="/brain-booster">
+              <OAButton variant="primary" size="lg" className="w-full sm:w-auto">
+                Play Brain Booster <ArrowRight size={18} />
+              </OAButton>
+            </Link>
+          </div>
+
+          <div
+            className="relative flex flex-col items-center justify-center gap-4 p-10"
+            style={{ background: "var(--cobalt-50)" }}
+          >
+            <div
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-bold"
+              style={{ background: "var(--gold-400)", color: "var(--ink-900)" }}
+            >
+              <Sparkles size={13} /> LIVE NOW
+            </div>
+            <div className="text-[88px] leading-none">🥷</div>
+            <p className="font-bold text-[17px]" style={{ fontFamily: "var(--font-display)", color: "var(--ink-900)" }}>
+              Number Ninja
+            </p>
+            <p className="text-[13px] text-center max-w-[220px]" style={{ color: "var(--ink-700)" }}>
+              Slice the numbers 1 → N in order, as fast as you can.
+            </p>
+          </div>
         </div>
       </div>
     </section>
@@ -604,6 +672,7 @@ export default function MarketingPage() {
       <Hero />
       <Features />
       <Subjects />
+      <BrainBoosterPromo />
       <HowItWorks />
       <Audiences />
       <Testimonial />
