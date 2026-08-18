@@ -13,8 +13,14 @@ const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 // 503ing under demand when tested; revisit once that settles.
 const MODEL = "gemini-3.5-flash-lite";
 
-// Max questions per single Gemini call — keeps each response well within budget
-const BATCH_SIZE = 12;
+// Max questions per single Gemini call. The free tier caps this model at
+// 15 requests/minute for the WHOLE app (shared with study-plan generation),
+// not tokens — so splitting one user's request into several parallel calls
+// directly multiplies quota pressure for no benefit. A single call reliably
+// handles up to the UI's largest count (40, from Mock Tests) within budget,
+// so BATCH_SIZE is set to cover that and effectively disable splitting;
+// it only kicks in as a defensive fallback if count ever exceeds this.
+const BATCH_SIZE = 40;
 
 // Fixed-shape JSON schema for RawQuestion[] — Gemini is constrained to match
 // this exactly, so there's no need for regex-based JSON extraction/fallback.
@@ -96,6 +102,10 @@ async function generateBatch(
       systemInstruction: systemPrompt,
       responseMimeType: "application/json",
       responseSchema: QUESTIONS_SCHEMA,
+      // Generous ceiling for a single call generating up to BATCH_SIZE (40)
+      // verbose HOTS questions — no cost to over-provisioning this, since
+      // actual usage is billed/capped by what the model actually generates.
+      maxOutputTokens: 16384,
     },
   }));
 
@@ -180,10 +190,18 @@ Return ONLY a valid JSON array — no markdown, no preamble:
         batches.push(n);
         remaining -= n;
       }
-      const results = await Promise.all(
+      // allSettled, not all — one exhausted-retry batch (rare but real under
+      // free-tier contention) shouldn't sink questions the other batches
+      // already generated successfully. Only fail outright if every batch failed.
+      const results = await Promise.allSettled(
         batches.map((n) => generateBatch(n, systemPrompt, userMsg.replace("{N}", String(n))))
       );
-      rawQuestions = results.flat();
+      results.forEach((r, i) => {
+        if (r.status === "rejected") {
+          console.error(`[/api/questions] batch ${i} failed:`, r.reason);
+        }
+      });
+      rawQuestions = results.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
     }
 
     if (rawQuestions.length === 0) {

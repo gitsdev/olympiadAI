@@ -9,7 +9,10 @@ export async function withRetry<T>(fn: () => Promise<T>, attempts = 3, baseDelay
     } catch (err) {
       lastErr = err;
       const status = (err as { status?: number })?.status;
-      const retryable = status === 503 || status === 429;
+      // 503/429 are the documented transient free-tier errors; other 5xx and
+      // network-level failures (no status — timeout, ECONNRESET, etc.) are
+      // also worth a retry rather than failing the whole batch outright.
+      const retryable = status === undefined || status === 429 || (status >= 500 && status < 600);
       if (!retryable || i === attempts - 1) throw err;
       await new Promise((r) => setTimeout(r, baseDelayMs * (i + 1)));
     }
