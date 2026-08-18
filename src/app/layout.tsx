@@ -23,7 +23,7 @@ const jetbrains = JetBrains_Mono({
   display: "swap",
 });
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.olympiadai.in";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.olympiadiq.in";
 const TITLE = "OlympiadIQ — Your personal Olympiad coach";
 const DESCRIPTION =
   "AI-powered Olympiad preparation for CBSE & ICSE students, Classes 1–10. An AI tutor grounded in your syllabus, adaptive mock tests, and a readiness score that tells you exactly what to fix — free for everyone.";
