@@ -21,7 +21,7 @@ interface Game {
 const GAMES: Game[] = [
   { slug: "number-ninja", title: "Number Ninja", emoji: "🥷", desc: "Slice the numbers 1 → N in order, as fast as you can.", live: true },
   { slug: "memory-match",  title: "Memory Match",  emoji: "🧩", desc: "Flip and match pairs to train visual memory.", live: true },
-  { slug: "pattern-blitz", title: "Pattern Blitz",  emoji: "🔷", desc: "Spot the next shape in the sequence before time runs out.", live: false },
+  { slug: "pattern-blitz", title: "Pattern Blitz",  emoji: "🔷", desc: "Spot the next shape in the sequence before time runs out.", live: true },
 ];
 
 export default async function BrainBoosterPage() {
