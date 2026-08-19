@@ -35,7 +35,11 @@ export async function updateSession(request: NextRequest) {
   ];
   const isPublic = PUBLIC.some((p) => pathname === p)
     || pathname.startsWith("/api/")
-    || pathname.startsWith("/brain-booster");
+    || pathname.startsWith("/brain-booster")
+    // "/learn/" (trailing slash) only — bare "/learn" is the authenticated
+    // knowledge-graph dashboard and stays gated; "/learn/<slug>" is the
+    // public topic-page route.
+    || pathname.startsWith("/learn/");
 
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();

@@ -1,0 +1,137 @@
+[
+  {
+    "name": "Rational Numbers",
+    "topics": [
+      {
+        "name": "Introduction to Rational Numbers",
+        "summary": "Understanding numbers that can be expressed in the form p by q where p and q are integers and q is not equal to zero.",
+        "olympiadTags": [
+          "SOF IMO"
+        ]
+      },
+      {
+        "name": "Properties of Rational Numbers",
+        "summary": "Exploring closure, commutative, associative, and distributive properties under addition, subtraction, multiplication, and division.",
+        "olympiadTags": [
+          "SOF IMO"
+        ]
+      },
+      {
+        "name": "Representation on Number Line",
+        "summary": "Graphically positioning rational numbers accurately on a straight number line.",
+        "olympiadTags": [
+          "SOF IMO"
+        ]
+      },
+      {
+        "name": "Rational Numbers Between Two Rational Numbers",
+        "summary": "Finding infinite rational numbers lying between any two given distinct rational numbers.",
+        "olympiadTags": [
+          "SOF IMO",
+          "IOQM"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Linear Equations in One Variable",
+    "topics": [
+      {
+        "name": "Algebraic Expressions and Equations",
+        "summary": "Distinguishing between algebraic expressions and equations involving an equality sign.",
+        "olympiadTags": [
+          "SOF IMO"
+        ]
+      },
+      {
+        "name": "Solving Equations with Variables on Both Sides",
+        "summary": "Applying balancing methods to isolate variables present on both sides of a linear equation.",
+        "olympiadTags": [
+          "SOF IMO"
+        ]
+      },
+      {
+        "name": "Reducing Equations to Simpler Form",
+        "summary": "Simplifying complex linear equations into standard forms before solving them.",
+        "olympiadTags": [
+          "SOF IMO"
+        ]
+      },
+      {
+        "name": "Word Problems on Linear Equations",
+        "summary": "Translating real-world scenarios into mathematical linear equations to find unknown values.",
+        "olympiadTags": [
+          "SOF IMO",
+          "IOQM"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Squares and Square Roots",
+    "topics": [
+      {
+        "name": "Properties of Square Numbers",
+        "summary": "Identifying patterns and characteristic properties of numbers obtained by squaring integers.",
+        "olympiadTags": [
+          "SOF IMO"
+        ]
+      },
+      {
+        "name": "Finding Square Roots by Prime Factorization",
+        "summary": "Computing the square root of a number by breaking it down into its prime factors.",
+        "olympiadTags": [
+          "SOF IMO"
+        ]
+      },
+      {
+        "name": "Finding Square Roots by Division Method",
+        "summary": "Using the long division algorithm to determine the square root of larger numbers.",
+        "olympiadTags": [
+          "SOF IMO"
+        ]
+      },
+      {
+        "name": "Square Roots of Decimals",
+        "summary": "Calculating square roots for numbers containing decimal points using appropriate grouping methods.",
+        "olympiadTags": [
+          "SOF IMO"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Exponents and Powers",
+    "topics": [
+      {
+        "name": "Powers with Negative Exponents",
+        "summary": "Understanding how negative exponents represent the reciprocal of the base raised to a positive power.",
+        "olympiadTags": [
+          "SOF IMO"
+        ]
+      },
+      {
+        "name": "Laws of Exponents",
+        "summary": "Applying algebraic rules for multiplying and dividing terms with the same or different bases and exponents.",
+        "olympiadTags": [
+          "SOF IMO",
+          "IOQM"
+        ]
+      },
+      {
+        "name": "Standard Form of Numbers",
+        "summary": "Expressing very large or very small numbers compactly using scientific notation with powers of ten.",
+        "olympiadTags": [
+          "SOF IMO"
+        ]
+      },
+      {
+        "name": "Comparing Very Large and Very Small Numbers",
+        "summary": "Utilizing standard form representations to compare magnitudes of extreme values.",
+        "olympiadTags": [
+          "SOF IMO"
+        ]
+      }
+    ]
+  }
+]

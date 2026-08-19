@@ -1,0 +1,153 @@
+[
+  {
+    "name": "Integers",
+    "topics": [
+      {
+        "name": "Introduction to Integers",
+        "summary": "Understanding negative numbers, positive numbers, and zero as a complete set of integers.",
+        "olympiadTags": [
+          "SOF IMO"
+        ]
+      },
+      {
+        "name": "Addition and Subtraction of Integers",
+        "summary": "Learning rules to add and subtract integers using number lines and algebraic principles.",
+        "olympiadTags": [
+          "SOF IMO"
+        ]
+      },
+      {
+        "name": "Multiplication of Integers",
+        "summary": "Mastering the sign rules for multiplying positive and negative integers.",
+        "olympiadTags": [
+          "SOF IMO"
+        ]
+      },
+      {
+        "name": "Division of Integers",
+        "summary": "Applying rules of signs to divide integers and understanding properties like division by zero.",
+        "olympiadTags": []
+      },
+      {
+        "name": "Properties of Integers",
+        "summary": "Studying closure, commutative, associative, and distributive properties under various operations.",
+        "olympiadTags": [
+          "SOF IMO"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Fractions and Decimals",
+    "topics": [
+      {
+        "name": "Multiplication of Fractions",
+        "summary": "Multiplying whole numbers by fractions, proper fractions, and improper fractions.",
+        "olympiadTags": [
+          "SOF IMO"
+        ]
+      },
+      {
+        "name": "Division of Fractions",
+        "summary": "Dividing fractions by utilizing the reciprocal of the divisor fraction.",
+        "olympiadTags": [
+          "SOF IMO"
+        ]
+      },
+      {
+        "name": "Decimal Representation",
+        "summary": "Understanding place value in decimals and converting between fractions and decimals.",
+        "olympiadTags": []
+      },
+      {
+        "name": "Operations on Decimals",
+        "summary": "Performing addition, subtraction, multiplication, and division with decimal numbers.",
+        "olympiadTags": [
+          "SOF IMO"
+        ]
+      },
+      {
+        "name": "Application of Decimals",
+        "summary": "Solving real-world word problems involving units of measurement like money, length, and weight.",
+        "olympiadTags": []
+      }
+    ]
+  },
+  {
+    "name": "Simple Equations",
+    "topics": [
+      {
+        "name": "Concept of a Variable",
+        "summary": "Understanding how letters or symbols represent unknown quantities in mathematical expressions.",
+        "olympiadTags": [
+          "SOF IMO"
+        ]
+      },
+      {
+        "name": "Setting Up an Equation",
+        "summary": "Translating verbal statements and real-life situations into mathematical equations.",
+        "olympiadTags": [
+          "SOF IMO"
+        ]
+      },
+      {
+        "name": "Solving Equations by Balancing",
+        "summary": "Finding the root of an equation by performing identical operations on both sides.",
+        "olympiadTags": [
+          "SOF IMO"
+        ]
+      },
+      {
+        "name": "Transposition Method",
+        "summary": "Simplifying equation solving by moving terms from one side to the other with inverted signs.",
+        "olympiadTags": []
+      },
+      {
+        "name": "Applications to Practical Problems",
+        "summary": "Using linear equations with one variable to solve puzzle-like word problems.",
+        "olympiadTags": [
+          "SOF IMO",
+          "IOQM"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Lines and Angles",
+    "topics": [
+      {
+        "name": "Basic Geometric Terms",
+        "summary": "Defining points, lines, line segments, rays, and planes in geometry.",
+        "olympiadTags": []
+      },
+      {
+        "name": "Complementary and Supplementary Angles",
+        "summary": "Identifying pairs of angles whose measures sum up to 90 degrees or 180 degrees respectively.",
+        "olympiadTags": [
+          "SOF IMO"
+        ]
+      },
+      {
+        "name": "Adjacent and Linear Pair Angles",
+        "summary": "Recognizing adjacent angles and special linear pairs that form a straight line.",
+        "olympiadTags": [
+          "SOF IMO"
+        ]
+      },
+      {
+        "name": "Vertically Opposite Angles",
+        "summary": "Understanding that intersecting lines form equal pairs of vertically opposite angles.",
+        "olympiadTags": [
+          "SOF IMO"
+        ]
+      },
+      {
+        "name": "Angles made by a Transversal",
+        "summary": "Studying interior, exterior, corresponding, and alternate angles formed by a transversal across parallel lines.",
+        "olympiadTags": [
+          "SOF IMO"
+        ]
+      }
+    ]
+  }
+]

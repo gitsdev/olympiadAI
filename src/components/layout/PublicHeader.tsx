@@ -3,7 +3,7 @@ import { ArrowRight } from "lucide-react";
 import { Logo } from "@/components/brand";
 import { OAButton } from "@/components/ui";
 
-export function BrainBoosterHeader({ loggedIn }: { loggedIn: boolean }) {
+export function PublicHeader({ loggedIn }: { loggedIn: boolean }) {
   return (
     <header
       className="sticky top-0 z-30 border-b border-[var(--line-200)]"

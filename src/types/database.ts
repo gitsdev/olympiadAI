@@ -129,6 +129,12 @@ export interface KnowledgeEdgeRow {
   id: string; from_node_id: string; to_node_id: string; weight: number;
 }
 
+export interface TopicPageRow {
+  id: string; slug: string; subject: Subject; class_level: number;
+  chapter_name: string; topic_name: string; summary: string;
+  olympiad_tags: string[]; order_index: number; created_at: string;
+}
+
 /* ── Database schema (for Supabase client generic) ──────────────────── */
 export interface Database {
   public: {
@@ -242,6 +248,11 @@ export interface Database {
         Row: AIConversationRow;
         Insert: { student_id: string; messages?: ConversationMessage[]; subject?: Subject | null; topic_name?: string | null };
         Update: Partial<{ messages: ConversationMessage[]; subject: Subject | null; topic_name: string | null }>;
+      };
+      topic_pages: {
+        Row: TopicPageRow;
+        Insert: { slug: string; subject: Subject; class_level: number; chapter_name: string; topic_name: string; summary: string; olympiad_tags?: string[]; order_index?: number };
+        Update: Partial<{ summary: string; olympiad_tags: string[]; order_index: number }>;
       };
     };
     Functions: {

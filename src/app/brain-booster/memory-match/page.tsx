@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { BrainBoosterHeader } from "../BrainBoosterHeader";
+import { PublicHeader } from "@/components/layout";
 import { MemoryMatchGame } from "./MemoryMatchGame";
 
 export default async function MemoryMatchPage() {
@@ -10,7 +10,7 @@ export default async function MemoryMatchPage() {
 
   return (
     <div className="min-h-screen" style={{ background: "var(--paper)" }}>
-      <BrainBoosterHeader loggedIn={!!user} />
+      <PublicHeader loggedIn={!!user} />
 
       <div className="max-w-[640px] mx-auto px-4 sm:px-7 py-8 pb-14">
         <Link

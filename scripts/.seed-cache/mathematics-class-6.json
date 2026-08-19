@@ -1,0 +1,135 @@
+[
+  {
+    "name": "Knowing Our Numbers",
+    "topics": [
+      {
+        "name": "Comparing Numbers",
+        "summary": "Determining which of the given numbers is greater or smaller using place value.",
+        "olympiadTags": [
+          "SOF IMO"
+        ]
+      },
+      {
+        "name": "Large Numbers in Practice",
+        "summary": "Understanding and converting units of length, weight, and capacity involving large numbers.",
+        "olympiadTags": []
+      },
+      {
+        "name": "Estimation",
+        "summary": "Rounding off numbers to the nearest tens, hundreds, and thousands to find rough estimates.",
+        "olympiadTags": []
+      },
+      {
+        "name": "Using Brackets",
+        "summary": "Simplifying numerical expressions by expanding and solving brackets systematically.",
+        "olympiadTags": [
+          "SOF IMO"
+        ]
+      },
+      {
+        "name": "Roman Numerals",
+        "summary": "Learning the basic symbols and rules to write and interpret Roman numerals up to standard limits.",
+        "olympiadTags": []
+      }
+    ]
+  },
+  {
+    "name": "Fractions",
+    "topics": [
+      {
+        "name": "Introduction to Fractions",
+        "summary": "Understanding fractions as a part of a whole or a collection of objects.",
+        "olympiadTags": []
+      },
+      {
+        "name": "Proper and Improper Fractions",
+        "summary": "Classifying fractions based on the relative size of their numerators and denominators.",
+        "olympiadTags": [
+          "SOF IMO"
+        ]
+      },
+      {
+        "name": "Equivalent Fractions",
+        "summary": "Finding fractions that represent the same value by multiplying or dividing numerator and denominator.",
+        "olympiadTags": [
+          "SOF IMO"
+        ]
+      },
+      {
+        "name": "Like and Unlike Fractions",
+        "summary": "Distinguishing between fractions with the same denominators and those with different denominators.",
+        "olympiadTags": []
+      },
+      {
+        "name": "Addition and Subtraction of Fractions",
+        "summary": "Combining or finding the difference between fractions by converting them to a common denominator.",
+        "olympiadTags": [
+          "SOF IMO"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Basic Geometrical Ideas",
+    "topics": [
+      {
+        "name": "Points, Lines, and Line Segments",
+        "summary": "Exploring fundamental geometric concepts of a point, an infinite line, and a finite line segment.",
+        "olympiadTags": []
+      },
+      {
+        "name": "Rays and Curves",
+        "summary": "Understanding rays as lines with one endpoint and identifying open versus closed curves.",
+        "olympiadTags": []
+      },
+      {
+        "name": "Angles",
+        "summary": "Defining angles formed by two rays sharing a common endpoint along with their interior and exterior.",
+        "olympiadTags": [
+          "SOF IMO"
+        ]
+      },
+      {
+        "name": "Triangles and Quadrilaterals",
+        "summary": "Studying three-sided and four-sided polygons and their basic structural properties.",
+        "olympiadTags": []
+      },
+      {
+        "name": "Circles",
+        "summary": "Learning the anatomy of a circle including its center, radius, diameter, chord, and circumference.",
+        "olympiadTags": [
+          "SOF IMO"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Data Handling",
+    "topics": [
+      {
+        "name": "Recording Data",
+        "summary": "Collecting and organizing raw data into meaningful observations.",
+        "olympiadTags": []
+      },
+      {
+        "name": "Tally Marks",
+        "summary": "Using tally marks to count and tabulate frequencies of different observations in a dataset.",
+        "olympiadTags": [
+          "SOF IMO"
+        ]
+      },
+      {
+        "name": "Pictographs",
+        "summary": "Representing numerical data visually using symbols or pictures assigned to specific values.",
+        "olympiadTags": []
+      },
+      {
+        "name": "Bar Graphs",
+        "summary": "Displaying data using bars of uniform width with heights proportional to respective values.",
+        "olympiadTags": [
+          "SOF IMO"
+        ]
+      }
+    ]
+  }
+]

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Brain, Gauge, Eye, Timer, Lock, ArrowRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { OACard } from "@/components/ui";
-import { BrainBoosterHeader } from "./BrainBoosterHeader";
+import { PublicHeader } from "@/components/layout";
 
 const BENEFITS = [
   { Icon: Gauge, title: "Faster processing", desc: "Short, timed challenges train the brain to recognise patterns and react quicker." },
@@ -31,7 +31,7 @@ export default async function BrainBoosterPage() {
 
   return (
     <div className="min-h-screen" style={{ background: "var(--paper)" }}>
-      <BrainBoosterHeader loggedIn={!!user} />
+      <PublicHeader loggedIn={!!user} />
 
       <div className="max-w-[1000px] mx-auto px-4 sm:px-7 py-8 pb-14">
         <div className="mb-7">
