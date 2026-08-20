@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { OAButton, OACard, OARing, OASubjectDot, OAAvatar, SUBJECT_COLORS, type Subject } from "@/components/ui";
 import { Logo } from "@/components/brand";
+import { slugify } from "@/lib/slug";
 import { MktNav } from "./MktNav";
 
 /* ── Hero ────────────────────────────────────────────────────────────── */
@@ -624,7 +625,7 @@ function Footer() {
                 {links.map((l) => (
                   <a
                     key={l}
-                    href="#"
+                    href={h === "Subjects" ? `/learn/subject/${slugify(l)}` : "#"}
                     className="text-[13.5px] transition-colors duration-[120ms] hover:text-white"
                     style={{ color: "oklch(0.72 0.02 264)", textDecoration: "none" }}
                   >

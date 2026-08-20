@@ -1,7 +1,9 @@
 import type { MetadataRoute } from "next";
 import { createClient } from "@supabase/supabase-js";
+import { slugify } from "@/lib/slug";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.olympiadiq.in";
+const SUBJECTS = ["Mathematics", "Science", "English", "General Knowledge", "Cyber"];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
@@ -15,6 +17,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/brain-booster/memory-match`,          lastModified: now, changeFrequency: "monthly", priority: 0.4 },
     { url: `${SITE_URL}/brain-booster/pattern-blitz`,         lastModified: now, changeFrequency: "monthly", priority: 0.4 },
     { url: `${SITE_URL}/brain-booster/code-breaker`,          lastModified: now, changeFrequency: "monthly", priority: 0.4 },
+    ...SUBJECTS.map((s): MetadataRoute.Sitemap[number] => ({
+      url: `${SITE_URL}/learn/subject/${slugify(s)}`,
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.6,
+    })),
   ];
 
   const supabase = createClient(
