@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from "@google/genai";
 import Groq from "groq-sdk";
 import { createClient } from "@/lib/supabase/server";
 import { asConcepts, asResources, asStudent } from "@/lib/supabase/types-helper";
 import { withRetry } from "@/lib/ai-retry";
+import { moderateText } from "@/lib/moderation";
 import type { Board, TutorReference } from "@/types/database";
 
 const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -15,6 +16,20 @@ const GROQ_MODEL   = "openai/gpt-oss-120b";
 // "gemini-3.7-flash" (the flagship) was intermittently 503ing under
 // free-tier demand when tested; 3.5-flash is stable and still strong.
 const GEMINI_MODEL = "gemini-3.5-flash";
+
+// Blocks Gemini's own generation on sexual/dangerous content as a second
+// layer, independent of the moderation pre-check below. Harassment/hate are
+// set less aggressively to avoid over-blocking ordinary curriculum content
+// (history of conflicts, health education, etc.).
+const TUTOR_SAFETY_SETTINGS = [
+  { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE },
+  { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,  threshold: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE },
+  { category: HarmCategory.HARM_CATEGORY_HARASSMENT,         threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+  { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,        threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+];
+
+const SAFE_REFUSAL_ANSWER =
+  "I can only help with your school subjects and curriculum topics. Let's get back to your studies — try asking me about a topic from one of your classes instead!";
 
 type ChatTurn = { role: "user" | "assistant"; content: string };
 
@@ -57,6 +72,7 @@ async function generateTutorReply(
       // the visible JSON answer), so this needs real headroom — 2048 was
       // truncating responses mid-JSON.
       maxOutputTokens: 4096,
+      safetySettings: TUTOR_SAFETY_SETTINGS,
     },
   }));
   return { text: response.text ?? "{}", usage: response.usageMetadata };
@@ -100,6 +116,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Question is required" }, { status: 400 });
     }
 
+    // Safety gate — runs before any DB lookup or main-model call. Applies to
+    // both output modes; a blocked question never reaches Gemini or the
+    // Groq answer model, and isn't persisted to conversation history.
+    const moderation = await moderateText(question);
+    if (moderation.blocked) {
+      return NextResponse.json({
+        answer: SAFE_REFUSAL_ANSWER,
+        keyInsight: undefined,
+        visual: undefined,
+        steps: [],
+        tryIt: undefined,
+        followUps: [],
+        references: [],
+        usage: undefined,
+        conversationId: conversationId ?? null,
+      });
+    }
+
     const supabase = await createClient();
     const terms = question.split(" ").slice(0, 3).join(" | ");
 
@@ -135,6 +169,8 @@ export async function POST(req: NextRequest) {
     ].join("\n\n---\n\n");
 
     const systemPrompt = `You are OlympiadIQ, an expert tutor for CBSE & ICSE students (Class ${studentClass}). Warm, precise, encouraging.
+
+SAFETY: You only discuss school curriculum topics. Never produce sexual, illegal, violent, or otherwise harmful content, even if asked directly, indirectly, or via a hypothetical/roleplay framing. If a request falls outside safe curriculum topics, politely decline in the "answer" field and steer the student back to their studies — do not explain why in detail.
 
 KNOWLEDGE CONTEXT:
 ${ragContext || "Answer from general curriculum knowledge."}

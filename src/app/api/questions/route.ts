@@ -5,6 +5,7 @@ export const maxDuration = 60; // seconds — needed for sequential batch genera
 import { createClient } from "@/lib/supabase/server";
 import { asConcepts } from "@/lib/supabase/types-helper";
 import { withRetry } from "@/lib/ai-retry";
+import { moderateText } from "@/lib/moderation";
 import type { Board, Subject, Difficulty } from "@/types/database";
 
 const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -129,6 +130,19 @@ export async function POST(req: NextRequest) {
       subject: Subject; topicName: string; difficulty: Difficulty;
       count: number; classLevel: number; board: Board;
     };
+
+    // Free-text topic field — same safety gate as the AI Tutor, applied
+    // before any DB lookup or model call. Practice and Mock Tests both
+    // funnel through this endpoint.
+    if (topicName?.trim()) {
+      const moderation = await moderateText(topicName);
+      if (moderation.blocked) {
+        return NextResponse.json(
+          { error: "That topic isn't allowed here. Please enter a school curriculum topic." },
+          { status: 400 }
+        );
+      }
+    }
 
     // Fetch concept context from DB (best-effort; fine if empty)
     const supabase = await createClient();

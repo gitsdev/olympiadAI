@@ -120,7 +120,10 @@ function PracticeInner() {
           board:      user.board,
         }),
       });
-      if (!res.ok) throw new Error("Request failed");
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error || "Request failed");
+      }
       const { questions: q } = await res.json();
       if (!q?.length) throw new Error("No questions returned");
 
@@ -132,8 +135,11 @@ function PracticeInner() {
         }))
       );
       setPhase("quiz");
-    } catch {
-      setFetchError("Could not generate questions. Check your connection and try again.");
+    } catch (err) {
+      const message = err instanceof Error && err.message.includes("isn't allowed")
+        ? err.message
+        : "Could not generate questions. Check your connection and try again.";
+      setFetchError(message);
       setPhase("setup");
     }
   }
