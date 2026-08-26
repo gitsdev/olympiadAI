@@ -12,6 +12,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/`,                                   lastModified: now, changeFrequency: "weekly",  priority: 1.0 },
     { url: `${SITE_URL}/login`,                               lastModified: now, changeFrequency: "monthly", priority: 0.3 },
     { url: `${SITE_URL}/signup`,                              lastModified: now, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${SITE_URL}/privacy`,                             lastModified: now, changeFrequency: "yearly",  priority: 0.2 },
     { url: `${SITE_URL}/brain-booster`,                       lastModified: now, changeFrequency: "weekly",  priority: 0.6 },
     { url: `${SITE_URL}/brain-booster/number-ninja`,          lastModified: now, changeFrequency: "monthly", priority: 0.4 },
     { url: `${SITE_URL}/brain-booster/memory-match`,          lastModified: now, changeFrequency: "monthly", priority: 0.4 },
