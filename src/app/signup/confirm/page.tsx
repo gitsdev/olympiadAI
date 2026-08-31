@@ -17,7 +17,9 @@ export default function ConfirmPage() {
         className="oa-fade relative w-[380px] rounded-[var(--r-2xl)] border border-[var(--line-200)] shadow-[var(--shadow-lg)] p-8 text-center"
         style={{ background: "var(--surface)" }}
       >
-        <Logo size={32} />
+        <Link href="/" className="inline-block w-fit">
+          <Logo size={32} />
+        </Link>
 
         <div
           className="w-16 h-16 mx-auto mt-7 mb-5 rounded-full flex items-center justify-center"

@@ -33,7 +33,9 @@ export default function SignupPage() {
         className="oa-fade relative w-[380px] rounded-[var(--r-2xl)] border border-[var(--line-200)] shadow-[var(--shadow-lg)] p-8"
         style={{ background: "var(--surface)" }}
       >
-        <Logo size={32} />
+        <Link href="/" className="inline-block w-fit">
+          <Logo size={32} />
+        </Link>
 
         <h1
           className="font-bold text-[26px] tracking-tight mt-6 mb-1.5"
