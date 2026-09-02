@@ -212,29 +212,36 @@ export const KIDS = {
 };
 
 /* ---------------------------------------------------------------------------
- * 13. SECTION 9 — SOCIAL PROOF
+ * 13. SECTION 9 — TRUST  (non-testimonial social proof)
  * ---------------------------------------------------------------------------
- * ⚠️  NO fabricated testimonials, ratings or student counts. Replace each
- *     [PLACEHOLDER] with a REAL quote (with permission) or delete the card.
- *     If you have none yet, set `SOCIAL_PROOF.show = false` to hide the
- *     whole section.
+ * Every line below is a FACTUAL statement about the product — safe to run in
+ * ads. When you collect REAL parent quotes (with permission), you can add a
+ * quote block here; do NOT invent testimonials, ratings or student counts.
+ * Set `TRUST.show = false` to hide the whole section.
  * ------------------------------------------------------------------------- */
-export const SOCIAL_PROOF = {
+export const TRUST = {
   show: true,
-  eyebrow: "Parents & students",
-  title: "What Families Are Saying",
-  // Factual trust signals (safe to show — these are true statements about the product)
-  trustSignals: [
+  eyebrow: "Learning parents can trust",
+  title: "Serious Preparation, Without the Pressure.",
+  sub: "No inflated claims — just what Olympiad IQ actually gives your child.",
+  // Quick factual pills
+  signals: [
     "Aligned to CBSE & ICSE",
     "Classes 1–10",
     "Free to start",
-    "Brain-Booster games — no login needed",
+    "Games need no login",
   ],
-  testimonials: [
-    { quote: "[PLACEHOLDER — add a real parent testimonial here]", name: "[Parent name]", meta: "[City]" },
-    { quote: "[PLACEHOLDER — add a real parent or student testimonial here]", name: "[Name]", meta: "[Class / City]" },
-    { quote: "[PLACEHOLDER — add a real testimonial here]", name: "[Name]", meta: "[City]" },
+  // Reason cards — all verifiable statements about the platform
+  points: [
+    { icon: "book",   title: "Syllabus-aligned",   body: "Content and questions mapped to the CBSE & ICSE curriculum for Classes 1–10." },
+    { icon: "gauge",  title: "Honest progress",    body: "A readiness score and weak-area insights — real signal, not vanity badges." },
+    { icon: "shield", title: "No pressure to pay", body: "Every core feature is open to every student, free, with no card required." },
+    { icon: "puzzle", title: "Original questions", body: "Practice and mock-test questions generated per concept — not recycled worksheets." },
+    { icon: "layers", title: "One place to prepare", body: "Learn a concept, practise it, and test it — without switching between apps." },
+    { icon: "play",   title: "Try before you sign up", body: "Play the Brain-Booster games first — no account, no login needed." },
   ],
+  // Optional footnote inviting real feedback (shown under the section)
+  footnote: "Have a story to share? Real parent experiences will be featured here soon.",
 };
 
 /* ---------------------------------------------------------------------------

@@ -13,6 +13,7 @@ import * as React from "react";
 import Link from "next/link";
 import {
   Brain, Sparkles, Target, Trophy, ChevronDown, Check, Rocket, Play,
+  BookOpen, Gauge, ShieldCheck, Puzzle, Layers,
 } from "lucide-react";
 import { Logo } from "@/components/brand";
 import { OAButton, OARing } from "@/components/ui";
@@ -22,11 +23,15 @@ import { Reveal, Counter } from "./motion";
 import { track } from "./analytics";
 import {
   HERO, FACTS, PROBLEM, FEATURES, SKILLS, HOW, DEMO, PARENTS, KIDS,
-  SOCIAL_PROOF, FAQ, FINAL, EVENTS,
+  TRUST, FAQ, FINAL, EVENTS,
 } from "./landing-content";
 
 const PROBLEM_ICONS: Record<string, React.ElementType> = {
   brain: Brain, sparkles: Sparkles, target: Target, trophy: Trophy,
+};
+
+const TRUST_ICONS: Record<string, React.ElementType> = {
+  book: BookOpen, gauge: Gauge, shield: ShieldCheck, puzzle: Puzzle, layers: Layers, play: Play,
 };
 
 /* ── shared section heading ─────────────────────────────────────────────── */
@@ -454,40 +459,42 @@ function Kids() {
   );
 }
 
-/* ── 10. Social proof ───────────────────────────────────────────────────── */
-function SocialProof() {
-  if (!SOCIAL_PROOF.show) return null;
+/* ── 10. Trust (non-testimonial social proof) ───────────────────────────── */
+function Trust() {
+  if (!TRUST.show) return null;
   return (
     <section className="px-4 sm:px-8 py-14 sm:py-20 border-t border-[var(--line-200)]" style={{ background: "var(--paper)" }}>
       <div className="max-w-[1000px] mx-auto">
-        <Reveal><Head eyebrow={SOCIAL_PROOF.eyebrow} title={SOCIAL_PROOF.title} /></Reveal>
+        <Reveal><Head eyebrow={TRUST.eyebrow} title={TRUST.title} sub={TRUST.sub} /></Reveal>
 
         <Reveal className="flex flex-wrap justify-center gap-2 mb-9">
-          {SOCIAL_PROOF.trustSignals.map((s) => (
+          {TRUST.signals.map((s) => (
             <span key={s} className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold px-3 py-1.5 rounded-full border border-[var(--line-300)]" style={{ background: "var(--surface)", color: "var(--ink-700)" }}>
               <Check size={13} style={{ color: "var(--success)" }} /> {s}
             </span>
           ))}
         </Reveal>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {SOCIAL_PROOF.testimonials.map((t, i) => (
-            <Reveal key={i} delay={i * 60}>
-              <div className="h-full rounded-[var(--r-lg)] border border-dashed border-[var(--line-300)] bg-[var(--paper-2)] p-5">
-                <div className="flex gap-0.5 mb-3">
-                  {[0, 1, 2, 3, 4].map((s) => <span key={s} style={{ color: "var(--gold-400)" }}>★</span>)}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {TRUST.points.map((p, i) => {
+            const Icon = TRUST_ICONS[p.icon] ?? ShieldCheck;
+            return (
+              <Reveal key={p.title} delay={i * 50}>
+                <div className="h-full rounded-[var(--r-lg)] border border-[var(--line-200)] bg-[var(--surface)] shadow-[var(--shadow-sm)] p-5 sm:p-6">
+                  <div className="w-10 h-10 rounded-[var(--r-md)] flex items-center justify-center mb-3.5" style={{ background: "var(--cobalt-50)" }}>
+                    <Icon size={19} style={{ color: "var(--brand)" }} />
+                  </div>
+                  <h3 className="font-bold text-[16px] mb-1.5 tracking-tight" style={{ fontFamily: "var(--font-display)" }}>{p.title}</h3>
+                  <p className="text-[13.5px] leading-[1.55]" style={{ color: "var(--ink-700)" }}>{p.body}</p>
                 </div>
-                <p className="text-[14px] leading-[1.55] mb-4" style={{ color: "var(--ink-700)" }}>&ldquo;{t.quote}&rdquo;</p>
-                <p className="text-[13px] font-bold" style={{ color: "var(--ink-900)" }}>{t.name}</p>
-                <p className="text-[12px]" style={{ color: "var(--fg-muted)" }}>{t.meta}</p>
-              </div>
-            </Reveal>
-          ))}
+              </Reveal>
+            );
+          })}
         </div>
-        <p className="text-center text-[11.5px] mt-4" style={{ color: "var(--fg-subtle)" }}>
-          {/* dev note — not shown as a claim; replace placeholders above with real, permission-granted quotes */}
-          Testimonials shown are placeholders pending real parent feedback.
-        </p>
+
+        {TRUST.footnote && (
+          <p className="text-center text-[12.5px] mt-8" style={{ color: "var(--fg-muted)" }}>{TRUST.footnote}</p>
+        )}
       </div>
     </section>
   );
@@ -598,7 +605,7 @@ export function Landing() {
         <Demo />
         <Parents />
         <Kids />
-        <SocialProof />
+        <Trust />
         <Faqs />
         <FinalCTA />
       </main>
