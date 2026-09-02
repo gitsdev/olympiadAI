@@ -63,7 +63,6 @@ export default function SignupPage() {
           name="full_name"
           type="text"
           required
-          placeholder="Aarav Sharma"
           className="mt-1.5 mb-3.5 w-full border border-[var(--line-300)] rounded-[var(--r-md)] px-3 py-[11px] text-[14px] outline-none focus:border-[var(--cobalt-400)] focus:ring-2 focus:ring-[var(--cobalt-500)]/20 transition-colors"
           style={{ background: "var(--surface)", color: "var(--ink-900)" }}
         />
@@ -75,7 +74,6 @@ export default function SignupPage() {
           name="email"
           type="email"
           required
-          placeholder="you@school.edu"
           className="mt-1.5 mb-3.5 w-full border border-[var(--line-300)] rounded-[var(--r-md)] px-3 py-[11px] text-[14px] outline-none focus:border-[var(--cobalt-400)] focus:ring-2 focus:ring-[var(--cobalt-500)]/20 transition-colors"
           style={{ background: "var(--surface)", color: "var(--ink-900)" }}
         />
