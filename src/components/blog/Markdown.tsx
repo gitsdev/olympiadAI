@@ -21,7 +21,7 @@ const components: Components = {
     </h2>
   ),
   h2: ({ children, id }) => (
-    <h2 id={id} className="font-bold tracking-tight mt-11 mb-3 scroll-mt-24" style={{ fontFamily: "var(--font-display)", fontSize: "clamp(19px, 3vw, 23px)", color: "var(--ink-900)" }}>
+    <h2 id={id} className="font-bold tracking-tight mt-12 mb-3.5 pt-1 scroll-mt-24" style={{ fontFamily: "var(--font-display)", fontSize: "clamp(20px, 3.2vw, 26px)", letterSpacing: "-0.01em", color: "var(--ink-900)" }}>
       {children}
     </h2>
   ),
@@ -61,7 +61,10 @@ const components: Components = {
   ol: ({ children }) => <ol className="mb-5 pl-5 flex flex-col gap-1.5" style={{ listStyleType: "decimal" }}>{children}</ol>,
   li: ({ children }) => <li className="text-[15px] leading-[1.7]" style={{ color: "var(--ink-700)" }}>{children}</li>,
   blockquote: ({ children }) => (
-    <blockquote className="my-5 pl-4 border-l-[3px] italic" style={{ borderColor: "var(--cobalt-300)", color: "var(--ink-500)" }}>
+    <blockquote
+      className="my-6 pl-5 pr-4 py-3.5 border-l-4 rounded-r-[var(--r-md)] text-[16px] leading-[1.6] italic [&_p]:m-0 [&_p]:text-[16px] [&_p]:leading-[1.6] [&_p]:not-italic [&_cite]:block [&_cite]:mt-2 [&_cite]:text-[12.5px] [&_cite]:not-italic"
+      style={{ borderColor: "var(--cobalt-400)", background: "var(--surface)", color: "var(--ink-900)", boxShadow: "var(--shadow-xs)" }}
+    >
       {children}
     </blockquote>
   ),
@@ -84,7 +87,7 @@ const components: Components = {
     </pre>
   ),
   table: ({ children }) => (
-    <div className="my-6 overflow-x-auto">
+    <div className="my-6 overflow-x-auto rounded-[var(--r-md)] border" style={{ borderColor: "var(--line-200)" }}>
       <table className="w-full text-[14px] border-collapse">{children}</table>
     </div>
   ),
