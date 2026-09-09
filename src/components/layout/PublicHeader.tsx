@@ -13,6 +13,14 @@ export function PublicHeader({ loggedIn }: { loggedIn: boolean }) {
         <Link href={loggedIn ? "/dashboard" : "/"}>
           <Logo size={28} />
         </Link>
+        <nav className="hidden sm:flex items-center gap-5 ml-2">
+          <Link href="/blog" className="text-[14px] font-medium" style={{ color: "var(--ink-700)" }}>
+            Blog
+          </Link>
+          <Link href="/learn/subject/mathematics" className="text-[14px] font-medium" style={{ color: "var(--ink-700)" }}>
+            Study guides
+          </Link>
+        </nav>
         <span className="flex-1" />
         {loggedIn ? (
           <Link href="/dashboard">

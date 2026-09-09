@@ -1,0 +1,114 @@
+import ReactMarkdown, { type Components } from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeSlug from "rehype-slug";
+import { isAmazonUrl, withAmazonTag } from "@/lib/blog";
+
+/**
+ * Server-safe Markdown renderer for blog articles.
+ *
+ * Raw HTML in the source is intentionally NOT rendered (no rehype-raw), so
+ * article content cannot inject markup even though it is authored in-app.
+ *
+ * Outbound links follow Amazon Associates + Google policy:
+ * external links get rel="sponsored nofollow noopener noreferrer" and open in
+ * a new tab; Amazon links additionally get the associate tag appended.
+ */
+
+const components: Components = {
+  h1: ({ children }) => (
+    <h2 className="font-bold tracking-tight mt-12 mb-3.5 scroll-mt-24" style={{ fontFamily: "var(--font-display)", fontSize: "clamp(21px, 3.4vw, 27px)", color: "var(--ink-900)" }}>
+      {children}
+    </h2>
+  ),
+  h2: ({ children, id }) => (
+    <h2 id={id} className="font-bold tracking-tight mt-11 mb-3 scroll-mt-24" style={{ fontFamily: "var(--font-display)", fontSize: "clamp(19px, 3vw, 23px)", color: "var(--ink-900)" }}>
+      {children}
+    </h2>
+  ),
+  h3: ({ children, id }) => (
+    <h3 id={id} className="font-bold mt-7 mb-2 scroll-mt-24" style={{ fontFamily: "var(--font-display)", fontSize: "17px", color: "var(--ink-900)" }}>
+      {children}
+    </h3>
+  ),
+  h4: ({ children, id }) => (
+    <h4 id={id} className="font-semibold mt-6 mb-2 scroll-mt-24 text-[15px]" style={{ color: "var(--ink-900)" }}>
+      {children}
+    </h4>
+  ),
+  p: ({ children }) => (
+    <p className="text-[15px] leading-[1.75] mb-4" style={{ color: "var(--ink-700)" }}>{children}</p>
+  ),
+  a: ({ href, children }) => {
+    const url = href ?? "#";
+    const isInternal = url.startsWith("/") || url.startsWith("#");
+    if (isInternal) {
+      return <a href={url} className="font-medium underline" style={{ color: "var(--brand)" }}>{children}</a>;
+    }
+    const amazon = isAmazonUrl(url);
+    return (
+      <a
+        href={amazon ? withAmazonTag(url) : url}
+        target="_blank"
+        rel="sponsored nofollow noopener noreferrer"
+        className="font-medium underline underline-offset-2"
+        style={{ color: "var(--brand)" }}
+      >
+        {children}
+      </a>
+    );
+  },
+  ul: ({ children }) => <ul className="mb-5 pl-5 flex flex-col gap-1.5" style={{ listStyleType: "disc" }}>{children}</ul>,
+  ol: ({ children }) => <ol className="mb-5 pl-5 flex flex-col gap-1.5" style={{ listStyleType: "decimal" }}>{children}</ol>,
+  li: ({ children }) => <li className="text-[15px] leading-[1.7]" style={{ color: "var(--ink-700)" }}>{children}</li>,
+  blockquote: ({ children }) => (
+    <blockquote className="my-5 pl-4 border-l-[3px] italic" style={{ borderColor: "var(--cobalt-300)", color: "var(--ink-500)" }}>
+      {children}
+    </blockquote>
+  ),
+  strong: ({ children }) => <strong style={{ color: "var(--ink-900)", fontWeight: 700 }}>{children}</strong>,
+  hr: () => <hr className="my-9" style={{ borderColor: "var(--line-200)" }} />,
+  code: ({ className, children }) => {
+    const inline = !className && !String(children).includes("\n");
+    if (inline) {
+      return (
+        <code className="px-1.5 py-0.5 rounded text-[13px]" style={{ background: "var(--fill-100)", fontFamily: "var(--font-mono)", color: "var(--cobalt-700)" }}>
+          {children}
+        </code>
+      );
+    }
+    return <code className={className} style={{ fontFamily: "var(--font-mono)" }}>{children}</code>;
+  },
+  pre: ({ children }) => (
+    <pre className="my-5 p-4 rounded-[var(--r-md)] overflow-x-auto text-[13px] leading-[1.6]" style={{ background: "var(--ink-900)", color: "oklch(0.92 0.01 264)" }}>
+      {children}
+    </pre>
+  ),
+  table: ({ children }) => (
+    <div className="my-6 overflow-x-auto">
+      <table className="w-full text-[14px] border-collapse">{children}</table>
+    </div>
+  ),
+  th: ({ children }) => (
+    <th className="text-left font-semibold p-2.5 border" style={{ borderColor: "var(--line-200)", background: "var(--fill-100)", color: "var(--ink-900)" }}>
+      {children}
+    </th>
+  ),
+  td: ({ children }) => (
+    <td className="p-2.5 border align-top" style={{ borderColor: "var(--line-200)", color: "var(--ink-700)" }}>{children}</td>
+  ),
+  img: ({ src, alt }) =>
+    typeof src === "string" ? (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={src} alt={alt ?? ""} loading="lazy" className="my-6 rounded-[var(--r-md)] border w-full" style={{ borderColor: "var(--line-200)" }} />
+    ) : null,
+};
+
+export function Markdown({ content }: { content: string }) {
+  return (
+    <div>
+      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSlug]} components={components}>
+        {content}
+      </ReactMarkdown>
+    </div>
+  );
+}

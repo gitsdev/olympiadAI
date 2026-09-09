@@ -16,7 +16,7 @@ export default function robots(): MetadataRoute.Robots {
         disallow: [
           "/dashboard", "/tutor", "/practice", "/results", "/settings",
           "/learn$", "/tests", "/achievements", "/onboarding", "/parent",
-          "/api/",
+          "/api/", "/admin",
         ],
       },
     ],

@@ -4,13 +4,17 @@ import { slugify } from "@/lib/slug";
 const FOOTER_COLS = [
   { h: "Platform", links: ["AI Tutor", "Practice", "Mock tests", "Readiness score", "Knowledge graph"] },
   { h: "Subjects",  links: ["Mathematics", "Science", "English", "General Knowledge", "Cyber"] },
+  { h: "Resources", links: ["Blog", "Olympiad Prep", "Study Guides", "Book Reviews"] },
   { h: "Company",   links: ["About", "For schools", "Careers", "Contact"] },
-  { h: "Legal",     links: ["Privacy", "Terms", "Copyright policy"] },
+  { h: "Legal",     links: ["Privacy", "Terms", "Affiliate disclosure"] },
 ];
 
 function footerHref(section: string, link: string): string {
   if (section === "Subjects") return `/learn/subject/${slugify(link)}`;
   if (link === "Privacy") return "/privacy";
+  if (link === "Blog") return "/blog";
+  if (link === "Affiliate disclosure") return "/blog/affiliate-disclosure";
+  if (section === "Resources") return `/blog/category/${slugify(link)}`;
   return "#";
 }
 
@@ -19,7 +23,7 @@ export function Footer() {
     <footer className="px-5 sm:px-8 pt-12 sm:pt-14 pb-8" style={{ background: "var(--ink-900)" }}>
       <div className="max-w-[1160px] mx-auto">
         {/* Brand column + link columns */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-[1.4fr_repeat(4,1fr)] gap-7 pb-9 border-b"
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-[1.4fr_repeat(5,1fr)] gap-7 pb-9 border-b"
           style={{ borderColor: "oklch(1 0 0 / 0.10)" }}>
           {/* Brand — full width on mobile, spans first row */}
           <div className="col-span-2 sm:col-span-3 lg:col-span-1">

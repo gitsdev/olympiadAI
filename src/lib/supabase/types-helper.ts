@@ -9,6 +9,7 @@ import type {
   ConceptRow, ResourceRow, QuestionRow, QuestionOptionRow,
   StudentRow, ProfileRow, TestAttemptRow, PerformanceMetricRow,
   StudyPlanRow, AchievementRow, AIConversationRow, TopicPageRow,
+  BlogPostRow,
 } from "@/types/database";
 
 export function asConcepts(data: unknown): ConceptRow[] { return (data ?? []) as ConceptRow[]; }
@@ -26,3 +27,5 @@ export function asAchievements(data: unknown): AchievementRow[] { return (data ?
 export function asConversation(data: unknown): AIConversationRow | null { return data as AIConversationRow | null; }
 export function asTopicPages(data: unknown): TopicPageRow[] { return (data ?? []) as TopicPageRow[]; }
 export function asTopicPage(data: unknown): TopicPageRow | null { return data as TopicPageRow | null; }
+export function asBlogPosts(data: unknown): BlogPostRow[] { return (data ?? []) as BlogPostRow[]; }
+export function asBlogPost(data: unknown): BlogPostRow | null { return data as BlogPostRow | null; }

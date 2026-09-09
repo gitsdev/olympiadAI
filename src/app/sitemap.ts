@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { createClient } from "@supabase/supabase-js";
 import { slugify } from "@/lib/slug";
+import { BLOG_CATEGORIES, categorySlug } from "@/lib/blog";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.olympiadiq.in";
 const SUBJECTS = ["Mathematics", "Science", "English", "General Knowledge", "Cyber"];
@@ -14,6 +15,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/signup`,                              lastModified: now, changeFrequency: "monthly", priority: 0.5 },
     { url: `${SITE_URL}/start`,                               lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     { url: `${SITE_URL}/privacy`,                             lastModified: now, changeFrequency: "yearly",  priority: 0.2 },
+    { url: `${SITE_URL}/blog`,                                lastModified: now, changeFrequency: "daily",   priority: 0.8 },
+    { url: `${SITE_URL}/blog/affiliate-disclosure`,           lastModified: now, changeFrequency: "yearly",  priority: 0.2 },
+    ...BLOG_CATEGORIES.map((c): MetadataRoute.Sitemap[number] => ({
+      url: `${SITE_URL}/blog/category/${categorySlug(c.name)}`,
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.5,
+    })),
     { url: `${SITE_URL}/brain-booster`,                       lastModified: now, changeFrequency: "weekly",  priority: 0.6 },
     { url: `${SITE_URL}/brain-booster/number-ninja`,          lastModified: now, changeFrequency: "monthly", priority: 0.4 },
     { url: `${SITE_URL}/brain-booster/memory-match`,          lastModified: now, changeFrequency: "monthly", priority: 0.4 },
@@ -39,5 +48,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.5,
   }));
 
-  return [...staticEntries, ...topicEntries];
+  const { data: postRows } = await supabase
+    .from("blog_posts")
+    .select("slug, updated_at")
+    .eq("status", "published");
+  const blogEntries: MetadataRoute.Sitemap = (postRows ?? []).map((row) => ({
+    url: `${SITE_URL}/blog/${row.slug}`,
+    lastModified: row.updated_at ? new Date(row.updated_at as string) : now,
+    changeFrequency: "monthly",
+    priority: 0.7,
+  }));
+
+  return [...staticEntries, ...topicEntries, ...blogEntries];
 }

@@ -135,6 +135,23 @@ export interface TopicPageRow {
   olympiad_tags: string[]; order_index: number; created_at: string;
 }
 
+export type BlogCategory =
+  | "Olympiad Prep" | "Study Guides" | "Book Reviews"
+  | "Exam Strategy" | "Parent Resources";
+export type BlogBoard = "CBSE" | "ICSE" | "Both";
+export type BlogStatus = "draft" | "published";
+
+export interface BlogPostRow {
+  id: string; slug: string; title: string; excerpt: string; content: string;
+  cover_image_url: string | null; cover_image_alt: string | null;
+  category: BlogCategory; board: BlogBoard; class_levels: number[];
+  tags: string[]; author_name: string;
+  seo_title: string | null; seo_description: string | null;
+  has_affiliate_links: boolean; status: BlogStatus; reading_minutes: number;
+  published_at: string | null; created_at: string; updated_at: string;
+  created_by: string | null;
+}
+
 /* ── Database schema (for Supabase client generic) ──────────────────── */
 export interface Database {
   public: {
@@ -253,6 +270,27 @@ export interface Database {
         Row: TopicPageRow;
         Insert: { slug: string; subject: Subject; class_level: number; chapter_name: string; topic_name: string; summary: string; olympiad_tags?: string[]; order_index?: number };
         Update: Partial<{ summary: string; olympiad_tags: string[]; order_index: number }>;
+      };
+      blog_posts: {
+        Row: BlogPostRow;
+        Insert: {
+          slug: string; title: string; excerpt: string; content: string;
+          cover_image_url?: string | null; cover_image_alt?: string | null;
+          category?: BlogCategory; board?: BlogBoard; class_levels?: number[];
+          tags?: string[]; author_name?: string;
+          seo_title?: string | null; seo_description?: string | null;
+          has_affiliate_links?: boolean; status?: BlogStatus; reading_minutes?: number;
+          published_at?: string | null; created_by?: string | null;
+        };
+        Update: Partial<{
+          slug: string; title: string; excerpt: string; content: string;
+          cover_image_url: string | null; cover_image_alt: string | null;
+          category: BlogCategory; board: BlogBoard; class_levels: number[];
+          tags: string[]; author_name: string;
+          seo_title: string | null; seo_description: string | null;
+          has_affiliate_links: boolean; status: BlogStatus; reading_minutes: number;
+          published_at: string | null;
+        }>;
       };
     };
     Functions: {
