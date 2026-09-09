@@ -1,8 +1,8 @@
-import { cache } from "react";
-import { createClient } from "@supabase/supabase-js";
-import { asBlogPosts, asBlogPost } from "@/lib/supabase/types-helper";
 import type { BlogCategory } from "@/types/database";
 import { slugify } from "@/lib/slug";
+
+// Pure constants + helpers only — safe to import from Client Components.
+// Data-access lives in "@/lib/blog-data" (server-only).
 
 export const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.olympiadiq.in";
@@ -24,6 +24,41 @@ export function categorySlug(category: string): string {
 
 export function categoryFromSlug(slug: string): BlogCategory | null {
   return BLOG_CATEGORIES.find((c) => categorySlug(c.name) === slug)?.name ?? null;
+}
+
+/** OABadge tone for each blog category, so cards/badges read at a glance. */
+export function categoryTone(
+  category: string
+): "cobalt" | "gold" | "green" | "red" | "amber" | "neutral" {
+  switch (category) {
+    case "Olympiad Prep": return "green";
+    case "Book Reviews": return "gold";
+    case "Exam Strategy": return "cobalt";
+    case "Parent Resources": return "red";
+    case "Study Guides":
+    default: return "cobalt";
+  }
+}
+
+/** "All classes" · "Class 7" · "Classes 4–9" from a class_levels array. */
+export function classRangeLabel(levels: number[] | null | undefined): string {
+  if (!levels || levels.length === 0) return "All classes";
+  const sorted = [...levels].sort((a, b) => a - b);
+  const lo = sorted[0];
+  const hi = sorted[sorted.length - 1];
+  return lo === hi ? `Class ${lo}` : `Classes ${lo}–${hi}`;
+}
+
+/** Most-used tags across posts, for the "Popular" quick-search chips. */
+export function popularTags(posts: { tags: string[] }[], limit = 5): string[] {
+  const counts = new Map<string, number>();
+  for (const p of posts) {
+    for (const t of p.tags ?? []) counts.set(t, (counts.get(t) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, limit)
+    .map(([t]) => t);
 }
 
 /**
@@ -66,47 +101,3 @@ export const AFFILIATE_DISCLOSURE_SHORT =
 
 export const AFFILIATE_PRICE_DISCLAIMER =
   "Product prices and availability are accurate as of the date/time shown and are subject to change. Any price and availability information displayed on Amazon at the time of purchase will apply.";
-
-// ── Data access (public, anon key — RLS restricts to published rows) ──────
-function publicClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
-
-export const getPublishedPosts = cache(async () => {
-  const supabase = publicClient();
-  const { data } = await supabase
-    .from("blog_posts")
-    .select(
-      "slug, title, excerpt, cover_image_url, cover_image_alt, category, board, tags, author_name, reading_minutes, published_at"
-    )
-    .eq("status", "published")
-    .order("published_at", { ascending: false });
-  return asBlogPosts(data);
-});
-
-export const getPostBySlug = cache(async (slug: string) => {
-  const supabase = publicClient();
-  const { data } = await supabase
-    .from("blog_posts")
-    .select("*")
-    .eq("slug", slug)
-    .eq("status", "published")
-    .maybeSingle();
-  return asBlogPost(data);
-});
-
-export const getRelatedPosts = cache(async (category: string, excludeSlug: string) => {
-  const supabase = publicClient();
-  const { data } = await supabase
-    .from("blog_posts")
-    .select("slug, title, excerpt, cover_image_url, cover_image_alt, category, reading_minutes, published_at")
-    .eq("status", "published")
-    .eq("category", category)
-    .neq("slug", excludeSlug)
-    .order("published_at", { ascending: false })
-    .limit(3);
-  return asBlogPosts(data);
-});

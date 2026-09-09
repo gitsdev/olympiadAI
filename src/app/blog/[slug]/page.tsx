@@ -9,10 +9,8 @@ import { Markdown } from "@/components/blog/Markdown";
 import { JsonLd } from "@/components/blog/JsonLd";
 import { AffiliateDisclosure } from "@/components/blog/AffiliateDisclosure";
 import { BlogCard } from "@/components/blog/BlogCard";
-import {
-  AFFILIATE_PRICE_DISCLAIMER, categorySlug, getPostBySlug,
-  getPublishedPosts, getRelatedPosts, SITE_URL,
-} from "@/lib/blog";
+import { AFFILIATE_PRICE_DISCLAIMER, categorySlug, SITE_URL } from "@/lib/blog";
+import { getPostBySlug, getPublishedPosts, getRelatedPosts } from "@/lib/blog-data";
 
 export const revalidate = 600;
 

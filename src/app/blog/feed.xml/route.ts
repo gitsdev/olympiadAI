@@ -1,4 +1,5 @@
-import { getPublishedPosts, SITE_URL } from "@/lib/blog";
+import { SITE_URL } from "@/lib/blog";
+import { getPublishedPosts } from "@/lib/blog-data";
 
 export const revalidate = 3600;
 

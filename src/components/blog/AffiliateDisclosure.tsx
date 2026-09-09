@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Info } from "lucide-react";
+import { Info, ExternalLink } from "lucide-react";
 import { AFFILIATE_DISCLOSURE_SHORT, AFFILIATE_PRICE_DISCLAIMER } from "@/lib/blog";
 
 /**
@@ -10,19 +10,23 @@ import { AFFILIATE_DISCLOSURE_SHORT, AFFILIATE_PRICE_DISCLAIMER } from "@/lib/bl
 export function AffiliateDisclosure({ withPriceNote = false }: { withPriceNote?: boolean }) {
   return (
     <aside
-      className="my-6 p-4 rounded-[var(--r-md)] border text-[12.5px] leading-[1.65]"
-      style={{ background: "var(--fill-100)", borderColor: "var(--line-200)", color: "var(--ink-500)" }}
+      className="rounded-[var(--r-lg)] border px-4 py-3.5 shadow-[var(--shadow-xs)]"
+      style={{ background: "var(--surface)", borderColor: "var(--line-200)" }}
       aria-label="Affiliate disclosure"
     >
-      <div className="flex gap-2.5">
-        <Info size={15} className="mt-0.5 shrink-0" style={{ color: "var(--ink-400)" }} />
-        <div>
+      <div className="flex items-start gap-3">
+        <span
+          className="w-7 h-7 rounded-[var(--r-sm)] flex items-center justify-center shrink-0 mt-0.5"
+          style={{ background: "var(--cobalt-50)", color: "var(--brand)" }}
+        >
+          <Info size={15} />
+        </span>
+        <div className="text-[12.5px] leading-[1.65]" style={{ color: "var(--fg-muted)" }}>
           <p>
-            <strong style={{ color: "var(--ink-700)" }}>Disclosure:</strong> {AFFILIATE_DISCLOSURE_SHORT}{" "}
-            <Link href="/blog/affiliate-disclosure" className="underline" style={{ color: "var(--brand)" }}>
-              Learn more
+            <strong style={{ color: "var(--ink-900)" }}>Disclosure:</strong> {AFFILIATE_DISCLOSURE_SHORT}{" "}
+            <Link href="/blog/affiliate-disclosure" className="font-semibold inline-flex items-center gap-0.5" style={{ color: "var(--brand)" }}>
+              Learn more <ExternalLink size={12} />
             </Link>
-            .
           </p>
           {withPriceNote && <p className="mt-1.5">{AFFILIATE_PRICE_DISCLAIMER}</p>}
         </div>

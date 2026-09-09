@@ -6,10 +6,8 @@ import { Footer } from "@/app/Footer";
 import { BlogCard } from "@/components/blog/BlogCard";
 import { JsonLd } from "@/components/blog/JsonLd";
 import { AffiliateDisclosure } from "@/components/blog/AffiliateDisclosure";
-import {
-  BLOG_CATEGORIES, categoryFromSlug, categorySlug,
-  getPublishedPosts, SITE_URL,
-} from "@/lib/blog";
+import { BLOG_CATEGORIES, categoryFromSlug, categorySlug, SITE_URL } from "@/lib/blog";
+import { getPublishedPosts } from "@/lib/blog-data";
 
 export const revalidate = 600;
 
@@ -50,6 +48,8 @@ export default async function BlogCategoryPage({ params }: { params: Promise<{ c
     ],
   };
 
+  const tabBase = "px-4 py-2 rounded-[var(--r-pill)] text-[13px] font-semibold transition-all whitespace-nowrap";
+
   return (
     <div style={{ background: "var(--paper)" }}>
       <JsonLd data={jsonLd} />
@@ -57,7 +57,8 @@ export default async function BlogCategoryPage({ params }: { params: Promise<{ c
 
       <main className="max-w-[1100px] mx-auto px-5 sm:px-8 py-10 sm:py-14 pb-20">
         <nav className="text-[13px] mb-4" style={{ color: "var(--fg-muted)" }} aria-label="Breadcrumb">
-          <Link href="/blog" className="hover:underline">Blog</Link> <span className="mx-1">/</span> {category}
+          <Link href="/blog" className="hover:underline">Blog</Link> <span className="mx-1">/</span>{" "}
+          <span style={{ color: "var(--ink-900)", fontWeight: 600 }}>{category}</span>
         </nav>
         <h1
           className="font-black tracking-tight"
@@ -67,32 +68,35 @@ export default async function BlogCategoryPage({ params }: { params: Promise<{ c
         </h1>
         <p className="mt-3 max-w-[620px] text-[15px] leading-[1.65]" style={{ color: "var(--fg-muted)" }}>{blurb}</p>
 
-        <nav className="mt-6 flex flex-wrap gap-2" aria-label="Blog categories">
-          <Link href="/blog" className="px-3 py-1.5 rounded-full text-[13px] font-semibold border transition-colors hover:bg-[var(--fill-100)]" style={{ borderColor: "var(--line-300)", color: "var(--ink-700)" }}>
-            All posts
-          </Link>
-          {BLOG_CATEGORIES.map((c) => (
-            <Link
-              key={c.name}
-              href={`/blog/category/${categorySlug(c.name)}`}
-              className="px-3 py-1.5 rounded-full text-[13px] font-semibold border transition-colors"
-              style={
-                c.name === category
-                  ? { background: "var(--cobalt-500)", color: "white", borderColor: "var(--cobalt-500)" }
-                  : { borderColor: "var(--line-300)", color: "var(--ink-700)" }
-              }
-            >
-              {c.name}
-            </Link>
-          ))}
-        </nav>
+        <div className="mt-6 flex overflow-x-auto py-1">
+          <div className="inline-flex items-center gap-1 p-1.5 rounded-[var(--r-pill)]" style={{ background: "var(--fill-100)" }}>
+            <Link href="/blog" className={tabBase} style={{ color: "var(--ink-700)" }}>All posts</Link>
+            {BLOG_CATEGORIES.map((c) => {
+              const active = c.name === category;
+              return (
+                <Link
+                  key={c.name}
+                  href={`/blog/category/${categorySlug(c.name)}`}
+                  className={tabBase}
+                  style={active
+                    ? { background: "var(--cobalt-500)", color: "white", boxShadow: "var(--shadow-sm)" }
+                    : { color: "var(--ink-700)" }}
+                >
+                  {c.name}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
 
-        <AffiliateDisclosure />
+        <div className="mt-6">
+          <AffiliateDisclosure />
+        </div>
 
         {posts.length === 0 ? (
           <p className="mt-8 text-[14px]" style={{ color: "var(--fg-muted)" }}>No articles in this category yet.</p>
         ) : (
-          <section className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <section className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {posts.map((p) => (
               <BlogCard key={p.slug} post={p} />
             ))}
