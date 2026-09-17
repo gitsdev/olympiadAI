@@ -1,7 +1,9 @@
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeSlug from "rehype-slug";
+import { ShoppingBag, ExternalLink } from "lucide-react";
 import { isAmazonUrl, withAmazonTag } from "@/lib/blog";
+import type { Element as HastElement, ElementContent } from "hast";
 
 /**
  * Server-safe Markdown renderer for blog articles.
@@ -13,6 +15,39 @@ import { isAmazonUrl, withAmazonTag } from "@/lib/blog";
  * external links get rel="sponsored nofollow noopener noreferrer" and open in
  * a new tab; Amazon links additionally get the associate tag appended.
  */
+
+function hastText(node: ElementContent): string {
+  if (node.type === "text") return node.value;
+  if (node.type === "element") return node.children.map(hastText).join("");
+  return "";
+}
+
+/** A paragraph that is *only* a link — used as a "highlight this CTA" pattern. */
+function soleLink(node: HastElement | undefined): { href: string; text: string } | null {
+  if (!node || node.children.length !== 1) return null;
+  const only = node.children[0];
+  if (only.type !== "element" || only.tagName !== "a") return null;
+  const href = only.properties?.href;
+  if (typeof href !== "string") return null;
+  return { href, text: hastText(only) };
+}
+
+function CtaButton({ href, text }: { href: string; text: string }) {
+  const amazon = isAmazonUrl(href);
+  const url = amazon ? withAmazonTag(href) : href;
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="sponsored nofollow noopener noreferrer"
+      className="not-prose group my-7 flex items-center justify-center gap-2.5 px-6 py-4 rounded-[var(--r-lg)] text-[15.5px] font-bold text-white text-center transition-all duration-150 hover:-translate-y-0.5"
+      style={{ background: "linear-gradient(135deg, var(--gold-500), var(--gold-700))", boxShadow: "0 6px 18px oklch(0.56 0.11 70 / 0.35)" }}
+    >
+      {amazon ? <ShoppingBag size={19} /> : <ExternalLink size={19} />}
+      {text || "View on Amazon"}
+    </a>
+  );
+}
 
 const components: Components = {
   h1: ({ children }) => (
@@ -35,9 +70,13 @@ const components: Components = {
       {children}
     </h4>
   ),
-  p: ({ children }) => (
-    <p className="text-[15px] leading-[1.75] mb-4" style={{ color: "var(--ink-700)" }}>{children}</p>
-  ),
+  p: ({ children, node }) => {
+    const cta = soleLink(node);
+    if (cta) return <CtaButton href={cta.href} text={cta.text} />;
+    return (
+      <p className="text-[15px] leading-[1.75] mb-4" style={{ color: "var(--ink-700)" }}>{children}</p>
+    );
+  },
   a: ({ href, children }) => {
     const url = href ?? "#";
     const isInternal = url.startsWith("/") || url.startsWith("#");
