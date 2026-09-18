@@ -9,7 +9,7 @@ import type {
   ConceptRow, ResourceRow, QuestionRow, QuestionOptionRow,
   StudentRow, ProfileRow, TestAttemptRow, PerformanceMetricRow,
   StudyPlanRow, AchievementRow, AIConversationRow, TopicPageRow,
-  BlogPostRow,
+  BlogPostRow, AdminSettingsRow, AdminAuditLogRow,
 } from "@/types/database";
 
 export function asConcepts(data: unknown): ConceptRow[] { return (data ?? []) as ConceptRow[]; }
@@ -29,3 +29,7 @@ export function asTopicPages(data: unknown): TopicPageRow[] { return (data ?? []
 export function asTopicPage(data: unknown): TopicPageRow | null { return data as TopicPageRow | null; }
 export function asBlogPosts(data: unknown): BlogPostRow[] { return (data ?? []) as BlogPostRow[]; }
 export function asBlogPost(data: unknown): BlogPostRow | null { return data as BlogPostRow | null; }
+export function asAttempts(data: unknown): TestAttemptRow[] { return (data ?? []) as TestAttemptRow[]; }
+export function asConversations(data: unknown): AIConversationRow[] { return (data ?? []) as AIConversationRow[]; }
+export function asAdminSettings(data: unknown): AdminSettingsRow | null { return data as AdminSettingsRow | null; }
+export function asAuditLog(data: unknown): AdminAuditLogRow[] { return (data ?? []) as AdminAuditLogRow[]; }

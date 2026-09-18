@@ -17,10 +17,11 @@ export interface StudyPlanItem {
   topic_name?: string;
 }
 
+// Matches what /api/tutor actually persists (src/app/api/tutor/route.ts) —
+// no per-message timestamp is stored, only the conversation's created/updated_at.
 export interface ConversationMessage {
-  role: "student" | "tutor";
+  role: "user" | "assistant";
   content: string;
-  timestamp: string;
 }
 
 export interface TutorReference {
@@ -41,10 +42,13 @@ export interface ProfileRow {
   avatar_url: string | null; created_at: string; updated_at: string;
 }
 
+export type StudentAccountStatus = "active" | "suspended";
+
 export interface StudentRow {
   id: string; profile_id: string; board: Board; class_level: number;
   subjects: Subject[]; streak_days: number; readiness_score: number;
   total_points: number; created_at: string; updated_at: string;
+  last_active_at: string | null; account_status: StudentAccountStatus;
 }
 
 export interface ParentRow {
@@ -152,6 +156,17 @@ export interface BlogPostRow {
   created_by: string | null;
 }
 
+export interface AdminSettingsRow {
+  id: 1; inactive_days_warning: number; inactive_days_critical: number;
+  low_score_threshold: number; low_ai_engagement_sessions: number;
+  updated_at: string; updated_by: string | null;
+}
+
+export interface AdminAuditLogRow {
+  id: string; admin_id: string | null; action: string; target_type: string;
+  target_id: string | null; metadata: Record<string, unknown>; created_at: string;
+}
+
 /* ── Database schema (for Supabase client generic) ──────────────────── */
 export interface Database {
   public: {
@@ -163,8 +178,8 @@ export interface Database {
       };
       students: {
         Row: StudentRow;
-        Insert: { profile_id: string; board: Board; class_level: number; subjects: Subject[]; streak_days?: number; readiness_score?: number; total_points?: number };
-        Update: Partial<{ board: Board; class_level: number; subjects: Subject[]; streak_days: number; readiness_score: number; total_points: number }>;
+        Insert: { profile_id: string; board: Board; class_level: number; subjects: Subject[]; streak_days?: number; readiness_score?: number; total_points?: number; last_active_at?: string | null; account_status?: StudentAccountStatus };
+        Update: Partial<{ board: Board; class_level: number; subjects: Subject[]; streak_days: number; readiness_score: number; total_points: number; last_active_at: string | null; account_status: StudentAccountStatus }>;
       };
       parents: {
         Row: ParentRow;
@@ -291,6 +306,16 @@ export interface Database {
           has_affiliate_links: boolean; status: BlogStatus; reading_minutes: number;
           published_at: string | null;
         }>;
+      };
+      admin_settings: {
+        Row: AdminSettingsRow;
+        Insert: never;
+        Update: Partial<{ inactive_days_warning: number; inactive_days_critical: number; low_score_threshold: number; low_ai_engagement_sessions: number; updated_by: string | null }>;
+      };
+      admin_audit_log: {
+        Row: AdminAuditLogRow;
+        Insert: { admin_id: string | null; action: string; target_type: string; target_id?: string | null; metadata?: Record<string, unknown> };
+        Update: never;
       };
     };
     Functions: {

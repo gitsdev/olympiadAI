@@ -33,3 +33,22 @@ export {
 export { Progress } from "./progress";
 export { Avatar, AvatarFallback, AvatarImage } from "./avatar";
 export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./tooltip";
+export {
+  Table, TableBody, TableCaption, TableCell, TableFooter,
+  TableHead, TableHeader, TableRow,
+} from "./table";
+export { Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs";
+export {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
+  DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuCheckboxItem,
+} from "./dropdown-menu";
+export { Popover, PopoverContent, PopoverTrigger } from "./popover";
+export { Calendar } from "./calendar";
+export { Skeleton } from "./skeleton";
+export {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogTrigger,
+} from "./alert-dialog";
+export { Checkbox } from "./checkbox";
+export { Textarea } from "./textarea";
