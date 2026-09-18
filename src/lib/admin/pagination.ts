@@ -14,3 +14,12 @@ export function pageRange(page: number, pageSize = ADMIN_PAGE_SIZE): [number, nu
 export function totalPages(count: number, pageSize = ADMIN_PAGE_SIZE): number {
   return Math.max(1, Math.ceil(count / pageSize));
 }
+
+/** Parses the Students page's "tests" filter preset into a [min, max] range for the RPC. */
+export function parseTestCountFilter(value: string | undefined): { min?: number; max?: number } {
+  if (!value || value === "all") return {};
+  if (value === "0") return { min: 0, max: 0 };
+  if (value === "11-") return { min: 11 };
+  const [min, max] = value.split("-").map(Number);
+  return { min, max };
+}

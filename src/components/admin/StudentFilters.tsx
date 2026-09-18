@@ -72,12 +72,3 @@ export function StudentFilters() {
     </div>
   );
 }
-
-/** Parses the "tests" preset param into a [min, max] range for the RPC. */
-export function parseTestCountFilter(value: string | undefined): { min?: number; max?: number } {
-  if (!value || value === "all") return {};
-  if (value === "0") return { min: 0, max: 0 };
-  if (value === "11-") return { min: 11 };
-  const [min, max] = value.split("-").map(Number);
-  return { min, max };
-}

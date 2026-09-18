@@ -1,7 +1,6 @@
 import { requireAdmin } from "@/lib/admin/auth";
 import { listStudents } from "@/lib/admin/students";
-import { parsePage, ADMIN_PAGE_SIZE, totalPages } from "@/lib/admin/pagination";
-import { parseTestCountFilter } from "@/components/admin/StudentFilters";
+import { parsePage, ADMIN_PAGE_SIZE, totalPages, parseTestCountFilter } from "@/lib/admin/pagination";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { StudentTable } from "@/components/admin/StudentTable";
 import { StudentFilters } from "@/components/admin/StudentFilters";
