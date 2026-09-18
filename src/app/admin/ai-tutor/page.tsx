@@ -50,8 +50,7 @@ export default async function AdminAiTutorPage({ searchParams }: PageProps) {
             <OACardHeader><OACardTitle>Usage Trend</OACardTitle></OACardHeader>
             <TrendChart
               data={series.map((s) => ({ x: s.day, y: s.ai_sessions }))}
-              formatX={(x) => new Date(x).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
-              formatY={(y) => `${y} session${y === 1 ? "" : "s"}`}
+              yFormat="sessions"
               emptyLabel="No AI Tutor sessions in this period"
             />
           </OACard>

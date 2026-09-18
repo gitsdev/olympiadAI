@@ -15,8 +15,8 @@ export function MockTestPerformanceChart({ attempts }: { attempts: AdminTestAtte
   return (
     <TrendChart
       data={data}
-      formatY={(y) => `${y}%`}
-      formatX={(x) => x}
+      xFormat="raw"
+      yFormat="percent"
       emptyLabel="No completed mock tests yet"
     />
   );

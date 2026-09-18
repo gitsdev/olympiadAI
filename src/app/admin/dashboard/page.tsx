@@ -31,8 +31,6 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     getStudentsNeedingAttention(settings.inactive_days_warning, settings.low_score_threshold, settings.low_ai_engagement_sessions, 1),
   ]);
 
-  const formatDay = (x: string) => new Date(x).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
-
   return (
     <AdminShell adminName={admin.fullName} title="Dashboard" subtitle={`OlympiadIQ platform overview — ${label}`}>
       <div className="flex flex-col gap-5">
@@ -55,23 +53,23 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
         <div className="grid lg:grid-cols-2 gap-4">
           <OACard>
             <OACardHeader><OACardTitle>Student Registrations</OACardTitle></OACardHeader>
-            <TrendChart data={series.map((s) => ({ x: s.day, y: s.registrations }))} formatX={formatDay} formatY={(y) => `${y} new`} variant="bar" />
+            <TrendChart data={series.map((s) => ({ x: s.day, y: s.registrations }))} yFormat="new" variant="bar" />
           </OACard>
           <OACard>
             <OACardHeader><OACardTitle>Student Activity</OACardTitle></OACardHeader>
-            <TrendChart data={series.map((s) => ({ x: s.day, y: s.active_students }))} formatX={formatDay} formatY={(y) => `${y} active`} />
+            <TrendChart data={series.map((s) => ({ x: s.day, y: s.active_students }))} yFormat="active" />
           </OACard>
           <OACard>
             <OACardHeader><OACardTitle>Mock Test Activity</OACardTitle></OACardHeader>
-            <TrendChart data={series.map((s) => ({ x: s.day, y: s.mock_tests }))} formatX={formatDay} formatY={(y) => `${y} tests`} variant="bar" />
+            <TrendChart data={series.map((s) => ({ x: s.day, y: s.mock_tests }))} yFormat="tests" variant="bar" />
           </OACard>
           <OACard>
             <OACardHeader><OACardTitle>Mock Test Performance</OACardTitle></OACardHeader>
-            <TrendChart data={series.map((s) => ({ x: s.day, y: Math.round(s.avg_score) }))} formatX={formatDay} formatY={(y) => `${y}%`} />
+            <TrendChart data={series.map((s) => ({ x: s.day, y: Math.round(s.avg_score) }))} yFormat="percent" />
           </OACard>
           <OACard>
             <OACardHeader><OACardTitle>AI Tutor Usage</OACardTitle></OACardHeader>
-            <TrendChart data={series.map((s) => ({ x: s.day, y: s.ai_sessions }))} formatX={formatDay} formatY={(y) => `${y} sessions`} />
+            <TrendChart data={series.map((s) => ({ x: s.day, y: s.ai_sessions }))} yFormat="sessions" />
           </OACard>
           <OACard>
             <OACardHeader><OACardTitle>Subject Performance</OACardTitle></OACardHeader>
