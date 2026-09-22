@@ -10,6 +10,8 @@ import type {
   StudentRow, ProfileRow, TestAttemptRow, PerformanceMetricRow,
   StudyPlanRow, AchievementRow, AIConversationRow, TopicPageRow,
   BlogPostRow, AdminSettingsRow, AdminAuditLogRow,
+  BattleRow, BattleParticipantRow, BattleQuestionRow, BattleAnswerRow,
+  StudentBattleStatsRow, BattleConfigRow,
 } from "@/types/database";
 
 export function asConcepts(data: unknown): ConceptRow[] { return (data ?? []) as ConceptRow[]; }
@@ -33,3 +35,9 @@ export function asAttempts(data: unknown): TestAttemptRow[] { return (data ?? []
 export function asConversations(data: unknown): AIConversationRow[] { return (data ?? []) as AIConversationRow[]; }
 export function asAdminSettings(data: unknown): AdminSettingsRow | null { return data as AdminSettingsRow | null; }
 export function asAuditLog(data: unknown): AdminAuditLogRow[] { return (data ?? []) as AdminAuditLogRow[]; }
+export function asBattle(data: unknown): BattleRow | null { return data as BattleRow | null; }
+export function asBattleParticipants(data: unknown): BattleParticipantRow[] { return (data ?? []) as BattleParticipantRow[]; }
+export function asBattleQuestions(data: unknown): BattleQuestionRow[] { return (data ?? []) as BattleQuestionRow[]; }
+export function asBattleAnswers(data: unknown): BattleAnswerRow[] { return (data ?? []) as BattleAnswerRow[]; }
+export function asBattleStats(data: unknown): StudentBattleStatsRow | null { return data as StudentBattleStatsRow | null; }
+export function asBattleConfigs(data: unknown): BattleConfigRow[] { return (data ?? []) as BattleConfigRow[]; }

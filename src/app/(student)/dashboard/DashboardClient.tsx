@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Play, Sparkles, Check, Flame, Target, ChevronRight, Zap } from "lucide-react";
+import { Play, Sparkles, Check, Flame, Target, ChevronRight, Zap, Swords } from "lucide-react";
 import { AppShell } from "@/components/layout";
 import { OAButton, OABadge, OACard, OAProgressBar, OARing, OASubjectDot, type Subject } from "@/components/ui";
-import type { Tables, StudyPlanItem } from "@/types/database";
+import type { Tables, StudyPlanItem, StudentBattleStatsRow } from "@/types/database";
 
 const WEEK_DAYS = ["M", "T", "W", "T", "F", "S", "S"];
 
@@ -19,9 +19,10 @@ interface Props {
   student: Tables<"students"> & { profile: { full_name: string; email: string; avatar_url: string | null } | null };
   plan: Tables<"study_plans"> | null;
   weakTopics: Pick<Tables<"performance_metrics">, "subject" | "topic_name" | "mastery_score">[];
+  battleStats: StudentBattleStatsRow;
 }
 
-export default function DashboardClient({ student, plan, weakTopics }: Props) {
+export default function DashboardClient({ student, plan, weakTopics, battleStats }: Props) {
   const firstName  = student.profile?.full_name?.split(" ")[0] ?? "Student";
   const planItems: StudyPlanItem[] = (plan?.items as StudyPlanItem[] | null) ?? FALLBACK_PLAN;
   const doneCount  = planItems.filter((p) => p.done).length;
@@ -143,6 +144,32 @@ export default function DashboardClient({ student, plan, weakTopics }: Props) {
                   day streak{student.streak_days > 0 ? " · keep it going" : " · start today"}
                 </span>
               </div>
+            </OACard>
+
+            {/* Olympiad Battle */}
+            <OACard style={{ padding: "16px 18px" }}>
+              <div className="flex items-center gap-1.5 mb-3">
+                <Swords size={17} style={{ color: "var(--brand)" }} />
+                <h3 className="font-bold text-[16px]" style={{ fontFamily: "var(--font-display)" }}>Olympiad Battle</h3>
+              </div>
+              {battleStats.wins + battleStats.losses + battleStats.draws > 0 ? (
+                <div className="flex items-center gap-3 mb-3">
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 22, fontWeight: 700, color: "var(--ink-900)" }}>
+                    {battleStats.rating}
+                  </span>
+                  <span className="text-[12px]" style={{ color: "var(--fg-muted)" }}>
+                    {battleStats.wins}W–{battleStats.losses}L–{battleStats.draws}D
+                    {battleStats.current_streak > 0 && ` · ${battleStats.current_streak} win streak`}
+                  </span>
+                </div>
+              ) : (
+                <p className="text-[13px] mb-3" style={{ color: "var(--fg-muted)" }}>
+                  Battle an AI opponent and test what you know.
+                </p>
+              )}
+              <Link href="/battle">
+                <OAButton variant="gold" size="sm" className="w-full justify-center">BATTLE NOW</OAButton>
+              </Link>
             </OACard>
 
             {/* Focus areas */}

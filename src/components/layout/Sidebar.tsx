@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Home, Sparkles, PencilLine, BarChart2,
+  Home, Sparkles, PencilLine, BarChart2, Swords,
   Route, FileText, Trophy, Flame, X, Zap, Brain,
 } from "lucide-react";
 import { Logo } from "@/components/brand";
@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { href: "/dashboard", label: "Home",     Icon: Home },
   { href: "/tutor",     label: "AI Tutor", Icon: Sparkles },
   { href: "/practice",  label: "Practice", Icon: PencilLine },
+  { href: "/battle",    label: "Battle",   Icon: Swords },
   { href: "/results",   label: "Progress", Icon: BarChart2 },
 ];
 

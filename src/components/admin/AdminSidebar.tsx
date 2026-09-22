@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard, Users, FileText, Sparkles, TrendingUp,
+  LayoutDashboard, Users, FileText, Sparkles, TrendingUp, Swords,
   Newspaper, Settings, X, ShieldCheck,
 } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { href: "/admin/dashboard", label: "Dashboard", Icon: LayoutDashboard },
   { href: "/admin/students", label: "Students", Icon: Users },
   { href: "/admin/mock-tests", label: "Mock Tests", Icon: FileText },
+  { href: "/admin/battles", label: "Battles", Icon: Swords },
   { href: "/admin/ai-tutor", label: "AI Tutor", Icon: Sparkles },
   { href: "/admin/progress", label: "Student Progress", Icon: TrendingUp },
 ];

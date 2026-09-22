@@ -1,4 +1,4 @@
-import type { Board, Subject, StudentAccountStatus } from "./database";
+import type { Board, Subject, StudentAccountStatus, BattleMode, BattleStatus, BattleOutcome, Difficulty } from "./database";
 
 export interface AdminStudentListRow {
   student_id: string;
@@ -143,6 +143,38 @@ export interface AdminPlatformSubjectPerformance {
   subject: Subject;
   avg_score: number;
   attempts_count: number;
+}
+
+export interface AdminBattleRow {
+  battle_id: string;
+  student_id: string;
+  student_name: string;
+  mode: BattleMode;
+  status: BattleStatus;
+  subject: Subject;
+  class_level: number;
+  difficulty: Difficulty;
+  question_count: number;
+  student_score: number;
+  ai_score: number | null;
+  result: BattleOutcome | null;
+  rating_delta: number | null;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+  total_count: number;
+}
+
+export interface AdminBattleFilters {
+  studentId?: string;
+  status?: BattleStatus;
+  mode?: BattleMode;
+  subject?: Subject;
+  classLevel?: number;
+  result?: BattleOutcome;
+  dateFrom?: string;
+  dateTo?: string;
+  sort?: string;
 }
 
 export interface AdminAttentionStudentRow {

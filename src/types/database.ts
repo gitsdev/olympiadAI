@@ -167,6 +167,60 @@ export interface AdminAuditLogRow {
   target_id: string | null; metadata: Record<string, unknown>; created_at: string;
 }
 
+/* ── Olympiad Battle ──────────────────────────────────────────────────
+   'ai' is the only mode Phase 1 writes; pvp_random/pvp_private are
+   reserved for the live-matchmaking/private-code phase. */
+export type BattleMode = "ai" | "pvp_random" | "pvp_private";
+export type BattleStatus = "pending" | "active" | "completed" | "cancelled";
+export type BattleOutcome = "win" | "loss" | "draw";
+
+export interface BattleQuestionOption {
+  index: number;
+  text: string;
+}
+
+export interface BattleRow {
+  id: string; mode: BattleMode; status: BattleStatus; subject: Subject;
+  class_level: number; board: Board; difficulty: Difficulty; question_count: number;
+  time_per_question_seconds: number; created_by: string; room_code: string | null;
+  started_at: string | null; completed_at: string | null; cancelled_at: string | null;
+  created_at: string; winner_participant_id: string | null;
+}
+
+export interface BattleParticipantRow {
+  id: string; battle_id: string; student_id: string | null; is_ai: boolean;
+  ai_difficulty_key: Difficulty | null; score: number; correct_count: number;
+  incorrect_count: number; timeout_count: number; total_time_seconds: number;
+  rating_before: number | null; rating_after: number | null; rating_delta: number | null;
+  result: BattleOutcome | null; joined_at: string;
+}
+
+export interface BattleQuestionRow {
+  id: string; battle_id: string; question_id: string | null; order_index: number;
+  question_text: string; options: BattleQuestionOption[]; correct_option_index: number;
+  explanation: string; topic_name: string | null; difficulty: Difficulty;
+  time_limit_seconds: number;
+}
+
+export interface BattleAnswerRow {
+  id: string; battle_id: string; battle_question_id: string; participant_id: string;
+  selected_option_index: number | null; is_correct: boolean; time_taken_seconds: number;
+  points_awarded: number; answered_at: string;
+}
+
+export interface StudentBattleStatsRow {
+  student_id: string; rating: number; wins: number; losses: number; draws: number;
+  current_streak: number; best_win_streak: number; battles_played: number;
+  last_battle_at: string | null; updated_at: string;
+}
+
+export type BattleConfigCategory = "scoring" | "timer" | "ai_difficulty" | "rating" | "achievements";
+
+export interface BattleConfigRow {
+  key: string; category: BattleConfigCategory; label: string; description: string | null;
+  value: Record<string, unknown>; updated_at: string; updated_by: string | null;
+}
+
 /* ── Database schema (for Supabase client generic) ──────────────────── */
 export interface Database {
   public: {
@@ -315,6 +369,36 @@ export interface Database {
       admin_audit_log: {
         Row: AdminAuditLogRow;
         Insert: { admin_id: string | null; action: string; target_type: string; target_id?: string | null; metadata?: Record<string, unknown> };
+        Update: never;
+      };
+      battles: {
+        Row: BattleRow;
+        Insert: { mode?: BattleMode; status?: BattleStatus; subject: Subject; class_level: number; board: Board; difficulty: Difficulty; question_count?: number; time_per_question_seconds: number; created_by: string; room_code?: string | null; started_at?: string | null; completed_at?: string | null; cancelled_at?: string | null };
+        Update: Partial<{ status: BattleStatus; started_at: string | null; completed_at: string | null; cancelled_at: string | null; winner_participant_id: string | null }>;
+      };
+      battle_participants: {
+        Row: BattleParticipantRow;
+        Insert: { battle_id: string; student_id?: string | null; is_ai?: boolean; ai_difficulty_key?: Difficulty | null; score?: number; correct_count?: number; incorrect_count?: number; timeout_count?: number; total_time_seconds?: number; rating_before?: number | null };
+        Update: Partial<{ score: number; correct_count: number; incorrect_count: number; timeout_count: number; total_time_seconds: number; rating_after: number | null; rating_delta: number | null; result: BattleOutcome | null }>;
+      };
+      battle_questions: {
+        Row: BattleQuestionRow;
+        Insert: { battle_id: string; question_id?: string | null; order_index: number; question_text: string; options: BattleQuestionOption[]; correct_option_index: number; explanation: string; topic_name?: string | null; difficulty: Difficulty; time_limit_seconds: number };
+        Update: never;
+      };
+      battle_answers: {
+        Row: BattleAnswerRow;
+        Insert: { battle_id: string; battle_question_id: string; participant_id: string; selected_option_index?: number | null; is_correct: boolean; time_taken_seconds: number; points_awarded: number };
+        Update: never;
+      };
+      student_battle_stats: {
+        Row: StudentBattleStatsRow;
+        Insert: { student_id: string; rating?: number };
+        Update: Partial<{ rating: number; wins: number; losses: number; draws: number; current_streak: number; best_win_streak: number; battles_played: number; last_battle_at: string | null }>;
+      };
+      battle_config: {
+        Row: BattleConfigRow;
+        Insert: never;
         Update: never;
       };
     };

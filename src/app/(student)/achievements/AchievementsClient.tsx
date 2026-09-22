@@ -1,6 +1,6 @@
 "use client";
 
-import { Flame, Target, Zap, Trophy, Route, Crown, Award, TrendingUp, Lock } from "lucide-react";
+import { Flame, Target, Zap, Trophy, Route, Crown, Award, TrendingUp, Lock, Swords } from "lucide-react";
 import { AppShell } from "@/components/layout";
 import { OACard, OAAvatar } from "@/components/ui";
 import { useStudent } from "@/contexts/StudentContext";
@@ -14,6 +14,10 @@ const BADGE_CATALOG = [
   { key: "path_master", Icon: Route,  name: "Path master",       desc: "Finish a learning path",tone: "cobalt" },
   { key: "top_class",   Icon: Crown,  name: "Top of the class",  desc: "Reach #1 in batch",    tone: "gold"   },
   { key: "perfect_100", Icon: Award,  name: "Perfect ten",       desc: "Score 100% on a test", tone: "cobalt" },
+  { key: "battle_first_win",     Icon: Swords, name: "First victory",     desc: "Win an Olympiad Battle",  tone: "gold"   },
+  { key: "battle_perfect_score", Icon: Award,  name: "Perfect battle",    desc: "Ace every question",      tone: "cobalt" },
+  { key: "battle_win_streak_5",  Icon: Flame,  name: "On a roll",         desc: "5 battle wins in a row",  tone: "gold"   },
+  { key: "battle_rating_1200",   Icon: Crown,  name: "Rising challenger", desc: "Reach 1200 battle rating", tone: "cobalt" },
 ];
 
 interface Props {
