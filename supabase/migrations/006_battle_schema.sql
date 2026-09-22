@@ -171,28 +171,30 @@ alter table student_battle_stats enable row level security;
 alter table battle_config        enable row level security;
 -- battle_config: no policies — service-role only, same as admin_settings.
 
-create policy "own or participant battles" on battles
-  for select using (
-    created_by in (select id from students where profile_id = auth.uid())
-    or id in (
-      select battle_id from battle_participants
-      where student_id in (select id from students where profile_id = auth.uid())
-    )
-  );
+-- Phase 1 only ever has one human per battle (the creator) — visibility is
+-- keyed off `created_by` alone. Deliberately NOT "created_by OR (id in
+-- battle_participants where student_id = mine)": that OR-clause subqueries
+-- battle_participants, whose own policy below subqueries battles right
+-- back, which Postgres detects as infinite recursion (RLS re-evaluates
+-- each table's policy while evaluating the other's). When Phase 2 adds a
+-- second human participant, add visibility via a SECURITY DEFINER helper
+-- function instead of a direct cross-table subquery, to avoid reintroducing
+-- this cycle.
+create policy "own battles" on battles
+  for select using (created_by in (select id from students where profile_id = auth.uid()));
 create policy "create own battles" on battles
   for insert with check (created_by in (select id from students where profile_id = auth.uid()));
 create policy "update own battles" on battles
   for update using (created_by in (select id from students where profile_id = auth.uid()));
 
--- Self-referencing policy: visible if the requester is themselves a
--- participant in that battle — this also makes the AI's row (student_id
--- null) visible to the human participant, since both rows share battle_id.
+-- Keyed off battles.created_by (not a battle_participants self-join — see
+-- the comment on "own battles" above for why). This still correctly
+-- exposes both rows, including the AI's (student_id null), to the human
+-- participant, since both rows share battle_id and every Phase 1 battle
+-- has exactly one human: its creator.
 create policy "own battle participants" on battle_participants
   for select using (
-    battle_id in (
-      select battle_id from battle_participants bp2
-      where bp2.student_id in (select id from students where profile_id = auth.uid())
-    )
+    battle_id in (select id from battles where created_by in (select id from students where profile_id = auth.uid()))
   );
 create policy "insert own battle participants" on battle_participants
   for insert with check (
