@@ -11,7 +11,7 @@ import type {
   StudyPlanRow, AchievementRow, AIConversationRow, TopicPageRow,
   BlogPostRow, AdminSettingsRow, AdminAuditLogRow,
   BattleRow, BattleParticipantRow, BattleQuestionRow, BattleAnswerRow,
-  StudentBattleStatsRow, BattleConfigRow,
+  StudentBattleStatsRow, BattleConfigRow, BattleInvitationRow,
 } from "@/types/database";
 
 export function asConcepts(data: unknown): ConceptRow[] { return (data ?? []) as ConceptRow[]; }
@@ -41,3 +41,5 @@ export function asBattleQuestions(data: unknown): BattleQuestionRow[] { return (
 export function asBattleAnswers(data: unknown): BattleAnswerRow[] { return (data ?? []) as BattleAnswerRow[]; }
 export function asBattleStats(data: unknown): StudentBattleStatsRow | null { return data as StudentBattleStatsRow | null; }
 export function asBattleConfigs(data: unknown): BattleConfigRow[] { return (data ?? []) as BattleConfigRow[]; }
+export function asBattleInvitation(data: unknown): BattleInvitationRow | null { return data as BattleInvitationRow | null; }
+export function asBattleInvitations(data: unknown): BattleInvitationRow[] { return (data ?? []) as BattleInvitationRow[]; }

@@ -67,10 +67,16 @@ export interface BattleHistoryItem {
 
 export async function getRecentBattles(studentId: string, limit = 10): Promise<BattleHistoryItem[]> {
   const supabase = await createClient();
+  // No .eq("created_by", studentId) — RLS ("own or participant battles",
+  // 009_battle_invitations.sql) already scopes this to battles the student is
+  // in, whether they created it (AI Battle, or the inviter of a friend
+  // battle) or joined it (accepted an invite). Only completed battles here —
+  // in-progress ones ("your turn" / "waiting on opponent") surface via
+  // getActiveBattles() instead, so the two panels don't show the same row.
   const { data } = await supabase
     .from("battles")
     .select("id, subject, difficulty, status, created_at, completed_at, battle_participants(student_id, is_ai, score, result, rating_delta)")
-    .eq("created_by", studentId)
+    .eq("status", "completed")
     .order("created_at", { ascending: false })
     .limit(limit);
 
@@ -88,6 +94,75 @@ export async function getRecentBattles(studentId: string, limit = 10): Promise<B
       opponentScore: opponent?.score ?? null,
       ratingDelta: self?.rating_delta ?? null,
       completedAt: b.completed_at,
+      createdAt: b.created_at,
+    };
+  });
+}
+
+/**
+ * Same as getOrCreateStudentBattleStats, but takes an already-created
+ * service client so a trusted server action (e.g. acceptBattleInvitation)
+ * can fetch/create BOTH sides' stats in one privileged operation — the
+ * RLS-bound version above can only ever read the current session's own row.
+ */
+export async function getOrCreateStudentBattleStatsAsService(
+  service: ReturnType<typeof createServiceClient>,
+  studentId: string
+): Promise<StudentBattleStatsRow> {
+  const { data } = await service.from("student_battle_stats").select("*").eq("student_id", studentId).maybeSingle();
+  const existing = asBattleStats(data);
+  if (existing) return existing;
+
+  const { data: inserted, error } = await service
+    .from("student_battle_stats")
+    .upsert({ student_id: studentId, rating: BATTLE_CONFIG_DEFAULTS.rating.starting_rating }, { onConflict: "student_id" })
+    .select("*")
+    .single();
+
+  if (error || !inserted) {
+    const { data: refetched } = await service.from("student_battle_stats").select("*").eq("student_id", studentId).single();
+    return asBattleStats(refetched)!;
+  }
+  return asBattleStats(inserted)!;
+}
+
+export interface ActiveBattleItem {
+  battleId: string;
+  subject: Subject;
+  difficulty: Difficulty;
+  opponentName: string;
+  myTurn: boolean;
+  createdAt: string;
+}
+
+/** Active (not yet completed) friend battles the student is a participant in — "your turn" vs "waiting on opponent". */
+export async function getActiveBattles(studentId: string): Promise<ActiveBattleItem[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("battles")
+    .select("id, subject, difficulty, created_at, battle_participants(student_id, is_ai, finished_at, student:students(profile:profiles(full_name)))")
+    .eq("mode", "pvp_private")
+    .eq("status", "active")
+    .order("created_at", { ascending: false });
+
+  type Raw = {
+    id: string; subject: Subject; difficulty: Difficulty; created_at: string;
+    battle_participants: Array<{
+      student_id: string | null; is_ai: boolean; finished_at: string | null;
+      student: { profile: { full_name: string } | null } | null;
+    }>;
+  };
+  const rows = (data ?? []) as unknown as Raw[];
+
+  return rows.map((b) => {
+    const me = b.battle_participants.find((p) => p.student_id === studentId);
+    const opponent = b.battle_participants.find((p) => p.student_id !== studentId);
+    return {
+      battleId: b.id,
+      subject: b.subject,
+      difficulty: b.difficulty,
+      opponentName: opponent?.student?.profile?.full_name ?? "Opponent",
+      myTurn: !me?.finished_at,
       createdAt: b.created_at,
     };
   });

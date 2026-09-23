@@ -19,20 +19,25 @@ const BATTLE_BADGE_LABELS: Record<string, string> = {
   battle_veteran_50: "50 Battles Played",
 };
 
-const OUTCOME_COPY: Record<BattleResultPayload["result"], { headline: string; sub: string; Icon: typeof Trophy; tone: string }> = {
-  win: { headline: "Victory! Great battle.", sub: "You outscored the AI — keep this momentum going.", Icon: Trophy, tone: "var(--gold-400)" },
-  draw: { headline: "Good battle! It's a draw.", sub: "Neck and neck with the AI — a rematch could tip it your way.", Icon: Handshake, tone: "var(--cobalt-300)" },
-  loss: { headline: "Good battle! You're improving.", sub: "Every battle sharpens you — let's fix a few things and go again.", Icon: Swords, tone: "var(--cobalt-300)" },
-};
+function getOutcomeCopy(result: BattleResultPayload["result"], opponentLabel: string) {
+  const copy: Record<BattleResultPayload["result"], { headline: string; sub: string; Icon: typeof Trophy; tone: string }> = {
+    win: { headline: "Victory! Great battle.", sub: `You outscored ${opponentLabel} — keep this momentum going.`, Icon: Trophy, tone: "var(--gold-400)" },
+    draw: { headline: "Good battle! It's a draw.", sub: `Neck and neck with ${opponentLabel} — a rematch could tip it your way.`, Icon: Handshake, tone: "var(--cobalt-300)" },
+    loss: { headline: "Good battle! You're improving.", sub: "Every battle sharpens you — let's fix a few things and go again.", Icon: Swords, tone: "var(--cobalt-300)" },
+  };
+  return copy[result];
+}
 
 interface BattleResultScreenProps {
   result: BattleResultPayload;
   subject: Subject;
   onBattleAgain: () => void;
+  /** "AI Opponent" for AI Battle, or the friend's name for a PvP battle. */
+  opponentLabel?: string;
 }
 
-export function BattleResultScreen({ result, subject, onBattleAgain }: BattleResultScreenProps) {
-  const copy = OUTCOME_COPY[result.result];
+export function BattleResultScreen({ result, subject, onBattleAgain, opponentLabel = "AI Opponent" }: BattleResultScreenProps) {
+  const copy = getOutcomeCopy(result.result, opponentLabel);
 
   useEffect(() => {
     result.newAchievementKeys.forEach((key) => track("achievement_unlocked", { badge_key: key }));
@@ -71,7 +76,7 @@ export function BattleResultScreen({ result, subject, onBattleAgain }: BattleRes
       {/* ── Score summary ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <ScoreStat label="You" value={String(result.studentScore)} tone="var(--brand)" />
-        <ScoreStat label="AI Opponent" value={String(result.aiScore)} tone="var(--ink-700)" />
+        <ScoreStat label={opponentLabel} value={String(result.aiScore)} tone="var(--ink-700)" />
         <ScoreStat
           label="Rating"
           value={`${result.ratingAfter} (${result.ratingDelta >= 0 ? "+" : ""}${result.ratingDelta})`}
@@ -140,7 +145,7 @@ export function BattleResultScreen({ result, subject, onBattleAgain }: BattleRes
                     You {q.studentCorrect ? <Check size={13} style={{ color: "var(--success)" }} /> : <X size={13} style={{ color: "var(--fg-subtle)" }} />}
                   </span>
                   <span className="flex items-center gap-1 text-[11.5px]" style={{ color: "var(--fg-muted)" }}>
-                    AI {q.aiCorrect ? <Check size={13} style={{ color: "var(--success)" }} /> : <X size={13} style={{ color: "var(--fg-subtle)" }} />}
+                    {opponentLabel.split(" ")[0]} {q.aiCorrect ? <Check size={13} style={{ color: "var(--success)" }} /> : <X size={13} style={{ color: "var(--fg-subtle)" }} />}
                   </span>
                 </div>
               </div>

@@ -192,7 +192,16 @@ export interface BattleParticipantRow {
   ai_difficulty_key: Difficulty | null; score: number; correct_count: number;
   incorrect_count: number; timeout_count: number; total_time_seconds: number;
   rating_before: number | null; rating_after: number | null; rating_delta: number | null;
-  result: BattleOutcome | null; joined_at: string;
+  result: BattleOutcome | null; joined_at: string; finished_at: string | null;
+}
+
+export type BattleInvitationStatus = "pending" | "accepted" | "declined" | "cancelled" | "expired";
+
+export interface BattleInvitationRow {
+  id: string; inviter_student_id: string; invitee_email: string; invitee_student_id: string | null;
+  subject: Subject; difficulty: Difficulty; class_level: number; board: Board; question_count: number;
+  status: BattleInvitationStatus; battle_id: string | null;
+  created_at: string; responded_at: string | null; expires_at: string;
 }
 
 export interface BattleQuestionRow {
@@ -379,7 +388,12 @@ export interface Database {
       battle_participants: {
         Row: BattleParticipantRow;
         Insert: { battle_id: string; student_id?: string | null; is_ai?: boolean; ai_difficulty_key?: Difficulty | null; score?: number; correct_count?: number; incorrect_count?: number; timeout_count?: number; total_time_seconds?: number; rating_before?: number | null };
-        Update: Partial<{ score: number; correct_count: number; incorrect_count: number; timeout_count: number; total_time_seconds: number; rating_after: number | null; rating_delta: number | null; result: BattleOutcome | null }>;
+        Update: Partial<{ score: number; correct_count: number; incorrect_count: number; timeout_count: number; total_time_seconds: number; rating_after: number | null; rating_delta: number | null; result: BattleOutcome | null; finished_at: string | null }>;
+      };
+      battle_invitations: {
+        Row: BattleInvitationRow;
+        Insert: { inviter_student_id: string; invitee_email: string; subject: Subject; difficulty: Difficulty; class_level: number; board: Board; question_count: number };
+        Update: Partial<{ status: BattleInvitationStatus; battle_id: string | null; invitee_student_id: string | null; responded_at: string | null }>;
       };
       battle_questions: {
         Row: BattleQuestionRow;
