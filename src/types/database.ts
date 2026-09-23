@@ -392,7 +392,7 @@ export interface Database {
       };
       battle_invitations: {
         Row: BattleInvitationRow;
-        Insert: { inviter_student_id: string; invitee_email: string; subject: Subject; difficulty: Difficulty; class_level: number; board: Board; question_count: number };
+        Insert: { inviter_student_id: string; invitee_email: string; subject: Subject; difficulty: Difficulty; class_level: number; board: Board; question_count: number; battle_id?: string | null };
         Update: Partial<{ status: BattleInvitationStatus; battle_id: string | null; invitee_student_id: string | null; responded_at: string | null }>;
       };
       battle_questions: {

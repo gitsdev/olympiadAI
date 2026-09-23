@@ -8,15 +8,18 @@ import {
 } from "@/lib/supabase/types-helper";
 import { generateQuestions } from "@/lib/questions/generate";
 import {
-  getBattleConfig, getOrCreateStudentBattleStatsAsService, getActiveBattles, type ActiveBattleItem,
+  getBattleConfig, getOrCreateStudentBattleStats, getOrCreateStudentBattleStatsAsService,
+  getActiveBattles, type ActiveBattleItem,
 } from "@/lib/battle/battle-data";
 import { BATTLE_CONFIG_DEFAULTS } from "@/lib/battle/battle";
+import { generateSignInLink } from "@/lib/email/auth-link";
+import { sendEmail } from "@/lib/email/send";
+import { buildBattleInviteEmail } from "@/lib/email/battle-invite-template";
 import type { StartAiBattleQuestion } from "@/actions/battle";
 import type {
   Board, Subject, Difficulty, BattleQuestionOption, BattleInvitationStatus,
 } from "@/types/database";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /* ── Send ─────────────────────────────────────────────────────────────── */
@@ -30,7 +33,21 @@ interface SendInvitationInput {
   questionCount: number;
 }
 
-export async function sendBattleInvitation(input: SendInvitationInput): Promise<{ error: string } | { invitationId: string }> {
+export interface SendInvitationResult {
+  invitationId: string;
+  battleId: string;
+  timeLimitSeconds: number;
+  questions: StartAiBattleQuestion[];
+}
+
+/**
+ * Creates the battle (and the inviter's own participant row + the shared
+ * question set) immediately, so the inviter can start playing their side
+ * right away rather than waiting for the invitee to accept first — the
+ * invitee's participant row is added later, in acceptBattleInvitation, to
+ * this SAME battle/question set.
+ */
+export async function sendBattleInvitation(input: SendInvitationInput): Promise<{ error: string } | SendInvitationResult> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
@@ -39,10 +56,66 @@ export async function sendBattleInvitation(input: SendInvitationInput): Promise<
   const student = asStudent(rawStudent);
   if (!student) return { error: "Student profile not found" };
 
+  const { data: rawProfile } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
+  const inviterName = (rawProfile as { full_name?: string } | null)?.full_name ?? "A friend";
+
   const inviteeEmail = input.inviteeEmail.trim().toLowerCase();
   if (!inviteeEmail || !EMAIL_RE.test(inviteeEmail)) return { error: "Enter a valid email address." };
   if (inviteeEmail === (user.email ?? "").toLowerCase()) {
     return { error: "You can't challenge yourself — invite a friend instead." };
+  }
+
+  let questions;
+  try {
+    questions = await generateQuestions({
+      subject: input.subject, topicName: input.subject, difficulty: input.difficulty,
+      count: input.questionCount, classLevel: input.classLevel, board: input.board,
+    });
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Could not generate battle questions." };
+  }
+  if (questions.length === 0) return { error: "Could not generate battle questions." };
+
+  const config = await getBattleConfig();
+  const timeLimitSeconds = config.timer.seconds_by_difficulty[input.difficulty] ?? config.timer.seconds_by_difficulty.Medium;
+  const stats = await getOrCreateStudentBattleStats(student.id);
+
+  const { data: rawBattle, error: battleErr } = await supabase
+    .from("battles")
+    .insert({
+      mode: "pvp_private", status: "active", subject: input.subject, class_level: input.classLevel,
+      board: input.board, difficulty: input.difficulty, question_count: questions.length,
+      time_per_question_seconds: timeLimitSeconds, created_by: student.id, started_at: new Date().toISOString(),
+    })
+    .select("*")
+    .single();
+  const battle = asBattle(rawBattle);
+  if (battleErr || !battle) return { error: battleErr?.message ?? "Could not create battle" };
+
+  const { error: participantErr } = await supabase.from("battle_participants").insert({
+    battle_id: battle.id, student_id: student.id, is_ai: false, rating_before: stats.rating,
+  });
+  if (participantErr) return { error: participantErr.message };
+
+  const questionRows = questions.map((q, i) => ({
+    battle_id: battle.id,
+    order_index: i,
+    question_text: q.question_text,
+    options: q.options.map((text, index): BattleQuestionOption => ({ index, text })),
+    correct_option_index: q.correct_answer_index,
+    explanation: q.explanation,
+    topic_name: q.topic_name,
+    difficulty: q.difficulty,
+    time_limit_seconds: timeLimitSeconds,
+  }));
+  const { data: rawQuestions, error: questionsErr } = await supabase
+    .from("battle_questions")
+    .insert(questionRows)
+    .select("*")
+    .order("order_index", { ascending: true });
+  const battleQuestions = asBattleQuestions(rawQuestions);
+  if (questionsErr || battleQuestions.length === 0) {
+    return { error: questionsErr?.message ?? "Could not create battle questions" };
   }
 
   const { data: invitation, error: insertErr } = await supabase
@@ -54,30 +127,42 @@ export async function sendBattleInvitation(input: SendInvitationInput): Promise<
       difficulty: input.difficulty,
       class_level: input.classLevel,
       board: input.board,
-      question_count: input.questionCount,
+      question_count: questions.length,
+      battle_id: battle.id,
     })
     .select("id")
     .single();
   if (insertErr || !invitation) return { error: insertErr?.message ?? "Could not create invitation" };
 
-  // Magic link works whether the invitee already has an OlympiadIQ account or
-  // not (shouldCreateUser: true creates one on the fly) — same underlying
-  // Supabase Auth email service as password reset (src/actions/auth.ts
-  // requestPasswordReset), no new dependency. The email body is Supabase's
-  // default "Magic Link" template copy (customizable only in the Supabase
-  // dashboard, not here); the actual "so-and-so challenged you" context
-  // appears once the invitee lands on /battle.
-  const { error: emailErr } = await supabase.auth.signInWithOtp({
-    email: inviteeEmail,
-    options: { shouldCreateUser: true, emailRedirectTo: `${SITE_URL}/auth/confirm?next=/battle` },
-  });
-  // Don't fail the action over an email hiccup — the invitation row already
-  // exists and will show up for the invitee once they're on OlympiadIQ
-  // regardless of whether this particular email arrives.
-  if (emailErr) console.error("[sendBattleInvitation] magic link email failed:", emailErr.message);
+  // Send a proper branded challenge email via Brevo (not Supabase's generic
+  // magic-link template copy). generateSignInLink() gets a sign-in link
+  // without triggering Supabase's own email — works whether the invitee
+  // already has an OlympiadIQ account or not.
+  const actionUrl = await generateSignInLink(inviteeEmail, "/battle");
+  if (actionUrl) {
+    const email = buildBattleInviteEmail({
+      inviterName, subject: input.subject, difficulty: input.difficulty,
+      questionCount: questions.length, actionUrl,
+    });
+    const { sent, error: emailErr } = await sendEmail({ to: inviteeEmail, subject: email.subject, html: email.html, text: email.text });
+    if (!sent) console.error("[sendBattleInvitation] invite email not sent:", emailErr);
+  } else {
+    console.error("[sendBattleInvitation] could not generate a sign-in link for", inviteeEmail);
+  }
+  // Don't fail the action over an email hiccup — the invitation and battle
+  // already exist, and the inviter can start playing their side regardless.
 
   revalidatePath("/battle");
-  return { invitationId: invitation.id as string };
+
+  const startQuestions: StartAiBattleQuestion[] = battleQuestions.map((q) => ({
+    battleQuestionId: q.id,
+    questionText: q.question_text,
+    options: [...q.options].sort((a, b) => a.index - b.index).map((o) => o.text),
+    topicName: q.topic_name,
+    timeLimitSeconds: q.time_limit_seconds,
+  }));
+
+  return { invitationId: invitation.id as string, battleId: battle.id, timeLimitSeconds, questions: startQuestions };
 }
 
 /* ── List ─────────────────────────────────────────────────────────────── */
@@ -200,6 +285,11 @@ export async function cancelBattleInvitation(invitationId: string): Promise<{ er
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
+  const { data: rawInvitation } = await supabase
+    .from("battle_invitations").select("*").eq("id", invitationId).eq("status", "pending").single();
+  const invitation = asBattleInvitation(rawInvitation);
+  if (!invitation) return { error: "Invitation not found or already responded to." };
+
   const { error } = await supabase
     .from("battle_invitations")
     .update({ status: "cancelled" })
@@ -207,13 +297,25 @@ export async function cancelBattleInvitation(invitationId: string): Promise<{ er
     .eq("status", "pending");
   if (error) return { error: error.message };
 
+  // The battle already exists (created at send time) — cancel it too, since
+  // it would otherwise sit active with only the inviter's participant row
+  // forever. "update own battles" (created_by = own) already permits this —
+  // the inviter is always created_by, no service client needed.
+  if (invitation.battle_id) {
+    await supabase.from("battles").update({ status: "cancelled", cancelled_at: new Date().toISOString() })
+      .eq("id", invitation.battle_id).eq("status", "active");
+  }
+
   revalidatePath("/battle");
   return { ok: true };
 }
 
-/** Privileged multi-party write (creates the battle + both sides' participant
- * rows — one belongs to the inviter, not the caller) — the service client is
- * the trust boundary here, not RLS, same as admin writes elsewhere. */
+/**
+ * Adds the invitee's own participant row to the battle the inviter already
+ * created (at send time) — this is a privileged write (I'm inserting into a
+ * battle I didn't create), so it goes through the service client, the trust
+ * boundary here, not RLS, same as admin writes elsewhere.
+ */
 export async function acceptBattleInvitation(invitationId: string): Promise<{ error: string } | { battleId: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -231,71 +333,27 @@ export async function acceptBattleInvitation(invitationId: string): Promise<{ er
   if (invitation.invitee_email.toLowerCase() !== (user.email ?? "").toLowerCase()) {
     return { error: "This invitation isn't addressed to you." };
   }
+  if (!invitation.battle_id) return { error: "This invitation's battle could not be found." };
 
   const service = createServiceClient();
 
-  let questions;
-  try {
-    questions = await generateQuestions({
-      subject: invitation.subject,
-      topicName: invitation.subject,
-      difficulty: invitation.difficulty,
-      count: invitation.question_count,
-      classLevel: invitation.class_level,
-      board: invitation.board,
-    });
-  } catch (err) {
-    return { error: err instanceof Error ? err.message : "Could not generate battle questions." };
-  }
-  if (questions.length === 0) return { error: "Could not generate battle questions." };
-
-  const config = await getBattleConfig();
-  const timeLimitSeconds = config.timer.seconds_by_difficulty[invitation.difficulty] ?? config.timer.seconds_by_difficulty.Medium;
-
-  const [inviterStats, inviteeStats] = await Promise.all([
-    getOrCreateStudentBattleStatsAsService(service, invitation.inviter_student_id),
-    getOrCreateStudentBattleStatsAsService(service, student.id),
-  ]);
-
-  const { data: rawBattle, error: battleErr } = await service
-    .from("battles")
-    .insert({
-      mode: "pvp_private", status: "active", subject: invitation.subject, class_level: invitation.class_level,
-      board: invitation.board, difficulty: invitation.difficulty, question_count: questions.length,
-      time_per_question_seconds: timeLimitSeconds, created_by: invitation.inviter_student_id,
-      started_at: new Date().toISOString(),
-    })
-    .select("*")
-    .single();
+  const { data: rawBattle } = await service.from("battles").select("*").eq("id", invitation.battle_id).single();
   const battle = asBattle(rawBattle);
-  if (battleErr || !battle) return { error: battleErr?.message ?? "Could not create battle" };
+  if (!battle || battle.status !== "active") return { error: "This battle is no longer available." };
 
-  const { error: participantsErr } = await service.from("battle_participants").insert([
-    { battle_id: battle.id, student_id: invitation.inviter_student_id, is_ai: false, rating_before: inviterStats.rating },
-    { battle_id: battle.id, student_id: student.id, is_ai: false, rating_before: inviteeStats.rating },
-  ]);
-  if (participantsErr) return { error: participantsErr.message };
+  const inviteeStats = await getOrCreateStudentBattleStatsAsService(service, student.id);
 
-  const questionRows = questions.map((q, i) => ({
-    battle_id: battle.id,
-    order_index: i,
-    question_text: q.question_text,
-    options: q.options.map((text, index): BattleQuestionOption => ({ index, text })),
-    correct_option_index: q.correct_answer_index,
-    explanation: q.explanation,
-    topic_name: q.topic_name,
-    difficulty: q.difficulty,
-    time_limit_seconds: timeLimitSeconds,
-  }));
-  const { error: questionsErr } = await service.from("battle_questions").insert(questionRows);
-  if (questionsErr) return { error: questionsErr.message };
+  const { error: participantErr } = await service.from("battle_participants").insert({
+    battle_id: battle.id, student_id: student.id, is_ai: false, rating_before: inviteeStats.rating,
+  });
+  if (participantErr) return { error: participantErr.message };
 
   await service.from("battle_invitations").update({
-    status: "accepted", battle_id: battle.id, invitee_student_id: student.id, responded_at: new Date().toISOString(),
+    status: "accepted", invitee_student_id: student.id, responded_at: new Date().toISOString(),
   }).eq("id", invitationId);
 
   revalidatePath("/battle");
-  return { battleId: battle.id as string };
+  return { battleId: battle.id };
 }
 
 /* ── Play an already-accepted battle ─────────────────────────────────── */

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Loader2, Bot, Users, Hourglass } from "lucide-react";
 import { AppShell } from "@/components/layout";
 import { OACard, OAButton, type Subject } from "@/components/ui";
@@ -81,7 +82,6 @@ export default function BattleClient({
   const [inviteKey, setInviteKey] = useState(0);
   const [inviteSending, setInviteSending] = useState(false);
   const [inviteError, setInviteError] = useState("");
-  const [inviteSuccess, setInviteSuccess] = useState("");
 
   async function refreshInvitationsAndActive() {
     const [inv, active] = await Promise.all([getMyBattleInvitations(), getMyActiveBattles()]);
@@ -149,7 +149,6 @@ export default function BattleClient({
 
   async function handleSendInvite(email: string) {
     setInviteError("");
-    setInviteSuccess("");
     setInviteSending(true);
     const res = await sendBattleInvitation({
       inviteeEmail: email, subject: selSubject, difficulty: selDifficulty,
@@ -160,10 +159,21 @@ export default function BattleClient({
       setInviteError(res.error);
       return;
     }
-    track("private_battle_created", { subject: selSubject, difficulty: selDifficulty });
-    setInviteSuccess(`Invite sent to ${email} — they'll see it once they're on OlympiadIQ.`);
-    setInviteKey((k) => k + 1); // remounts ChallengeFriendForm, clearing its email field
+    track("private_battle_created", { battleId: res.battleId, subject: selSubject, difficulty: selDifficulty });
+    setInviteKey((k) => k + 1); // remounts ChallengeFriendForm for next time, clearing its email field
     refreshInvitationsAndActive();
+
+    // The invite is sent — start playing right away rather than waiting for
+    // the invitee to accept first. The invitee joins this same battle/
+    // question set later, via acceptBattleInvitation.
+    setBattleId(res.battleId);
+    setBattleKind("pvp");
+    setOpponentName(email);
+    setTimeLimitSeconds(res.timeLimitSeconds);
+    setQuestions(res.questions);
+    setIdx(0);
+    setAnswers([]);
+    setPhase("battle");
   }
 
   async function handleAcceptInvite(invitationId: string) {
@@ -340,13 +350,17 @@ export default function BattleClient({
                 selCount={selCount} onCountChange={setSelCount}
                 allowedCounts={allowedQuestionCounts}
                 error={inviteError}
-                success={inviteSuccess}
                 sending={inviteSending}
                 onSend={handleSendInvite}
               />
             )}
 
             <BattleHistoryList history={history} />
+            {history.length > 0 && (
+              <Link href="/battle/history" className="text-[13px] font-medium text-center hover:underline" style={{ color: "var(--brand)" }}>
+                View full battle history →
+              </Link>
+            )}
           </>
         )}
 

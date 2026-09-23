@@ -17,14 +17,13 @@ interface ChallengeFriendFormProps {
   onCountChange: (c: number) => void;
   allowedCounts: number[];
   error?: string;
-  success?: string;
   sending: boolean;
   onSend: (email: string) => void;
 }
 
 export function ChallengeFriendForm({
   subjects, selSubject, onSubjectChange, selDifficulty, onDifficultyChange,
-  selCount, onCountChange, allowedCounts, error, success, sending, onSend,
+  selCount, onCountChange, allowedCounts, error, sending, onSend,
 }: ChallengeFriendFormProps) {
   const [email, setEmail] = useState("");
 
@@ -35,7 +34,7 @@ export function ChallengeFriendForm({
           Friend&apos;s email
         </p>
         <p className="text-[12.5px] mb-3" style={{ color: "var(--fg-muted)" }}>
-          If they don&apos;t have an OlympiadIQ account yet, we&apos;ll email them a link to create one and see your challenge.
+          We&apos;ll email them the challenge — you&apos;ll start playing your side right away, no need to wait for them to accept first.
         </p>
         <div className="flex items-center gap-2 border border-[var(--line-300)] rounded-[var(--r-md)] px-3 py-[9px] focus-within:border-[var(--cobalt-400)] focus-within:ring-2 focus-within:ring-[var(--cobalt-500)]/20 transition-colors" style={{ background: "var(--surface)" }}>
           <Mail size={16} style={{ color: "var(--fg-muted)" }} />
@@ -121,11 +120,6 @@ export function ChallengeFriendForm({
           {error}
         </p>
       )}
-      {success && (
-        <p className="text-[13px] px-3 py-2 rounded-[var(--r-md)]" style={{ background: "var(--success-bg)", color: "var(--success-tx)" }}>
-          {success}
-        </p>
-      )}
 
       <button
         onClick={() => onSend(email)}
@@ -134,7 +128,7 @@ export function ChallengeFriendForm({
         style={{ background: "var(--cobalt-500)", boxShadow: "var(--shadow-brand)" }}
       >
         <Send size={16} />
-        {sending ? "Sending invite…" : "Send Invite"}
+        {sending ? "Setting up your battle…" : "Send Challenge & Start Battle"}
       </button>
     </div>
   );

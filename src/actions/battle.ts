@@ -356,8 +356,12 @@ export async function submitPvpBattleAnswers(
   const { data: rawParticipants } = await supabase.from("battle_participants").select("*").eq("battle_id", battleId);
   const participants = asBattleParticipants(rawParticipants);
   const me = participants.find((p) => p.student_id === student.id);
+  // The opponent may not have accepted the invite yet — the inviter can
+  // start playing as soon as they send it (src/actions/battle-invitations.ts
+  // sendBattleInvitation), before anyone has joined. Treat "no opponent yet"
+  // the same as "opponent hasn't finished yet" below.
   const opponent = participants.find((p) => p.student_id !== student.id);
-  if (!me || !opponent || battleQuestions.length === 0) return { error: "Battle is incomplete" };
+  if (!me || battleQuestions.length === 0) return { error: "Battle is incomplete" };
   if (me.finished_at) return { error: "You've already submitted your answers for this battle." };
 
   const config = await getBattleConfig();
@@ -396,7 +400,7 @@ export async function submitPvpBattleAnswers(
     }).eq("id", me.id),
   ]);
 
-  if (!opponent.finished_at) {
+  if (!opponent || !opponent.finished_at) {
     revalidatePath("/battle");
     return { waiting: true, battleId };
   }

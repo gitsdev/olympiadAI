@@ -53,7 +53,7 @@ async function persistQuestions(
       .select("id")
       .single();
 
-    const id = (inserted as any)?.id;
+    const id = (inserted as unknown as { id: string } | null)?.id;
     if (id) {
       await supabase.from("question_options").insert(
         q.options.map((text, i) => ({

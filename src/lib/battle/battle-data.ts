@@ -8,7 +8,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { asBattleConfigs, asBattleStats } from "@/lib/supabase/types-helper";
 import { BATTLE_CONFIG_DEFAULTS, type BattleConfigBundle } from "./battle";
 import type {
-  BattleRow, BattleParticipantRow, BattleStatus, BattleOutcome,
+  BattleRow, BattleParticipantRow, BattleStatus, BattleOutcome, BattleMode,
   StudentBattleStatsRow, Subject, Difficulty,
 } from "@/types/database";
 
@@ -54,16 +54,44 @@ export async function getOrCreateStudentBattleStats(studentId: string): Promise<
 
 export interface BattleHistoryItem {
   battleId: string;
+  mode: BattleMode;
   subject: Subject;
   difficulty: Difficulty;
   status: BattleStatus;
   result: BattleOutcome | null;
   studentScore: number;
   opponentScore: number | null;
+  opponentName: string;
   ratingDelta: number | null;
   completedAt: string | null;
   createdAt: string;
 }
+
+type BattleHistoryRaw = BattleRow & {
+  battle_participants: Array<BattleParticipantRow & { student: { profile: { full_name: string } | null } | null }>;
+};
+
+function toHistoryItem(b: BattleHistoryRaw, studentId: string): BattleHistoryItem {
+  const self = b.battle_participants.find((p) => p.student_id === studentId);
+  const opponent = b.battle_participants.find((p) => p.is_ai || p.student_id !== studentId);
+  return {
+    battleId: b.id,
+    mode: b.mode,
+    subject: b.subject,
+    difficulty: b.difficulty,
+    status: b.status,
+    result: self?.result ?? null,
+    studentScore: self?.score ?? 0,
+    opponentScore: opponent?.score ?? null,
+    opponentName: opponent?.is_ai ? "AI Opponent" : opponent?.student?.profile?.full_name ?? "Opponent",
+    ratingDelta: self?.rating_delta ?? null,
+    completedAt: b.completed_at,
+    createdAt: b.created_at,
+  };
+}
+
+const HISTORY_SELECT =
+  "id, mode, subject, difficulty, status, created_at, completed_at, battle_participants(student_id, is_ai, score, result, rating_delta, student:students(profile:profiles(full_name)))";
 
 export async function getRecentBattles(studentId: string, limit = 10): Promise<BattleHistoryItem[]> {
   const supabase = await createClient();
@@ -75,28 +103,35 @@ export async function getRecentBattles(studentId: string, limit = 10): Promise<B
   // getActiveBattles() instead, so the two panels don't show the same row.
   const { data } = await supabase
     .from("battles")
-    .select("id, subject, difficulty, status, created_at, completed_at, battle_participants(student_id, is_ai, score, result, rating_delta)")
+    .select(HISTORY_SELECT)
     .eq("status", "completed")
     .order("created_at", { ascending: false })
     .limit(limit);
 
-  const rows = (data ?? []) as Array<BattleRow & { battle_participants: BattleParticipantRow[] }>;
-  return rows.map((b) => {
-    const self = b.battle_participants.find((p) => p.student_id === studentId);
-    const opponent = b.battle_participants.find((p) => p.is_ai || p.student_id !== studentId);
-    return {
-      battleId: b.id,
-      subject: b.subject,
-      difficulty: b.difficulty,
-      status: b.status,
-      result: self?.result ?? null,
-      studentScore: self?.score ?? 0,
-      opponentScore: opponent?.score ?? null,
-      ratingDelta: self?.rating_delta ?? null,
-      completedAt: b.completed_at,
-      createdAt: b.created_at,
-    };
-  });
+  const rows = (data ?? []) as unknown as BattleHistoryRaw[];
+  return rows.map((b) => toHistoryItem(b, studentId));
+}
+
+export interface BattleHistoryPage {
+  items: BattleHistoryItem[];
+  totalCount: number;
+}
+
+/** All completed battles for a student, paginated — backs the /battle/history page. */
+export async function getBattleHistoryPage(studentId: string, page: number, pageSize = 20): Promise<BattleHistoryPage> {
+  const supabase = await createClient();
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  const { data, count } = await supabase
+    .from("battles")
+    .select(HISTORY_SELECT, { count: "exact" })
+    .eq("status", "completed")
+    .order("created_at", { ascending: false })
+    .range(from, to);
+
+  const rows = (data ?? []) as unknown as BattleHistoryRaw[];
+  return { items: rows.map((b) => toHistoryItem(b, studentId)), totalCount: count ?? 0 };
 }
 
 /**
