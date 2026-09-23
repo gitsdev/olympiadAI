@@ -381,16 +381,30 @@ export async function getBattleForPlay(battleId: string): Promise<{ error: strin
     return { error: "Battle not found or already finished." };
   }
 
+  // No nested student/profile embed here — students/profiles RLS is "own
+  // row only", so embedding the opponent's row via this RLS-respecting
+  // client would silently come back null. Resolve their name separately
+  // via the service client instead (same pattern as battle-data.ts's
+  // resolveStudentNames).
   const { data: rawParticipants } = await supabase
     .from("battle_participants")
-    .select("*, student:students(profile:profiles(full_name))")
+    .select("student_id, finished_at")
     .eq("battle_id", battleId);
-  type ParticipantWithName = { student_id: string | null; finished_at: string | null; student: { profile: { full_name: string } | null } | null };
-  const participants = (rawParticipants ?? []) as unknown as ParticipantWithName[];
+  type ParticipantRow = { student_id: string | null; finished_at: string | null };
+  const participants = (rawParticipants ?? []) as unknown as ParticipantRow[];
   const me = participants.find((p) => p.student_id === student.id);
   const opponent = participants.find((p) => p.student_id !== student.id);
   if (!me) return { error: "You're not a participant in this battle." };
   if (me.finished_at) return { error: "You've already submitted your answers for this battle." };
+
+  let opponentName = "your friend";
+  if (opponent?.student_id) {
+    const service = createServiceClient();
+    const { data: opponentStudent } = await service
+      .from("students").select("profile:profiles(full_name)").eq("id", opponent.student_id).maybeSingle();
+    const name = (opponentStudent as unknown as { profile: { full_name: string } | null } | null)?.profile?.full_name;
+    if (name) opponentName = name;
+  }
 
   const { data: rawQuestions } = await supabase
     .from("battle_questions").select("*").eq("battle_id", battleId).order("order_index", { ascending: true });
@@ -409,6 +423,6 @@ export async function getBattleForPlay(battleId: string): Promise<{ error: strin
     timeLimitSeconds: battle.time_per_question_seconds,
     subject: battle.subject,
     questions,
-    opponentName: opponent?.student?.profile?.full_name ?? "your friend",
+    opponentName,
   };
 }

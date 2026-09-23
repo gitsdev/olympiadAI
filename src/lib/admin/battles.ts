@@ -41,7 +41,11 @@ export async function getBattleDetail(battleId: string): Promise<BattleDetail | 
 
   const { data: battleData } = await service
     .from("battles")
-    .select("*, student:students(id, profile:profiles(full_name)), participants:battle_participants(*)")
+    // battle_participants!battle_participants_battle_id_fkey — explicit FK hint
+    // required: battles<->battle_participants have two relationships (the
+    // forward battle_id FK and the reverse winner_participant_id FK), so
+    // PostgREST can't infer which one to embed without disambiguating.
+    .select("*, student:students(id, profile:profiles(full_name)), participants:battle_participants!battle_participants_battle_id_fkey(*)")
     .eq("id", battleId)
     .maybeSingle();
   if (!battleData) return null;
