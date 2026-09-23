@@ -7,7 +7,8 @@ import { getBattleHistoryPage } from "@/lib/battle/battle-data";
 
 const PAGE_SIZE = 20;
 
-// Loss intentionally does NOT use the "red" danger tone — see BattleHistoryList.
+// Loss intentionally does NOT use the "red" danger tone — battles are a fun
+// learning loop, not something to feel bad about losing.
 const RESULT_TONE = { win: "green", loss: "neutral", draw: "amber" } as const;
 const RESULT_LABEL = { win: "Win", loss: "Battled", draw: "Draw" } as const;
 
@@ -52,7 +53,7 @@ export default async function BattleHistoryPage({ searchParams }: PageProps) {
                     </p>
                     <p className="text-[12px] flex items-center gap-1" style={{ color: "var(--fg-muted)" }}>
                       {b.mode === "ai" ? <Bot size={11} /> : <Users size={11} />}
-                      vs {b.opponentName}
+                      vs {b.opponentName} · {b.questionCount}Q
                     </p>
                   </div>
                   {b.result && <OABadge tone={RESULT_TONE[b.result]}>{RESULT_LABEL[b.result]}</OABadge>}

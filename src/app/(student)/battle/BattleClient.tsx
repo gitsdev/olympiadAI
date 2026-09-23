@@ -1,12 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { Loader2, Bot, Users, Hourglass } from "lucide-react";
+import { Loader2, Bot, Users, Hourglass, History } from "lucide-react";
 import { AppShell } from "@/components/layout";
 import { OACard, OAButton, type Subject } from "@/components/ui";
 import { useStudent } from "@/contexts/StudentContext";
-import { cn } from "@/lib/utils";
 import { track } from "@/lib/analytics";
 import {
   startAiBattle, finishAiBattle, submitPvpBattleAnswers, cancelBattle, getBattleHistory,
@@ -24,10 +22,10 @@ import { ChallengeFriendForm } from "@/components/battle/ChallengeFriendForm";
 import { BattleInvitationsPanel } from "@/components/battle/BattleInvitationsPanel";
 import { BattleQuestionCard } from "@/components/battle/BattleQuestionCard";
 import { BattleResultScreen } from "@/components/battle/BattleResultScreen";
-import { BattleHistoryList } from "@/components/battle/BattleHistoryList";
+import { BattleHistoryTable } from "@/components/battle/BattleHistoryTable";
 
 type Phase = "setup" | "loading" | "battle" | "waiting" | "results";
-type SetupMode = "ai" | "friend";
+type SetupMode = "ai" | "friend" | "history";
 type BattleKind = "ai" | "pvp";
 
 interface AnswerRecord {
@@ -53,7 +51,7 @@ export default function BattleClient({
   const user = useStudent();
   const subjects = (user.subjects.length > 0 ? user.subjects : ["Mathematics"]) as Subject[];
 
-  const [setupMode, setSetupMode] = useState<SetupMode>("ai");
+  const [setupMode, setSetupMode] = useState<SetupMode>("friend");
   const [phase, setPhase] = useState<Phase>("setup");
   const [selSubject, setSelSubject] = useState<Subject>(subjects[0]);
   const [selDifficulty, setSelDifficulty] = useState<Difficulty>("Medium");
@@ -276,7 +274,7 @@ export default function BattleClient({
     resetToSetup();
   }
 
-  const showInvitationsPanel = phase === "setup";
+  const showInvitationsPanel = phase === "setup" && setupMode !== "history";
 
   return (
     <AppShell
@@ -306,9 +304,7 @@ export default function BattleClient({
             <div className="flex gap-2 p-1 rounded-[var(--r-md)]" style={{ background: "var(--fill-100)" }}>
               <button
                 onClick={() => setSetupMode("ai")}
-                className={cn(
-                  "flex-1 flex items-center justify-center gap-1.5 py-2 rounded-[var(--r-sm)] text-[13.5px] font-semibold cursor-pointer transition-colors"
-                )}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-[var(--r-sm)] text-[13.5px] font-semibold cursor-pointer transition-colors"
                 style={{
                   background: setupMode === "ai" ? "var(--surface)" : "transparent",
                   color: setupMode === "ai" ? "var(--ink-900)" : "var(--fg-muted)",
@@ -328,9 +324,20 @@ export default function BattleClient({
               >
                 <Users size={15} /> Challenge a Friend
               </button>
+              <button
+                onClick={() => setSetupMode("history")}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-[var(--r-sm)] text-[13.5px] font-semibold cursor-pointer transition-colors"
+                style={{
+                  background: setupMode === "history" ? "var(--surface)" : "transparent",
+                  color: setupMode === "history" ? "var(--ink-900)" : "var(--fg-muted)",
+                  boxShadow: setupMode === "history" ? "var(--shadow-sm)" : "none",
+                }}
+              >
+                <History size={15} /> Battle History
+              </button>
             </div>
 
-            {setupMode === "ai" ? (
+            {setupMode === "ai" && (
               <BattleSetupForm
                 subjects={subjects}
                 selSubject={selSubject} onSubjectChange={setSelSubject}
@@ -341,7 +348,8 @@ export default function BattleClient({
                 error={error}
                 onStart={handleStart}
               />
-            ) : (
+            )}
+            {setupMode === "friend" && (
               <ChallengeFriendForm
                 key={inviteKey}
                 subjects={subjects}
@@ -354,12 +362,8 @@ export default function BattleClient({
                 onSend={handleSendInvite}
               />
             )}
-
-            <BattleHistoryList history={history} />
-            {history.length > 0 && (
-              <Link href="/battle/history" className="text-[13px] font-medium text-center hover:underline" style={{ color: "var(--brand)" }}>
-                View full battle history →
-              </Link>
+            {setupMode === "history" && (
+              <BattleHistoryTable history={history} studentName={user.name} />
             )}
           </>
         )}
@@ -411,7 +415,7 @@ export default function BattleClient({
         )}
 
         {phase === "results" && result && (
-          <BattleResultScreen result={result} subject={selSubject} onBattleAgain={resetToSetup} opponentLabel={opponentName} />
+          <BattleResultScreen result={result} subject={selSubject} onBattleAgain={resetToSetup} opponentLabel={opponentName} studentLabel={user.name} />
         )}
       </div>
     </AppShell>

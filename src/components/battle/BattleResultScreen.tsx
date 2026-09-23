@@ -34,9 +34,11 @@ interface BattleResultScreenProps {
   onBattleAgain: () => void;
   /** "AI Opponent" for AI Battle, or the friend's name for a PvP battle. */
   opponentLabel?: string;
+  /** Shown in the Battle recap's per-question rows in place of "You". */
+  studentLabel?: string;
 }
 
-export function BattleResultScreen({ result, subject, onBattleAgain, opponentLabel = "AI Opponent" }: BattleResultScreenProps) {
+export function BattleResultScreen({ result, subject, onBattleAgain, opponentLabel = "AI Opponent", studentLabel = "You" }: BattleResultScreenProps) {
   const copy = getOutcomeCopy(result.result, opponentLabel);
 
   useEffect(() => {
@@ -142,7 +144,7 @@ export function BattleResultScreen({ result, subject, onBattleAgain, opponentLab
                 </p>
                 <div className="flex items-center gap-2.5 shrink-0">
                   <span className="flex items-center gap-1 text-[11.5px]" style={{ color: "var(--fg-muted)" }}>
-                    You {q.studentCorrect ? <Check size={13} style={{ color: "var(--success)" }} /> : <X size={13} style={{ color: "var(--fg-subtle)" }} />}
+                    {studentLabel.split(" ")[0]} {q.studentCorrect ? <Check size={13} style={{ color: "var(--success)" }} /> : <X size={13} style={{ color: "var(--fg-subtle)" }} />}
                   </span>
                   <span className="flex items-center gap-1 text-[11.5px]" style={{ color: "var(--fg-muted)" }}>
                     {opponentLabel.split(" ")[0]} {q.aiCorrect ? <Check size={13} style={{ color: "var(--success)" }} /> : <X size={13} style={{ color: "var(--fg-subtle)" }} />}

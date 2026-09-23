@@ -57,6 +57,7 @@ export interface BattleHistoryItem {
   mode: BattleMode;
   subject: Subject;
   difficulty: Difficulty;
+  questionCount: number;
   status: BattleStatus;
   result: BattleOutcome | null;
   studentScore: number;
@@ -79,6 +80,7 @@ function toHistoryItem(b: BattleHistoryRaw, studentId: string): BattleHistoryIte
     mode: b.mode,
     subject: b.subject,
     difficulty: b.difficulty,
+    questionCount: b.question_count,
     status: b.status,
     result: self?.result ?? null,
     studentScore: self?.score ?? 0,
@@ -91,7 +93,7 @@ function toHistoryItem(b: BattleHistoryRaw, studentId: string): BattleHistoryIte
 }
 
 const HISTORY_SELECT =
-  "id, mode, subject, difficulty, status, created_at, completed_at, battle_participants(student_id, is_ai, score, result, rating_delta, student:students(profile:profiles(full_name)))";
+  "id, mode, subject, difficulty, question_count, status, created_at, completed_at, battle_participants(student_id, is_ai, score, result, rating_delta, student:students(profile:profiles(full_name)))";
 
 export async function getRecentBattles(studentId: string, limit = 10): Promise<BattleHistoryItem[]> {
   const supabase = await createClient();
