@@ -3,7 +3,7 @@ import {
   Sparkles, PencilLine, Target, BarChart2, Route, Trophy,
   ArrowRight, Play, Check, CircleCheck, Star, Users,
   BookOpen, Sigma, FlaskConical, Globe2, ShieldCheck,
-  Brain, Gauge, Eye,
+  Brain, Gauge, Eye, Bot, Flame,
 } from "lucide-react";
 import { OAButton, OACard, OARing, OASubjectDot, OAAvatar, SUBJECT_COLORS, type Subject } from "@/components/ui";
 import { MktNav } from "./MktNav";
@@ -229,6 +229,73 @@ function Subjects() {
               <p className="text-[12.5px] leading-[1.5]" style={{ color: "var(--ink-700)" }}>{desc}</p>
             </OACard>
           ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ── Battle ──────────────────────────────────────────────────────────── */
+const BATTLE_POINTS = [
+  { Icon: Bot,   text: "Battle an AI opponent, any time you want a challenge" },
+  { Icon: Users, text: "Challenge a friend by email — no waiting for them to accept first" },
+  { Icon: Flame, text: "Build your rating, win streaks & achievements as you play" },
+];
+
+function BattlePromo() {
+  return (
+    <section className="py-12 sm:py-20 px-5 sm:px-8 border-t border-[var(--line-200)]" style={{ background: "var(--paper)" }}>
+      <div className="max-w-[1160px] mx-auto">
+        <div
+          className="rounded-[var(--r-2xl)] border border-[var(--line-200)] overflow-hidden grid grid-cols-1 lg:grid-cols-2"
+          style={{ background: "var(--surface)", boxShadow: "var(--shadow-lg)" }}
+        >
+          <div className="p-7 sm:p-10 flex flex-col justify-center">
+            <p className="t-overline mb-3" style={{ color: "var(--brand)" }}>New · Olympiad Battle</p>
+            <h2
+              className="font-bold leading-[1.14] tracking-tight mb-3.5"
+              style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.025em", color: "var(--ink-900)", fontSize: "clamp(24px, 3.5vw, 34px)" }}
+            >
+              Battle it out. Learn twice as fast.
+            </h2>
+            <p className="text-[15px] leading-[1.6] mb-6" style={{ color: "var(--ink-700)" }}>
+              Answer the same questions as your opponent and see who scores higher — against an AI,
+              or a friend you invite by email. Every battle ends by showing you exactly what to
+              practice next, so losing never feels like losing.
+            </p>
+            <div className="flex flex-col gap-2.5 mb-7">
+              {BATTLE_POINTS.map(({ Icon, text }) => (
+                <div key={text} className="flex items-center gap-2.5">
+                  <Icon size={16} style={{ color: "var(--brand)", flexShrink: 0 }} />
+                  <span className="text-[14px]" style={{ color: "var(--ink-700)" }}>{text}</span>
+                </div>
+              ))}
+            </div>
+            <Link href="/onboarding">
+              <OAButton variant="primary" size="lg" className="w-full sm:w-auto">
+                Try Olympiad Battle <ArrowRight size={18} />
+              </OAButton>
+            </Link>
+          </div>
+
+          <div
+            className="relative flex flex-col items-center justify-center gap-4 p-10"
+            style={{ background: "var(--cobalt-50)" }}
+          >
+            <div
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-bold"
+              style={{ background: "var(--gold-400)", color: "var(--ink-900)" }}
+            >
+              <Sparkles size={13} /> NEW
+            </div>
+            <div className="text-[88px] leading-none">⚔️</div>
+            <p className="font-bold text-[17px]" style={{ fontFamily: "var(--font-display)", color: "var(--ink-900)" }}>
+              Olympiad Battle
+            </p>
+            <p className="text-[13px] text-center max-w-[220px]" style={{ color: "var(--ink-700)" }}>
+              Good battle! You&apos;re improving — ready for a rematch?
+            </p>
+          </div>
         </div>
       </div>
     </section>
@@ -611,6 +678,7 @@ export default function MarketingPage() {
       <Hero />
       <Features />
       <Subjects />
+      <BattlePromo />
       <BrainBoosterPromo />
       <HowItWorks />
       <Audiences />
