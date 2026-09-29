@@ -20,6 +20,7 @@ const ACTION_LABELS: Record<string, string> = {
   password_reset_sent: "Sent password reset",
   data_exported: "Exported data",
   settings_updated: "Updated settings",
+  reengagement_emails_sent: "Sent re-engagement emails",
 };
 
 export default async function AdminSettingsPage() {

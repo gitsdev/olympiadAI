@@ -40,6 +40,7 @@ export interface ProfileRow {
   id: string; email: string; full_name: string;
   role: "student" | "parent" | "teacher" | "school_admin" | "platform_admin";
   avatar_url: string | null; created_at: string; updated_at: string;
+  email_opt_out: boolean; unsubscribe_token: string;
 }
 
 export type StudentAccountStatus = "active" | "suspended";
@@ -167,6 +168,11 @@ export interface AdminAuditLogRow {
   target_id: string | null; metadata: Record<string, unknown>; created_at: string;
 }
 
+export interface EmailCampaignSendRow {
+  id: string; campaign: string; student_id: string; recipient_email: string;
+  recipient_role: "student" | "parent"; sent_by: string | null; sent_at: string;
+}
+
 /* ── Olympiad Battle ──────────────────────────────────────────────────
    'ai' is the only mode Phase 1 writes; pvp_random/pvp_private are
    reserved for the live-matchmaking/private-code phase. */
@@ -237,7 +243,7 @@ export interface Database {
       profiles: {
         Row: ProfileRow;
         Insert: { id: string; email: string; full_name: string; role?: ProfileRow["role"]; avatar_url?: string | null };
-        Update: Partial<{ email: string; full_name: string; role: ProfileRow["role"]; avatar_url: string | null }>;
+        Update: Partial<{ email: string; full_name: string; role: ProfileRow["role"]; avatar_url: string | null; email_opt_out: boolean }>;
       };
       students: {
         Row: StudentRow;
@@ -374,6 +380,11 @@ export interface Database {
         Row: AdminSettingsRow;
         Insert: never;
         Update: Partial<{ inactive_days_warning: number; inactive_days_critical: number; low_score_threshold: number; low_ai_engagement_sessions: number; updated_by: string | null }>;
+      };
+      email_campaign_sends: {
+        Row: EmailCampaignSendRow;
+        Insert: { campaign: string; student_id: string; recipient_email: string; recipient_role: EmailCampaignSendRow["recipient_role"]; sent_by?: string | null };
+        Update: never;
       };
       admin_audit_log: {
         Row: AdminAuditLogRow;

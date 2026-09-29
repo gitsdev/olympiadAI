@@ -30,6 +30,8 @@ interface SendEmailInput {
   subject: string;
   html: string;
   text: string;
+  /** Extra headers, e.g. List-Unsubscribe for bulk/marketing sends. */
+  headers?: Record<string, string>;
 }
 
 /**
@@ -51,6 +53,7 @@ export async function sendEmail(input: SendEmailInput): Promise<{ sent: boolean;
       subject: input.subject,
       html: input.html,
       text: input.text,
+      headers: input.headers,
     });
     return { sent: true };
   } catch (err) {
