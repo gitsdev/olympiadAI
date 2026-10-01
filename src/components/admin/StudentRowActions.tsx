@@ -3,12 +3,13 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { MoreHorizontal, Eye, Ban, CheckCircle2 } from "lucide-react";
+import { MoreHorizontal, Eye, Ban, CheckCircle2, Mail } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { SendStudentEmailDialog } from "./SendStudentEmailDialog";
 import { setStudentAccountStatus } from "@/actions/admin/students";
 import type { StudentAccountStatus } from "@/types/database";
 
@@ -16,6 +17,7 @@ export function StudentRowActions({ studentId, status }: { studentId: string; st
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [emailOpen, setEmailOpen] = useState(false);
   const nextStatus: StudentAccountStatus = status === "suspended" ? "active" : "suspended";
 
   return (
@@ -30,12 +32,17 @@ export function StudentRowActions({ studentId, status }: { studentId: string; st
           <DropdownMenuItem render={<Link href={`/admin/students/${studentId}`} />}>
             <Eye size={14} /> View profile
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setEmailOpen(true)}>
+            <Mail size={14} /> Send email
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setConfirmOpen(true)} variant={nextStatus === "suspended" ? "destructive" : undefined}>
             {nextStatus === "suspended" ? <Ban size={14} /> : <CheckCircle2 size={14} />}
             {nextStatus === "suspended" ? "Suspend student" : "Activate student"}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <SendStudentEmailDialog studentId={studentId} open={emailOpen} onOpenChange={setEmailOpen} />
 
       <ConfirmDialog
         open={confirmOpen}

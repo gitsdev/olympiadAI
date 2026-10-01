@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Ban, CheckCircle2, KeyRound } from "lucide-react";
+import { Ban, CheckCircle2, KeyRound, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { EditStudentDialog } from "./EditStudentDialog";
+import { SendStudentEmailDialog } from "./SendStudentEmailDialog";
 import { setStudentAccountStatus, adminSendPasswordReset } from "@/actions/admin/students";
 import type { StudentAccountStatus, StudentRow } from "@/types/database";
 
@@ -18,11 +19,16 @@ export function StudentHeaderActions({
   const [statusConfirmOpen, setStatusConfirmOpen] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [resetSent, setResetSent] = useState(false);
+  const [emailOpen, setEmailOpen] = useState(false);
   const nextStatus: StudentAccountStatus = status === "suspended" ? "active" : "suspended";
 
   return (
     <div className="flex items-center gap-2 flex-wrap">
       <EditStudentDialog studentId={studentId} student={student} fullName={fullName} />
+
+      <Button variant="outline" size="sm" onClick={() => setEmailOpen(true)}>
+        <Mail size={14} /> Send Email
+      </Button>
 
       <Button variant="outline" size="sm" onClick={() => setResetConfirmOpen(true)}>
         <KeyRound size={14} /> {resetSent ? "Reset email sent" : "Reset Password"}
@@ -36,6 +42,8 @@ export function StudentHeaderActions({
         {nextStatus === "suspended" ? <Ban size={14} /> : <CheckCircle2 size={14} />}
         {nextStatus === "suspended" ? "Suspend" : "Activate"}
       </Button>
+
+      <SendStudentEmailDialog studentId={studentId} open={emailOpen} onOpenChange={setEmailOpen} />
 
       <ConfirmDialog
         open={statusConfirmOpen}

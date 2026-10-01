@@ -21,6 +21,8 @@ const ACTION_LABELS: Record<string, string> = {
   data_exported: "Exported data",
   settings_updated: "Updated settings",
   reengagement_emails_sent: "Sent re-engagement emails",
+  campaign_emails_sent: "Sent bulk campaign emails",
+  campaign_email_sent: "Emailed student",
 };
 
 export default async function AdminSettingsPage() {
