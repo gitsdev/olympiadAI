@@ -77,8 +77,15 @@ export const SEO_KEYWORDS: SeoKeyword[] = [
   k("nso sample paper", "Mock tests & papers", "informational", "10K–100K", "high", "P2", "/blog"),
   k("olympiad previous year papers", "Mock tests & papers", "informational", "1K–10K", "medium", "P2", "/blog"),
   k("online olympiad practice test", "Mock tests & papers", "transactional", "1K–10K", "low", "P1", "/start"),
+  k("olympiad online test", "Mock tests & papers", "transactional", "1K–10K", "medium", "P1", "/start"),
+  k("olympiad test online", "Mock tests & papers", "transactional", "1K–10K", "medium", "P1", "/start"),
+  k("olympiad practice test", "Mock tests & papers", "transactional", "1K–10K", "medium", "P1", "/start"),
+  k("free olympiad practice", "Mock tests & papers", "transactional", "<1K", "low", "P1", "/start"),
+  k("olympiad questions", "Mock tests & papers", "informational", "10K–100K", "high", "P1", "/blog"),
+  k("olympiad practice questions", "Mock tests & papers", "informational", "1K–10K", "medium", "P1", "/blog"),
 
   // Class-wise — long tail, lower difficulty, many pages
+  k("olympiad test for class 1 to 10", "Class-wise", "transactional", "<1K", "low", "P1", "/start"),
   k("olympiad for class 1", "Class-wise", "informational", "1K–10K", "low", "P1", "/blog"),
   k("imo class 2 sample paper", "Class-wise", "informational", "1K–10K", "low", "P1", "/blog"),
   k("imo class 3 questions", "Class-wise", "informational", "1K–10K", "low", "P1", "/blog"),
@@ -93,7 +100,9 @@ export const SEO_KEYWORDS: SeoKeyword[] = [
   // Preparation — informational, good for blog + diagnostic CTA
   k("how to prepare for olympiad", "Preparation", "informational", "1K–10K", "medium", "P1", "/blog"),
   k("how to prepare for imo", "Preparation", "informational", "1K–10K", "low", "P1", "/blog"),
+  k("olympiad preparation", "Preparation", "commercial", "10K–100K", "high", "P1", "/"),
   k("olympiad preparation online", "Preparation", "commercial", "1K–10K", "medium", "P1", "/"),
+  k("online olympiad preparation", "Preparation", "commercial", "1K–10K", "medium", "P1", "/"),
   k("olympiad syllabus", "Preparation", "informational", "10K–100K", "medium", "P2", "/blog"),
   k("imo syllabus class 3", "Preparation", "informational", "1K–10K", "low", "P2", "/blog"),
   k("olympiad coaching online", "Preparation", "commercial", "1K–10K", "medium", "P2", "/"),
@@ -109,6 +118,9 @@ export const SEO_KEYWORDS: SeoKeyword[] = [
   // AI & product — our differentiator, low competition
   k("ai tutor for kids", "AI & product", "commercial", "1K–10K", "medium", "P1", "/"),
   k("ai tutor for olympiad", "AI & product", "commercial", "<1K", "low", "P1", "/"),
+  k("ai tutor for students", "AI & product", "commercial", "10K–100K", "high", "P1", "/"),
+  k("ai tutor for maths", "AI & product", "commercial", "1K–10K", "medium", "P1", "/learn/subject/mathematics"),
+  k("olympiad learning platform", "AI & product", "commercial", "<1K", "low", "P1", "/"),
   k("olympiad preparation app", "AI & product", "commercial", "1K–10K", "medium", "P1", "/"),
   k("free olympiad preparation app", "AI & product", "transactional", "<1K", "low", "P1", "/start"),
   k("olympiad readiness test", "AI & product", "transactional", "<1K", "low", "P1", "/onboarding"),
