@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/admin/auth";
 import { logAdminAction } from "@/lib/admin/audit";
 import { createServiceClient } from "@/lib/supabase/service";
 import { toCsv } from "@/lib/admin/csv";
+import { attachSignupSources } from "@/lib/admin/students";
 import type { AdminStudentFilters, AdminTestAttemptFilters, AdminStudentListRow, AdminTestAttemptRow } from "@/types/admin";
 
 // Admin-triggered, infrequent, bounded — a hard cap keeps a single export
@@ -32,12 +33,12 @@ export async function exportStudentsCsv(filters: AdminStudentFilters): Promise<{
   });
   if (error) throw new Error(error.message);
 
-  const rows = (data ?? []) as AdminStudentListRow[];
+  const rows = await attachSignupSources((data ?? []) as AdminStudentListRow[]);
   const csv = toCsv(
-    ["Name", "Email", "Class", "Board", "Registered", "Last Active", "Status", "Mock Tests", "Avg Score", "AI Sessions", "Progress %"],
+    ["Name", "Email", "Class", "Board", "Registered", "Source", "Last Active", "Status", "Mock Tests", "Avg Score", "AI Sessions", "Progress %"],
     rows.map((r) => [
       r.full_name, r.email, r.class_level, r.board, r.registered_at,
-      r.last_active_at ?? "", r.account_status, r.mock_tests_taken,
+      r.signup_source ?? "Unknown", r.last_active_at ?? "", r.account_status, r.mock_tests_taken,
       r.avg_score.toFixed(1), r.ai_sessions, r.overall_progress.toFixed(1),
     ])
   );

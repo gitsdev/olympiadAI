@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { ATTRIBUTION_COOKIE, classifySource, parseAttribution } from "@/lib/attribution";
 
 export async function login(formData: FormData) {
   const supabase = await createClient();
@@ -39,12 +41,15 @@ export async function signup(formData: FormData) {
   // Create the profile row using service role so RLS and triggers are not a factor
   const { createServiceClient } = await import("@/lib/supabase/service");
   const service = createServiceClient();
+  const attribution = parseAttribution((await cookies()).get(ATTRIBUTION_COOKIE)?.value);
   const { error: profileError } = await service.from("profiles").upsert(
     {
       id:        data.user.id,
       email,
       full_name: fullName || email.split("@")[0],
       role:      "student",
+      signup_source:      classifySource(attribution),
+      signup_attribution: attribution,
     },
     { onConflict: "id" }
   );

@@ -7,6 +7,25 @@ import type {
 } from "@/types/admin";
 import type { StudentRow, ProfileRow, AchievementRow } from "@/types/database";
 
+// The list RPC doesn't return signup source; look it up for just this page's profiles.
+export async function attachSignupSources(rows: AdminStudentListRow[]): Promise<AdminStudentListRow[]> {
+  if (rows.length === 0) return rows;
+  const service = createServiceClient();
+  const { data, error } = await service
+    .from("profiles")
+    .select("id, signup_source, signup_attribution")
+    .in("id", rows.map((r) => r.profile_id));
+  if (error) throw new Error(error.message);
+  const byId = new Map(
+    ((data ?? []) as { id: string; signup_source: string | null; signup_attribution: AdminStudentListRow["signup_attribution"] }[])
+      .map((p) => [p.id, p]),
+  );
+  return rows.map((r) => {
+    const p = byId.get(r.profile_id);
+    return { ...r, signup_source: p?.signup_source ?? null, signup_attribution: p?.signup_attribution ?? null };
+  });
+}
+
 export async function listStudents(filters: AdminStudentFilters, page: number) {
   await requireAdmin();
   const service = createServiceClient();
@@ -28,7 +47,7 @@ export async function listStudents(filters: AdminStudentFilters, page: number) {
   });
 
   if (error) throw new Error(error.message);
-  const rows = (data ?? []) as AdminStudentListRow[];
+  const rows = await attachSignupSources((data ?? []) as AdminStudentListRow[]);
   return { rows, totalCount: rows[0]?.total_count ?? 0 };
 }
 

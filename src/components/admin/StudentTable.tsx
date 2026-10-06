@@ -18,6 +18,12 @@ function isRecentlyActive(iso: string | null): boolean {
   return Date.now() - new Date(iso).getTime() < 7 * 86_400_000;
 }
 
+function sourceDetail(source: string | null, attr: AdminStudentListRow["signup_attribution"]): string | null {
+  if (!source || !attr) return null;
+  if (!source.startsWith("Other")) return null;
+  return attr.utm_source ?? attr.referrer_host ?? null;
+}
+
 function formatRelative(iso: string | null): string {
   if (!iso) return "Never";
   const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
@@ -46,6 +52,7 @@ export function StudentTable({ rows }: { rows: AdminStudentListRow[] }) {
           <TableHead>Student</TableHead>
           <TableHead>Class</TableHead>
           <TableHead>Registered</TableHead>
+          <TableHead>Source</TableHead>
           <TableHead>Last Active</TableHead>
           <TableHead>Mock Tests</TableHead>
           <TableHead>Avg Score</TableHead>
@@ -66,6 +73,20 @@ export function StudentTable({ rows }: { rows: AdminStudentListRow[] }) {
             </TableCell>
             <TableCell>{r.board} · Class {r.class_level}</TableCell>
             <TableCell>{formatDate(r.registered_at)}</TableCell>
+            <TableCell>
+              {r.signup_source ? (
+                <>
+                  <div>{r.signup_source}</div>
+                  {sourceDetail(r.signup_source, r.signup_attribution) && (
+                    <div className="text-[11.5px]" style={{ color: "var(--fg-subtle)" }}>
+                      {sourceDetail(r.signup_source, r.signup_attribution)}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <span style={{ color: "var(--fg-subtle)" }}>Unknown</span>
+              )}
+            </TableCell>
             <TableCell>{formatRelative(r.last_active_at)}</TableCell>
             <TableCell>{r.mock_tests_taken}</TableCell>
             <TableCell>{r.mock_tests_taken > 0 ? `${r.avg_score.toFixed(0)}%` : "—"}</TableCell>

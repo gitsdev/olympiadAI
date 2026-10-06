@@ -1,4 +1,5 @@
 import type { Board, Subject, StudentAccountStatus, BattleMode, BattleStatus, BattleOutcome, Difficulty } from "./database";
+import type { SignupAttribution } from "@/lib/attribution";
 
 export interface AdminStudentListRow {
   student_id: string;
@@ -15,6 +16,8 @@ export interface AdminStudentListRow {
   ai_sessions: number;
   overall_progress: number;
   total_count: number;
+  signup_source: string | null;
+  signup_attribution: SignupAttribution | null;
 }
 
 export interface AdminStudentFilters {
