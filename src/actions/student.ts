@@ -19,9 +19,12 @@ export const getStudentProfile = cache(async function getStudentProfile() {
     .from("students")
     .select("*, profile:profiles(full_name, email, avatar_url)")
     .eq("profile_id", user.id)
-    .single();
+    .maybeSingle();
 
-  if (error || !data) redirect("/onboarding");
+  // Only a genuinely missing record means onboarding; a query failure must not
+  // be treated as "new student", or a temporary DB error sends real students there.
+  if (error) throw new Error(`Could not load student profile: ${error.message}`);
+  if (!data) redirect("/onboarding");
   return asStudentWithProfile(data)!;
 });
 
