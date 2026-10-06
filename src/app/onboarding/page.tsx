@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Check, Loader2, Play, Target } from "lucide-react";
 import { Logo } from "@/components/brand";
 import { OAButton, OASubjectDot, type Subject } from "@/components/ui";
 import { cn } from "@/lib/utils";
-import { saveOnboarding } from "@/actions/onboarding";
+import { saveOnboarding, claimPendingOnboarding } from "@/actions/onboarding";
 
 const STEPS = ["Your class", "Your subjects", "Diagnostic"];
 const SUBJECTS: Subject[] = ["Mathematics", "Science", "English", "General Knowledge", "Cyber"];
@@ -16,9 +17,26 @@ export default function OnboardingPage() {
   const [cls, setCls] = useState(7);
   const [subs, setSubs] = useState<Subject[]>(["Mathematics", "Science"]);
   const [saving, setSaving] = useState(false);
+  const [claiming, setClaiming] = useState(true);
+  const router = useRouter();
+
+  useEffect(() => {
+    claimPendingOnboarding().then((res) => {
+      if (res.claimed) router.replace("/practice");
+      else setClaiming(false);
+    });
+  }, [router]);
 
   const toggle = (s: Subject) =>
     setSubs((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
+
+  if (claiming) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--paper)" }}>
+        <Loader2 size={22} className="animate-spin" style={{ color: "var(--cobalt-500)" }} aria-label="Loading" />
+      </div>
+    );
+  }
 
   return (
     <div
