@@ -1,7 +1,10 @@
 import Groq from "groq-sdk";
 import { withRetry } from "@/lib/ai-retry";
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+// Created per-call, not at module load, so `next build` doesn't need the key.
+function getGroq() {
+  return new Groq({ apiKey: process.env.GROQ_API_KEY });
+}
 
 // Small, fast model — this runs before the real request is generated, so it
 // needs to be cheap and quick, not the strongest model available. Uses Groq
@@ -44,7 +47,7 @@ export interface ModerationResult {
 
 export async function moderateText(text: string): Promise<ModerationResult> {
   try {
-    const completion = await withRetry(() => groq.chat.completions.create({
+    const completion = await withRetry(() => getGroq().chat.completions.create({
       model: MODERATION_MODEL,
       max_completion_tokens: 128,
       response_format: MODERATION_SCHEMA,
