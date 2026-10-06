@@ -8,7 +8,12 @@ import { moderateText } from "@/lib/moderation";
 import type { Board, TutorReference } from "@/types/database";
 
 const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-const groq  = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
+// Created per-request, not at module load: Next evaluates route modules during
+// `next build`, and a missing key there would otherwise fail the whole deploy.
+function getGroq() {
+  return new Groq({ apiKey: process.env.GROQ_API_KEY });
+}
 
 // "Fast" mode -> Groq (fast inference, decent instruction-following).
 // "Normal" mode -> Gemini (stronger reasoning for harder questions).
@@ -40,7 +45,7 @@ async function generateTutorReply(
   question: string,
 ): Promise<{ text: string; usage: unknown }> {
   if (outputMode === "fast") {
-    const completion = await withRetry(() => groq.chat.completions.create({
+    const completion = await withRetry(() => getGroq().chat.completions.create({
       model: GROQ_MODEL,
       max_completion_tokens: 1024,
       response_format: { type: "json_object" },
