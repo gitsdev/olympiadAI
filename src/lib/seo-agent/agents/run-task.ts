@@ -181,3 +181,50 @@ export async function runAgentTask<R>(
     throw err;
   }
 }
+
+/**
+ * Same bookkeeping as runAgentTask for work that uses no AI (e.g. the
+ * Publisher). The work may return status "FAILED" with an error to record a
+ * handled failure (such as validation blocking a publish) without throwing.
+ */
+export async function runPlainTask<R>(
+  opts: Omit<AgentTaskOptions, "category">,
+  deps: { store: TaskStore; now?: () => Date },
+  work: (ctx: { taskId: string }) => Promise<AgentWorkResult<R> & { failed?: string }>,
+): Promise<R> {
+  const now = deps.now ?? (() => new Date());
+  const taskId = await deps.store.createTask({
+    agent_type: opts.agentType,
+    task_type: opts.taskType,
+    entity_type: opts.entityType ?? null,
+    entity_id: opts.entityId ?? null,
+    status: "RUNNING",
+    triggered_by: opts.triggeredBy ?? "USER",
+    input_summary: clip(opts.inputSummary),
+    started_at: now().toISOString(),
+    model: "none",
+    created_by: opts.createdBy ?? null,
+  });
+  const none = { model: "none", input_tokens: 0, output_tokens: 0, estimated_cost: null };
+  try {
+    const out = await work({ taskId });
+    await deps.store.finishTask(taskId, {
+      status: out.failed ? "FAILED" : "COMPLETED",
+      completed_at: now().toISOString(),
+      output_summary: clip(out.outputSummary),
+      error: out.failed ? clip(out.failed, 2000) : null,
+      ...(out.entityId ? { entity_id: out.entityId } : {}),
+      ...none,
+    });
+    return out.result;
+  } catch (err) {
+    const message = errorMessage(err);
+    seoLog.error("task.failed", { taskId, agent: opts.agentType, task: opts.taskType, error: message });
+    try {
+      await deps.store.finishTask(taskId, { status: "FAILED", completed_at: now().toISOString(), error: clip(message, 2000), ...none });
+    } catch (finishErr) {
+      seoLog.error("task.mark_failed_failed", { taskId, error: errorMessage(finishErr) });
+    }
+    throw err;
+  }
+}

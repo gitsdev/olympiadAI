@@ -21,11 +21,15 @@ const STUBS = `
   create table blog_posts (id uuid primary key default gen_random_uuid());
   create function update_updated_at() returns trigger language plpgsql
     as $$ begin new.updated_at = now(); return new; end; $$;
+  create schema storage;
+  create table storage.buckets (id text primary key, name text not null, public boolean default false,
+    file_size_limit bigint, allowed_mime_types text[]);
 `;
 
 const migration = readFileSync(join(process.cwd(), "supabase/migrations/013_seo_agent.sql"), "utf8");
 const overviewView = readFileSync(join(process.cwd(), "supabase/migrations/014_seo_keywords_overview.sql"), "utf8");
 const claudeSwitch = readFileSync(join(process.cwd(), "supabase/migrations/015_seo_agent_claude.sql"), "utf8");
+const imagesBucket = readFileSync(join(process.cwd(), "supabase/migrations/016_seo_agent_images.sql"), "utf8");
 let db: PGlite;
 
 /** Runs `sql` as the `authenticated` role with auth.uid() = uid (like a Supabase session). */
@@ -234,5 +238,30 @@ describe("migration 015 (Claude provider)", () => {
     );
     expect(rows[0].p).toContain(DEFAULT_SEO_SETTINGS.aiProvider);
     expect(rows[0].m).toContain(DEFAULT_SEO_SETTINGS.aiModel);
+  });
+});
+
+describe("migration 016 (featured-image bucket)", () => {
+  it("creates a public, size- and type-limited bucket, idempotently", async () => {
+    await db.exec(imagesBucket);
+    await db.exec(imagesBucket);
+    const { rows } = await db.query("select id, public, file_size_limit, allowed_mime_types from storage.buckets");
+    expect(rows).toEqual([{ id: "blog-images", public: true, file_size_limit: 5242880, allowed_mime_types: ["image/jpeg", "image/png", "image/webp"] }]);
+  });
+});
+
+describe("publishing guarantees in the database (scheduling + approval)", () => {
+  it("lets a manually approved article be scheduled and published, but not unapproved ones", async () => {
+    await db.exec(`insert into seo_articles (id, title, status) values ('20000000-0000-0000-0000-000000000001', 'Pub test', 'DRAFT')`);
+    // Scheduling without approval is impossible even if application code had a bug.
+    await expect(db.exec(`update seo_articles set status = 'SCHEDULED', scheduled_for = now() + interval '1 day', publish_authorization = 'MANUAL_APPROVAL'
+      where id = '20000000-0000-0000-0000-000000000001'`)).rejects.toThrow(/requires_approval/);
+    await db.exec(`update seo_articles set status = 'APPROVED', publish_authorization = 'MANUAL_APPROVAL', approved_by = '${ADMIN}', approved_at = now()
+      where id = '20000000-0000-0000-0000-000000000001'`);
+    await db.exec(`update seo_articles set status = 'SCHEDULED', scheduled_for = now() + interval '1 day' where id = '20000000-0000-0000-0000-000000000001'`);
+    await db.exec(`update seo_articles set status = 'PUBLISHED', published_at = now() where id = '20000000-0000-0000-0000-000000000001'`);
+    // Withdrawing approval on a live article without moving it out of PUBLISHED is blocked.
+    await expect(db.exec(`update seo_articles set approved_at = null, approved_by = null where id = '20000000-0000-0000-0000-000000000001'`))
+      .rejects.toThrow(/requires_approval/);
   });
 });

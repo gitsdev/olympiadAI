@@ -11,6 +11,9 @@ import { EDITABLE_ARTICLE_STATUSES } from "@/lib/seo-agent/articles";
 import { wordCount } from "@/lib/seo-agent/article-html";
 import { formatZoned } from "@/lib/seo-agent/datetime";
 import { SeoSchemaMissingError } from "@/lib/seo-agent/db";
+import { createServiceClient } from "@/lib/supabase/service";
+import { buildPublishCheck, loadArticleForPublish } from "@/lib/seo-agent/publishing/publisher";
+import type { PublishValidation } from "@/lib/seo-agent/publishing/rules";
 import { ArticleEditor } from "./ArticleEditor";
 
 export const metadata: Metadata = { title: "Edit Article | SEO Agent", description: "Edit an SEO article." };
@@ -22,10 +25,21 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
+const CHECKABLE = ["DRAFT", "REVIEW", "REVIEW_REQUIRED", "APPROVED", "SCHEDULED"];
+
 async function load(id: string) {
   try {
     const [settings, article] = await Promise.all([getSeoSettings(), getArticle(id)]);
-    return { settings, article };
+    let checklist: PublishValidation | null = null;
+    if (article && CHECKABLE.includes(article.status)) {
+      // Read-only checks against the live blog (admin already verified by requireAdmin).
+      const service = createServiceClient();
+      const full = await loadArticleForPublish(service, id);
+      if (full) {
+        checklist = await buildPublishCheck(service, full, settings.publishingMode, { assumeApproved: true });
+      }
+    }
+    return { settings, article, checklist };
   } catch (err) {
     if (err instanceof SeoSchemaMissingError) return null;
     throw err;
@@ -38,7 +52,7 @@ export default async function ArticlePage({ params }: PageProps) {
   if (!z.uuid().safeParse(id).success) notFound();
   const data = await load(id);
   if (!data) return <SeoAgentShell title="Article"><SchemaMissingNotice /></SeoAgentShell>;
-  const { settings, article } = data;
+  const { settings, article, checklist } = data;
   if (!article) notFound();
 
   const plannedAt = article.plan?.plannedPublishAt;
@@ -64,6 +78,8 @@ export default async function ArticlePage({ params }: PageProps) {
           timezone={settings.timezone}
           blogBaseUrl={settings.blogBaseUrl}
           defaultCta={settings.defaultCta}
+          defaultPublishTime={settings.defaultPublishTime}
+          checklist={checklist}
         />
       )}
     </SeoAgentShell>

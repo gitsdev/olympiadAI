@@ -15,11 +15,7 @@ interface Props {
 const btn = "inline-flex items-center gap-1.5 h-9 px-3 rounded-[var(--r-md)] border text-[13px] font-semibold";
 const btnStyle = { borderColor: "var(--line-300)", color: "var(--ink-700)" };
 
-// Approval and scheduling are wired up in Phase 6; until then they render disabled.
-const LATER = [
-  { label: "Approve", Icon: CheckCircle2, phase: 6 },
-  { label: "Schedule", Icon: CalendarClock, phase: 6 },
-];
+
 
 export function TomorrowArticleCard({ article, tomorrowDate, timezone }: Props) {
   const dateLabel = formatZoned(new Date(`${tomorrowDate}T12:00:00Z`), timezone, { dateOnly: true });
@@ -84,12 +80,16 @@ export function TomorrowArticleCard({ article, tomorrowDate, timezone }: Props) 
                 <Sparkles size={15} aria-hidden /> Generate article
               </Link>
             ) : null}
-            {LATER.map(({ label, Icon, phase }) => (
-              <button key={label} type="button" disabled title={`Available from build phase ${phase}`}
-                className={`${btn} opacity-50 cursor-not-allowed`} style={btnStyle}>
-                <Icon size={15} aria-hidden /> {label}
-              </button>
-            ))}
+            {article.articleId && (
+              <>
+                <Link href={`/admin/seo-agent/articles/${article.articleId}`} className={btn} style={btnStyle} title="Approve in the editor">
+                  <CheckCircle2 size={15} aria-hidden /> Approve
+                </Link>
+                <Link href={`/admin/seo-agent/articles/${article.articleId}`} className={btn} style={btnStyle} title="Schedule in the editor">
+                  <CalendarClock size={15} aria-hidden /> Schedule
+                </Link>
+              </>
+            )}
           </div>
         </div>
       )}

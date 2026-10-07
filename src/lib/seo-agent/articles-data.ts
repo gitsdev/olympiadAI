@@ -82,6 +82,11 @@ export interface ArticleDetail {
   updatedAt: string;
   plan: { id: string; title: string; plannedPublishAt: string | null } | null;
   versions: ArticleVersionRow[];
+  approvedAt: string | null;
+  approvedByName: string | null;
+  scheduledFor: string | null;
+  publishedAt: string | null;
+  publishedUrl: string | null;
   seoAnalysis: SeoAnalysis | null;
   /** True when the saved article changed after the last SEO check. */
   seoStale: boolean;
@@ -94,7 +99,8 @@ export async function getArticle(id: string): Promise<ArticleDetail | null> {
     db.from("seo_articles")
       .select(`id, title, slug, meta_title, meta_description, excerpt, content_html, featured_image_url, featured_image_alt,
         featured_image_prompt, primary_keyword, secondary_keywords, category, cta_type, origin, status, seo_score, quality_flags,
-        current_version, updated_at, seo_analysis, seo_content_plans(id, title, planned_publish_at)`)
+        current_version, updated_at, seo_analysis, approved_at, scheduled_for, published_at, published_url,
+        approver:profiles!seo_articles_approved_by_fkey(full_name), seo_content_plans(id, title, planned_publish_at)`)
       .eq("id", id)
       .maybeSingle(),
     db.from("seo_article_versions")
@@ -119,6 +125,8 @@ export async function getArticle(id: string): Promise<ArticleDetail | null> {
     primary_keyword: string | null; secondary_keywords: string[]; category: string | null; cta_type: string | null; origin: string;
     status: string; seo_score: number | null; quality_flags: QualityFlag[] | null; current_version: number; updated_at: string;
     seo_analysis: SeoAnalysis | null;
+    approved_at: string | null; scheduled_for: string | null; published_at: string | null; published_url: string | null;
+    approver: { full_name: string } | null;
     seo_content_plans: { id: string; title: string; planned_publish_at: string | null } | null;
   };
   const a = art.data as unknown as Raw;
@@ -134,6 +142,8 @@ export async function getArticle(id: string): Promise<ArticleDetail | null> {
     versions: ((vers.data ?? []) as unknown as V[]).map((v) => ({
       id: v.id, versionNumber: v.version_number, source: v.source, title: v.title, createdAt: v.created_at, createdByName: v.profiles?.full_name ?? null,
     })),
+    approvedAt: a.approved_at, approvedByName: a.approver?.full_name ?? null, scheduledFor: a.scheduled_for,
+    publishedAt: a.published_at, publishedUrl: a.published_url,
     seoAnalysis: a.seo_analysis,
     seoStale: Boolean(a.seo_analysis && a.seo_analysis.fingerprint !== articleFingerprint(a)),
     linkSuggestions: ((links.data ?? []) as { id: string; target_url: string; anchor_text: string; reason: string | null; target_type: string }[])

@@ -1,10 +1,15 @@
 // Server-side read of SEO Agent settings (RLS-checked, admin session).
 
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { seoDb, throwIfDbError } from "./db";
 import { settingsFromRow, type SeoSettings, type SeoSettingsRow } from "./settings-schema";
 
-export async function getSeoSettings(): Promise<SeoSettings> {
-  const db = await seoDb();
+/**
+ * Loads settings with the admin session (RLS) by default. Cron and the
+ * publish API have no session and pass the service-role client instead.
+ */
+export async function getSeoSettings(client?: SupabaseClient): Promise<SeoSettings> {
+  const db = client ?? (await seoDb());
   const { data, error } = await db.from("seo_settings").select("*").eq("id", 1).maybeSingle();
   throwIfDbError(error, "Loading SEO settings");
   if (!data) throw new Error("seo_settings row is missing — re-run 013_seo_agent.sql.");

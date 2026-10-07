@@ -1,7 +1,7 @@
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeSlug from "rehype-slug";
-import { ShoppingBag, ExternalLink } from "lucide-react";
+import { ShoppingBag, ExternalLink, ArrowRight } from "lucide-react";
 import { isAmazonUrl, withAmazonTag } from "@/lib/blog";
 import type { Element as HastElement, ElementContent } from "hast";
 
@@ -33,6 +33,20 @@ function soleLink(node: HastElement | undefined): { href: string; text: string }
 }
 
 function CtaButton({ href, text }: { href: string; text: string }) {
+  // Internal CTAs (e.g. SEO Agent articles linking to /signup) stay in the
+  // same tab and are not marked sponsored/nofollow; they're our own pages.
+  if (href.startsWith("/")) {
+    return (
+      <a
+        href={href}
+        className="not-prose group my-7 flex items-center justify-center gap-2.5 px-6 py-4 rounded-[var(--r-lg)] text-[15.5px] font-bold text-white text-center transition-all duration-150 hover:-translate-y-0.5"
+        style={{ background: "linear-gradient(135deg, var(--gold-500), var(--gold-700))", boxShadow: "0 6px 18px oklch(0.56 0.11 70 / 0.35)" }}
+      >
+        {text}
+        <ArrowRight size={19} />
+      </a>
+    );
+  }
   const amazon = isAmazonUrl(href);
   const url = amazon ? withAmazonTag(href) : href;
   return (

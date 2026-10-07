@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Editor } from "@tiptap/react";
-import { CalendarClock, CheckCircle2, Copy, Gauge, Loader2, Monitor, RefreshCw, Save, ShieldAlert, Smartphone } from "lucide-react";
+import { ClipboardCheck, Copy, Gauge, Loader2, Monitor, RefreshCw, Save, ShieldAlert, Smartphone, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { OACard, OACardHeader, OACardTitle } from "@/components/ui";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
@@ -12,6 +12,9 @@ import { Field, inputCls, inputStyle } from "@/components/seo-agent/FormField";
 import { RichTextEditor } from "@/components/seo-agent/editor/RichTextEditor";
 import { regenerateArticle, saveArticle } from "@/actions/seo-agent/articles";
 import { dismissLinkSuggestion, findLinkSuggestions, runSeoCheck } from "@/actions/seo-agent/seo";
+import { uploadFeaturedImage } from "@/actions/seo-agent/workflow";
+import type { PublishValidation } from "@/lib/seo-agent/publishing/rules";
+import { formatZoned } from "@/lib/seo-agent/datetime";
 import { applyLinkAtText, setAllCtas } from "@/components/seo-agent/editor/commands";
 import { withCtaCards } from "@/lib/seo-agent/cta";
 import { BLOG_CATEGORIES, CTA_LABELS, CTA_TYPES, type CtaType } from "@/lib/seo-agent/constants";
@@ -21,6 +24,7 @@ import { cn } from "@/lib/utils";
 import { VersionsPanel } from "./VersionsPanel";
 import { SearchPreview, SeoPanel } from "./SeoPanel";
 import { LinkSuggestionsPanel } from "./LinkSuggestionsPanel";
+import { PublishChecklist, WorkflowBar } from "./WorkflowBar";
 import "@/components/seo-agent/editor/article-prose.css";
 
 const AUTOSAVE_MS = 30_000;
@@ -31,6 +35,8 @@ interface Props {
   timezone: string;
   blogBaseUrl: string;
   defaultCta: CtaType;
+  defaultPublishTime: string;
+  checklist: PublishValidation | null;
 }
 
 function Counter({ value, range }: { value: string; range: readonly [number, number] }) {
@@ -43,7 +49,7 @@ function Counter({ value, range }: { value: string; range: readonly [number, num
   );
 }
 
-export function ArticleEditor({ article, editable, timezone, blogBaseUrl, defaultCta }: Props) {
+export function ArticleEditor({ article, editable, timezone, blogBaseUrl, defaultCta, defaultPublishTime, checklist }: Props) {
   const router = useRouter();
   const [meta, setMeta] = useState({
     title: article.title,
@@ -68,6 +74,7 @@ export function ArticleEditor({ article, editable, timezone, blogBaseUrl, defaul
   const [findingLinks, setFindingLinks] = useState(false);
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
   const [editor, setEditor] = useState<Editor | null>(null);
+  const [uploading, setUploading] = useState(false);
   const savingRef = useRef(false);
 
   const setField = <K extends keyof typeof meta>(k: K, v: (typeof meta)[K]) => { setMeta((m) => ({ ...m, [k]: v })); setDirty(true); };
@@ -142,6 +149,19 @@ export function ArticleEditor({ article, editable, timezone, blogBaseUrl, defaul
     setFindingLinks(false);
   }
 
+  async function uploadImage(file: File) {
+    setUploading(true);
+    setStatus(null);
+    const form = new FormData();
+    form.append("file", file);
+    const res = await uploadFeaturedImage(article.id, form);
+    setUploading(false);
+    if (!res.ok) { setStatus({ kind: "error", text: res.error }); return; }
+    // Already saved on the server; just reflect it here.
+    setMeta((m) => ({ ...m, featuredImageUrl: res.url }));
+    setStatus({ kind: "ok", text: "Featured image uploaded." });
+  }
+
   function switchCta(type: CtaType) {
     if (!editor) return;
     const n = setAllCtas(editor, type);
@@ -171,12 +191,25 @@ export function ArticleEditor({ article, editable, timezone, blogBaseUrl, defaul
         <Button variant="outline" onClick={seoCheck} disabled={seoRunning || regenerating || saving !== null}>
           {seoRunning ? <Loader2 size={14} className="animate-spin" /> : <Gauge size={14} />} SEO check
         </Button>
-        <Button variant="outline" disabled title="Approval arrives in Phase 6"><CheckCircle2 size={14} /> Approve</Button>
-        <Button variant="outline" disabled title="Scheduling arrives in Phase 6"><CalendarClock size={14} /> Schedule</Button>
         <span role="status" className="text-[12.5px] ml-1" style={{ color: status?.kind === "error" ? "var(--danger-tx)" : "var(--fg-muted)" }}>
           {saving === "none" ? "Autosaving…" : status?.text ?? (dirty ? "Unsaved changes" : "")}
         </span>
       </div>
+
+      <OACard className="py-3">
+        <WorkflowBar
+          articleId={article.id}
+          status={article.status}
+          timezone={timezone}
+          defaultPublishTime={defaultPublishTime}
+          plannedPublishAt={article.plan?.plannedPublishAt ?? null}
+          scheduledFor={article.scheduledFor}
+          publishedUrl={article.publishedUrl}
+          approvedLabel={article.approvedAt ? `Approved by ${article.approvedByName ?? "an admin"} on ${formatZoned(article.approvedAt, timezone)}` : null}
+          blogUrl={url}
+          saveFirst={saveIfDirty}
+        />
+      </OACard>
 
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_340px] gap-5 items-start">
         {/* Main column */}
@@ -237,6 +270,13 @@ export function ArticleEditor({ article, editable, timezone, blogBaseUrl, defaul
 
         {/* Sidebar */}
         <div className="flex flex-col gap-4">
+          {checklist && (
+            <OACard>
+              <OACardHeader><OACardTitle className="text-[15px] flex items-center gap-2"><ClipboardCheck size={16} /> Publishing checks</OACardTitle></OACardHeader>
+              <PublishChecklist errors={checklist.errors} warnings={checklist.warnings} />
+            </OACard>
+          )}
+
           <OACard>
             <OACardHeader><OACardTitle className="text-[15px] flex items-center gap-2"><Gauge size={16} /> SEO check</OACardTitle></OACardHeader>
             <SeoPanel
@@ -314,7 +354,13 @@ export function ArticleEditor({ article, editable, timezone, blogBaseUrl, defaul
           <OACard>
             <OACardHeader><OACardTitle className="text-[15px]">Featured image</OACardTitle></OACardHeader>
             <fieldset disabled={!editable} className="flex flex-col gap-3">
-              <Field label="Image URL" hint="https:// only. Upload support comes with publishing (Phase 6).">
+              <label className={`inline-flex items-center gap-1.5 w-fit h-8 px-3 rounded-[var(--r-md)] border text-[12.5px] font-semibold ${uploading || !editable ? "opacity-50" : "cursor-pointer hover:bg-[var(--fill-100)]"}`}
+                style={{ borderColor: "var(--line-300)", color: "var(--ink-700)" }}>
+                {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />} {uploading ? "Uploading…" : "Upload image"}
+                <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={uploading || !editable}
+                  onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void uploadImage(f); }} />
+              </label>
+              <Field label="Image URL" hint="JPEG, PNG or WebP up to 5 MB. External images are copied to our storage when published.">
                 <input className={inputCls} style={inputStyle} value={meta.featuredImageUrl} placeholder="https://…" onChange={(e) => setField("featuredImageUrl", e.target.value)} />
               </Field>
               <Field label="Alt text">
