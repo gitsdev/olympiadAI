@@ -13,7 +13,9 @@ export interface ClusterView {
   status: string;
   updatedAt: string;
   members: { id: string; keyword: string; role: string }[];
+  plans: { id: string; title: string; status: string }[];
   opportunity: {
+    id: string;
     type: string;
     reason: string;
     cannibalizationRisk: string;
@@ -29,7 +31,8 @@ export async function listClusters(status: "ACTIVE" | "ARCHIVED"): Promise<Clust
     .from("seo_keyword_clusters")
     .select(`id, name, primary_keyword, secondary_keywords, question_keywords, search_intent, recommended_title, status, updated_at,
       seo_keyword_cluster_members(role, seo_keywords(id, keyword)),
-      seo_content_opportunities(type, reason, cannibalization_risk, related_blog_post_ids, status, created_at)`)
+      seo_content_opportunities(id, type, reason, cannibalization_risk, related_blog_post_ids, status, created_at),
+      seo_content_plans(id, title, status)`)
     .eq("status", status)
     .order("updated_at", { ascending: false })
     .limit(CLUSTERS_LIMIT);
@@ -39,7 +42,8 @@ export async function listClusters(status: "ACTIVE" | "ARCHIVED"): Promise<Clust
     id: string; name: string; primary_keyword: string; secondary_keywords: string[]; question_keywords: string[];
     search_intent: string | null; recommended_title: string | null; status: string; updated_at: string;
     seo_keyword_cluster_members: { role: string; seo_keywords: { id: string; keyword: string } | null }[];
-    seo_content_opportunities: { type: string; reason: string; cannibalization_risk: string; related_blog_post_ids: string[]; status: string; created_at: string }[];
+    seo_content_opportunities: { id: string; type: string; reason: string; cannibalization_risk: string; related_blog_post_ids: string[]; status: string; created_at: string }[];
+    seo_content_plans: { id: string; title: string; status: string }[];
   };
   const raw = (data ?? []) as unknown as Raw[];
 
@@ -74,8 +78,10 @@ export async function listClusters(status: "ACTIVE" | "ARCHIVED"): Promise<Clust
         .filter((m) => m.seo_keywords)
         .map((m) => ({ id: m.seo_keywords!.id, keyword: m.seo_keywords!.keyword, role: m.role }))
         .sort((a, b) => (roleOrder[a.role] ?? 9) - (roleOrder[b.role] ?? 9) || a.keyword.localeCompare(b.keyword)),
+      plans: (c.seo_content_plans ?? []).filter((p) => p.status !== "ARCHIVED"),
       opportunity: opp
         ? {
+            id: opp.id,
             type: opp.type,
             reason: opp.reason,
             cannibalizationRisk: opp.cannibalization_risk,

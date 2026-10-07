@@ -17,7 +17,7 @@ The MVP is built in phases (spec §47). A phase is marked done only after type c
 |---|---|---|
 | 1 | Setup, auth, database, admin dashboard, settings | ✅ Done |
 | 2 | Keyword management, keyword analysis agent, clusters, AI provider layer, agent task log, AI usage | ✅ Done |
-| 3 | Content opportunities, content calendar | Not started |
+| 3 | Content opportunities, Content Planner Agent, content calendar | ✅ Done |
 | 4 | Article generation, TipTap editor, versioning | Not started |
 | 5 | SEO analysis, internal links, CTA system | Not started |
 | 6 | Approval, scheduling, publishing adapter | Not started |
@@ -57,9 +57,11 @@ npm run lint
 
 `cron.md`, `publishing.md` and `search-console.md` will be added in the phases that build those features.
 
-## Using it (Phase 2)
+## Using it
 
 1. **Keywords:** add keywords one at a time, or **Import** a list (one per line, or a CSV with a `keyword` header). Search and filter by status, priority, class, subject, and whether a keyword is clustered.
 2. Select keywords and click **Analyze keywords**. The Keyword Agent groups them into clusters and recommends an article for each, checking it against existing blog posts.
 3. **Keyword Clusters:** review each cluster's primary keyword, variants, common questions, recommended title, and the reason for the recommendation. Archive clusters you don't want.
-4. **Agent Tasks:** shows every run, with input, output or error, tokens, cost and duration. **AI Usage:** shows cost for today and this month, broken down by area, by model and by day.
+4. **Content Opportunities:** every recommendation with its reason and cannibalisation risk. For `NEW_ARTICLE`, click **Create content plan**: the Content Planner Agent drafts a title, outline, CTA, internal links (real pages only) and things to fact-check, and schedules it on the next free day at your default publishing time. You can also start a plan from a cluster card. `UPDATE_EXISTING`/`MERGE_ARTICLES` are handled by editing the post in **Blog** for now.
+5. **Content Calendar:** a month view in your timezone. Drag a plan to another day to reschedule it (it keeps its time). Click a plan to edit any field, reorder the outline, or change links and CTA. **New plan** creates one by hand. Ideas without a date are listed on the right. Plans become read-only once their article is being written (Phase 4+).
+6. **Agent Tasks:** shows every run, with input, output or error, tokens, cost and duration. **AI Usage:** shows cost for today and this month, broken down by area, by model and by day.

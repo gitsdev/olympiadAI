@@ -17,6 +17,8 @@ export const metadata: Metadata = {
 };
 
 export const dynamic = "force-dynamic";
+// "Create content plan" runs the Content Planner Agent in a server action on this route.
+export const maxDuration = 120;
 
 interface PageProps {
   searchParams: Promise<Record<string, string | undefined>>;

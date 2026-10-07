@@ -7,6 +7,7 @@ import { Archive, ArchiveRestore, Lightbulb } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { OABadge, OACard } from "@/components/ui";
 import { StatusBadge } from "@/components/seo-agent/StatusBadge";
+import { CreatePlanButton } from "@/components/seo-agent/CreatePlanButton";
 import { setClusterStatus } from "@/actions/seo-agent/clusters";
 import { humanizeStatus } from "@/lib/seo-agent/constants";
 import type { ClusterView } from "@/lib/seo-agent/clusters-data";
@@ -80,8 +81,21 @@ export function ClusterCard({ cluster }: { cluster: ClusterView }) {
               ))}
             </p>
           )}
-          <p className="text-[12px]" style={{ color: "var(--fg-subtle)" }}>Creating a content plan from this arrives in Phase 3.</p>
+          {opp?.type === "NEW_ARTICLE" && cluster.plans.length === 0 && !archived && (
+            <div className="pt-1"><CreatePlanButton opportunityId={opp.id} /></div>
+          )}
         </div>
+      )}
+
+      {cluster.plans.length > 0 && (
+        <p className="text-[13px] flex items-center gap-2 flex-wrap" style={{ color: "var(--ink-700)" }}>
+          Content plan:
+          {cluster.plans.map((p) => (
+            <Link key={p.id} href={`/admin/seo-agent/calendar/${p.id}`} className="inline-flex items-center gap-1.5 font-semibold underline">
+              {p.title} <StatusBadge status={p.status} />
+            </Link>
+          ))}
+        </p>
       )}
 
       <div className="flex flex-col gap-1">

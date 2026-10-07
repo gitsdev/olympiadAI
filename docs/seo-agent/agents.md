@@ -77,6 +77,22 @@ Cost comes from Settings → AI → Model pricing (USD per 1M tokens). If a mode
    - the cluster's open recommendation is replaced by the new one in `seo_content_opportunities`
    - search intent is filled in only on keywords where the admin hasn't set one
 
+## Content Planner Agent (`agents/content-planner.ts`), Phase 3
+
+**Trigger:** **Create content plan** on a `NEW_ARTICLE` opportunity (Content Opportunities page or cluster card). Server action `createPlanFromOpportunity` in `src/actions/seo-agent/content.ts`. Logged as `ContentPlanner · create_content_plan`, usage category `CONTENT`.
+
+**Input** (`content-data.ts → getPlanningContext`): the cluster (keywords, questions, intent, recommended title), the most common target class and subject of its keywords, the recommendation's reason, and **link candidates**: published blog posts, topic pages for that class/subject, and the public feature pages in `site-pages.ts`.
+
+**AI** (`prompts/content-planning.ts`): title, content type, audience, up to 8 secondary keywords, a 4–9 section H2 outline with points, one CTA with a reason, up to 6 internal links chosen from the candidates, and fact-check notes. Prompt rules: people first, no filler, FAQ only if useful, never invent facts.
+
+**Validation** (`postProcessPlan`): links must exactly match a candidate URL (absolute olympiadiq.in URLs are normalised; anything else is dropped and reported). Duplicate links and secondary keywords are removed. The CTA reason and fact-check notes go into the plan's notes.
+
+**Saved as:** a `PLANNED` row in `seo_content_plans`, dated on the next day (in the configured timezone, from tomorrow) with no active plan, at the default publishing time. The opportunity becomes `ACCEPTED`. Deleting the plan puts the opportunity back to `OPEN`.
+
+**CTA destinations** (`site-pages.ts`): Mock Tests, AI Tutor and Battle are behind login and `/login` can't return users to a page, so those CTAs point to `/signup`. Brain Booster points to `/brain-booster`, which is public.
+
+**Measured live (2026-10-07):** one plan for "maths olympiad class 5" took ~25 s and about 3.9k input / 2k output tokens (~$0.055 on Opus 5.5).
+
 ## Coming in later phases
 
-Content Planner and Content Writer (Phases 3–4), SEO analysis and internal linking (Phase 5), Strategy (Phase 9), Backlink and Outreach (Phase 10). Each will use `runAgentTask` and `generateStructuredOutput`, and keep its prompt in `prompts/`.
+Content Writer (Phase 4), SEO analysis and internal linking (Phase 5), Strategy (Phase 9), Backlink and Outreach (Phase 10). Each will use `runAgentTask` and `generateStructuredOutput`, and keep its prompt in `prompts/`.

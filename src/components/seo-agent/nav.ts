@@ -28,14 +28,14 @@ export const SEO_NAV: SeoNavGroup[] = [
     items: [
       { href: `${SEO_AGENT_BASE}/keywords`, label: "Keywords", Icon: KeyRound },
       { href: `${SEO_AGENT_BASE}/clusters`, label: "Keyword Clusters", Icon: Network },
-      { href: `${SEO_AGENT_BASE}/opportunities`, label: "Content Opportunities", Icon: Lightbulb, comingInPhase: 3 },
+      { href: `${SEO_AGENT_BASE}/opportunities`, label: "Content Opportunities", Icon: Lightbulb },
       { href: `${SEO_AGENT_BASE}/performance`, label: "SEO Performance", Icon: LineChart, comingInPhase: 9 },
     ],
   },
   {
     label: "Content",
     items: [
-      { href: `${SEO_AGENT_BASE}/calendar`, label: "Content Calendar", Icon: CalendarDays, comingInPhase: 3 },
+      { href: `${SEO_AGENT_BASE}/calendar`, label: "Content Calendar", Icon: CalendarDays },
       { href: `${SEO_AGENT_BASE}/articles`, label: "Articles", Icon: FileText, comingInPhase: 4 },
       { href: `${SEO_AGENT_BASE}/articles?status=DRAFT`, label: "Drafts", Icon: FilePen, comingInPhase: 4 },
       { href: `${SEO_AGENT_BASE}/articles?status=PUBLISHED`, label: "Published", Icon: FileCheck2, comingInPhase: 4 },
