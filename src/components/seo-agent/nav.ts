@@ -26,8 +26,8 @@ export const SEO_NAV: SeoNavGroup[] = [
   {
     label: "SEO",
     items: [
-      { href: `${SEO_AGENT_BASE}/keywords`, label: "Keywords", Icon: KeyRound, comingInPhase: 2 },
-      { href: `${SEO_AGENT_BASE}/clusters`, label: "Keyword Clusters", Icon: Network, comingInPhase: 2 },
+      { href: `${SEO_AGENT_BASE}/keywords`, label: "Keywords", Icon: KeyRound },
+      { href: `${SEO_AGENT_BASE}/clusters`, label: "Keyword Clusters", Icon: Network },
       { href: `${SEO_AGENT_BASE}/opportunities`, label: "Content Opportunities", Icon: Lightbulb, comingInPhase: 3 },
       { href: `${SEO_AGENT_BASE}/performance`, label: "SEO Performance", Icon: LineChart, comingInPhase: 9 },
     ],
@@ -52,8 +52,8 @@ export const SEO_NAV: SeoNavGroup[] = [
   {
     label: "AI",
     items: [
-      { href: `${SEO_AGENT_BASE}/agent-tasks`, label: "Agent Tasks", Icon: Bot, comingInPhase: 2 },
-      { href: `${SEO_AGENT_BASE}/ai-usage`, label: "AI Usage", Icon: Coins, comingInPhase: 2 },
+      { href: `${SEO_AGENT_BASE}/agent-tasks`, label: "Agent Tasks", Icon: Bot },
+      { href: `${SEO_AGENT_BASE}/ai-usage`, label: "AI Usage", Icon: Coins },
     ],
   },
   { items: [{ href: `${SEO_AGENT_BASE}/settings`, label: "Settings", Icon: Settings }] },

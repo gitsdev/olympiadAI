@@ -30,7 +30,9 @@ tests/seo-agent/                  Vitest
 docs/seo-agent/
 ```
 
-Later phases will add `src/lib/seo-agent/ai/` (provider abstraction, prompts and agents), `publishing/`, `search-console/` and `src/app/api/{cron,content}/...`.
+Phase 2 added `ai/` (provider abstraction and prompts), `agents/` (task runner and Keyword Analysis Agent), `keywords*.ts`, `clusters-*.ts` and `tasks-data.ts`. See [agents.md](agents.md). Later phases will add `publishing/`, `search-console/` and `src/app/api/{cron,content}/...`.
+
+Server-only modules (anything that reads secrets or uses the DB clients) start with `import "server-only"`, so the build fails if they are ever imported into client code.
 
 ## Security model
 

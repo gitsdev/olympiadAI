@@ -24,6 +24,7 @@ const STUBS = `
 `;
 
 const migration = readFileSync(join(process.cwd(), "supabase/migrations/013_seo_agent.sql"), "utf8");
+const overviewView = readFileSync(join(process.cwd(), "supabase/migrations/014_seo_keywords_overview.sql"), "utf8");
 let db: PGlite;
 
 /** Runs `sql` as the `authenticated` role with auth.uid() = uid (like a Supabase session). */
@@ -40,10 +41,12 @@ beforeAll(async () => {
   db = new PGlite();
   await db.exec(STUBS);
   await db.exec(migration);
+  await db.exec(overviewView);
   await db.exec(`
     insert into profiles (id, role) values ('${ADMIN}', 'platform_admin'), ('${STUDENT}', 'student');
     grant usage on schema public, auth to authenticated;
     grant select, insert, update, delete on all tables in schema public to authenticated;
+    grant select on seo_keywords_overview to authenticated;
   `);
 }, 60_000);
 
@@ -149,5 +152,53 @@ describe("cron job lock", () => {
     expect(await acquire("run-b")).toBe(true);
     await db.exec("update seo_job_locks set locked_until = now() - interval '1 second'");
     expect(await acquire("run-c")).toBe(true);
+  });
+});
+
+describe("migration 014 + keyword import", () => {
+  it("is idempotent", async () => {
+    await expect(db.exec(overviewView)).resolves.toBeDefined();
+  });
+
+  it("matches the app's normalizeKeyword() for cleaned input", async () => {
+    const { cleanKeyword, normalizeKeyword } = await import("@/lib/seo-agent/keywords");
+    for (const raw of ["  NSO\tClass  6 \n", "IMO  Level-2 Prep", "Ünïcödé  Maths"]) {
+      const cleaned = cleanKeyword(raw);
+      const { rows } = await db.query<{ n: string }>("insert into seo_keywords (keyword) values ($1) returning keyword_normalized n", [cleaned]);
+      expect(rows[0].n).toBe(normalizeKeyword(raw));
+    }
+  });
+
+  it("supports ON CONFLICT (keyword_normalized) DO NOTHING for bulk import", async () => {
+    const { rows } = await db.query<{ id: string }>(
+      "insert into seo_keywords (keyword) values ('maths olympiad CLASS 5'), ('brand new keyword') on conflict (keyword_normalized) do nothing returning id",
+    );
+    expect(rows).toHaveLength(1);
+  });
+
+  it("lists active cluster memberships and filters on is_clustered", async () => {
+    await db.exec(`
+      insert into seo_keyword_clusters (id, name, primary_keyword) values
+        ('10000000-0000-0000-0000-000000000001', 'Class 5 Maths', 'maths olympiad class 5'),
+        ('10000000-0000-0000-0000-000000000002', 'Old', 'x');
+      update seo_keyword_clusters set status = 'ARCHIVED' where name = 'Old';
+      insert into seo_keyword_cluster_members (cluster_id, keyword_id, role)
+        select '10000000-0000-0000-0000-000000000001', id, 'PRIMARY' from seo_keywords where keyword_normalized = 'maths olympiad class 5';
+      insert into seo_keyword_cluster_members (cluster_id, keyword_id, role)
+        select '10000000-0000-0000-0000-000000000002', id, 'SECONDARY' from seo_keywords where keyword_normalized = 'brand new keyword';
+    `);
+    const rows = await asUser<{ keyword_normalized: string; is_clustered: boolean; clusters: { name: string; role: string }[] }>(
+      ADMIN, "select keyword_normalized, is_clustered, clusters from seo_keywords_overview where keyword_normalized in ('maths olympiad class 5', 'brand new keyword') order by 1 desc",
+    );
+    expect(rows).toEqual([
+      { keyword_normalized: "maths olympiad class 5", is_clustered: true, clusters: [{ id: "10000000-0000-0000-0000-000000000001", name: "Class 5 Maths", role: "PRIMARY" }] },
+      // Membership of an archived cluster doesn't count.
+      { keyword_normalized: "brand new keyword", is_clustered: false, clusters: [] },
+    ]);
+  });
+
+  it("respects RLS through the view (security_invoker)", async () => {
+    expect((await asUser<{ n: number }>(STUDENT, "select count(*)::int n from seo_keywords_overview"))[0].n).toBe(0);
+    expect((await asUser<{ n: number }>(ADMIN, "select count(*)::int n from seo_keywords_overview"))[0].n).toBeGreaterThan(0);
   });
 });

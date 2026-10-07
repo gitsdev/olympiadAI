@@ -61,6 +61,9 @@ export const STATUS_TONES: Record<string, StatusTone> = {
   // agent tasks
   PENDING: "neutral", RUNNING: "cobalt", COMPLETED: "green", FAILED: "red",
   WAITING_APPROVAL: "amber", CANCELLED: "neutral",
+  // content opportunities / cannibalization risk
+  NEW_ARTICLE: "cobalt", UPDATE_EXISTING: "amber", MERGE_ARTICLES: "amber", NO_ACTION: "neutral",
+  NONE: "green", LOW: "green", MEDIUM: "amber", HIGH: "red",
 };
 
 /** "REVIEW_REQUIRED" → "Review required" */

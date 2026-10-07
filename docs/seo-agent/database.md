@@ -1,6 +1,9 @@
 # Database
 
-Migration: [`supabase/migrations/013_seo_agent.sql`](../../supabase/migrations/013_seo_agent.sql). It only adds objects and is safe to re-run (a test applies it twice).
+Migrations (run in order; each only adds objects and is safe to re-run, which the tests check):
+
+- [`013_seo_agent.sql`](../../supabase/migrations/013_seo_agent.sql): all tables, constraints, RLS and lock functions
+- [`014_seo_keywords_overview.sql`](../../supabase/migrations/014_seo_keywords_overview.sql): the `seo_keywords_overview` view, with one row per keyword plus its active cluster memberships (`clusters` jsonb, `is_clustered`). The Keywords page uses it so the "clustered / not clustered" filter and pagination are handled in SQL. It is created `with (security_invoker = true)`, so the caller's RLS still applies.
 
 ## Tables
 
