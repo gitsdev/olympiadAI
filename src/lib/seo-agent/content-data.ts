@@ -265,3 +265,19 @@ export async function getPlan(id: string): Promise<PlanDetail | null> {
       .map(({ id, status }) => ({ id, status }))[0] ?? null,
   };
 }
+
+/** Every public internal path that exists (for broken-link checks). */
+export async function getKnownInternalPaths(db: SupabaseClient): Promise<Set<string>> {
+  const [posts, topics] = await Promise.all([
+    db.from("blog_posts").select("slug").eq("status", "published").limit(5000),
+    db.from("topic_pages").select("slug").limit(5000),
+  ]);
+  throwIfDbError(posts.error, "Loading blog slugs");
+  throwIfDbError(topics.error, "Loading topic slugs");
+  return new Set([
+    "/", "/blog", "/signup", "/start", "/login",
+    ...((posts.data ?? []) as { slug: string }[]).map((p) => `/blog/${p.slug}`),
+    ...((topics.data ?? []) as { slug: string }[]).map((t) => `/learn/${t.slug}`),
+    ...STATIC_LINK_CANDIDATES.map((c) => c.url),
+  ]);
+}

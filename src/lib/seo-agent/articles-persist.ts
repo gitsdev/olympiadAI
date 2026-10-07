@@ -5,6 +5,7 @@ import { slugify } from "@/lib/slug";
 import { throwIfDbError } from "./db";
 import { extractCtas, extractLinks } from "./article-html";
 import { BLOG_RESERVED_SLUGS } from "./articles";
+import { planLinkSync, type ExistingLinkRow } from "./link-sync";
 
 /**
  * A slug free in both seo_articles (non-archived) and the live blog
@@ -66,10 +67,13 @@ export async function addArticleVersion(
   return next;
 }
 
+const targetType = (url: string) => (url.startsWith("/") ? (url.startsWith("/blog/") ? "ARTICLE" : "FEATURE_PAGE") : "EXTERNAL");
+
 /**
- * Keeps seo_article_links / seo_article_ctas in step with what is actually in
- * the article body: links the editor placed are INSERTED; AI suggestions
- * that aren't in the body are kept as SUGGESTED.
+ * Keeps seo_article_links / seo_article_ctas in step with the article body:
+ * links in the body are INSERTED rows (rebuilt each save); suggestions stay
+ * SUGGESTED until applied; dismissed ones (REJECTED) are kept so they're
+ * never suggested again. See planLinkSync().
  */
 export async function syncArticleLinksAndCtas(
   db: SupabaseClient,
@@ -77,30 +81,22 @@ export async function syncArticleLinksAndCtas(
   html: string,
   opts: { source: "AI" | "MANUAL"; suggestions?: { url: string; anchorText: string; reason: string }[] },
 ): Promise<void> {
-  const inBody = extractLinks(html);
-  const inBodyUrls = new Set(inBody.map((l) => l.href));
+  const { data: existing, error: exErr } = await db.from("seo_article_links").select("id, target_url, status, reason").eq("article_id", articleId);
+  throwIfDbError(exErr, "Loading article links");
+  const plan = planLinkSync((existing ?? []) as ExistingLinkRow[], extractLinks(html), opts.suggestions ?? []);
 
-  const { error: delErr } = await db.from("seo_article_links").delete().eq("article_id", articleId);
-  throwIfDbError(delErr, "Resetting article links");
-
+  if (plan.deleteIds.length) {
+    const { error } = await db.from("seo_article_links").delete().in("id", plan.deleteIds);
+    throwIfDbError(error, "Updating article links");
+  }
   const rows = [
-    ...inBody.map((l) => ({
-      article_id: articleId,
-      target_url: l.href,
-      target_type: l.href.startsWith("/") ? (l.href.startsWith("/blog/") ? "ARTICLE" : "FEATURE_PAGE") : "EXTERNAL",
-      anchor_text: l.text || l.href,
-      reason: opts.suggestions?.find((s) => s.url === l.href)?.reason ?? null,
-      source: opts.source,
-      status: "INSERTED",
+    ...plan.insertInserted.map((l) => ({
+      article_id: articleId, target_url: l.url, target_type: targetType(l.url), anchor_text: l.anchorText,
+      reason: l.reason, source: opts.source, status: "INSERTED",
     })),
-    ...(opts.suggestions ?? []).filter((s) => !inBodyUrls.has(s.url)).map((s) => ({
-      article_id: articleId,
-      target_url: s.url,
-      target_type: s.url.startsWith("/blog/") ? "ARTICLE" : "FEATURE_PAGE",
-      anchor_text: s.anchorText,
-      reason: s.reason,
-      source: "AI",
-      status: "SUGGESTED",
+    ...plan.insertSuggested.map((s) => ({
+      article_id: articleId, target_url: s.url, target_type: targetType(s.url), anchor_text: s.anchorText,
+      reason: s.reason, source: "AI", status: "SUGGESTED",
     })),
   ];
   if (rows.length) {
@@ -117,4 +113,26 @@ export async function syncArticleLinksAndCtas(
     );
     throwIfDbError(error, "Saving article CTAs");
   }
+}
+
+/** Replaces the article's open AI link suggestions with a fresh set (dismissed ones stay dismissed). */
+export async function replaceLinkSuggestions(
+  db: SupabaseClient,
+  articleId: string,
+  html: string,
+  suggestions: { url: string; anchorText: string; reason: string }[],
+): Promise<number> {
+  const { error: delErr } = await db.from("seo_article_links").delete().eq("article_id", articleId).eq("status", "SUGGESTED");
+  throwIfDbError(delErr, "Clearing old suggestions");
+  const { data: existing, error: exErr } = await db.from("seo_article_links").select("id, target_url, status, reason").eq("article_id", articleId);
+  throwIfDbError(exErr, "Loading article links");
+  const plan = planLinkSync((existing ?? []) as ExistingLinkRow[], extractLinks(html), suggestions);
+  if (plan.insertSuggested.length) {
+    const { error } = await db.from("seo_article_links").insert(plan.insertSuggested.map((s) => ({
+      article_id: articleId, target_url: s.url, target_type: targetType(s.url), anchor_text: s.anchorText,
+      reason: s.reason, source: "AI", status: "SUGGESTED",
+    })));
+    throwIfDbError(error, "Saving link suggestions");
+  }
+  return plan.insertSuggested.length;
 }

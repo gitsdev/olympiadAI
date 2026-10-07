@@ -10,9 +10,9 @@ import type { CtaType } from "./constants";
  * /signup (the same target as the /start landing page).
  */
 export const CTA_DESTINATIONS: Record<CtaType, { path: string; label: string; description: string }> = {
-  MOCK_TEST: { path: "/signup", label: "Free Unlimited Mock Tests", description: "Olympiad-style mock tests with instant results" },
-  AI_TUTOR: { path: "/signup", label: "AI Tutor", description: "Step-by-step help from OlympiadIQ's AI Tutor" },
-  BATTLE: { path: "/signup", label: "Battle with Friends", description: "Live quiz battles against friends" },
+  MOCK_TEST: { path: "/signup", label: "Free Unlimited Mock Tests", description: "Unlimited Olympiad-style mock tests, free" },
+  AI_TUTOR: { path: "/signup", label: "AI Tutor", description: "Help with tricky questions from OlympiadIQ's AI Tutor" },
+  BATTLE: { path: "/signup", label: "Battle with Friends", description: "Olympiad quiz battles against friends" },
   BRAIN_BOOSTER: { path: "/brain-booster", label: "Brain Booster Games", description: "Free brain-training games, no sign-up needed" },
 };
 

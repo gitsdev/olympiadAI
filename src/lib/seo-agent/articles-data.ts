@@ -3,6 +3,8 @@ import "server-only";
 import { seoDb, throwIfDbError } from "./db";
 import { escapeLike } from "./keywords-data";
 import type { QualityFlag } from "./agents/content-writer";
+import type { SeoAnalysis } from "./agents/seo-analyst";
+import { articleFingerprint } from "./seo-checks";
 
 export const ARTICLES_PAGE_SIZE = 25;
 
@@ -80,15 +82,19 @@ export interface ArticleDetail {
   updatedAt: string;
   plan: { id: string; title: string; plannedPublishAt: string | null } | null;
   versions: ArticleVersionRow[];
+  seoAnalysis: SeoAnalysis | null;
+  /** True when the saved article changed after the last SEO check. */
+  seoStale: boolean;
+  linkSuggestions: { id: string; url: string; anchorText: string; reason: string | null; targetType: string }[];
 }
 
 export async function getArticle(id: string): Promise<ArticleDetail | null> {
   const db = await seoDb();
-  const [art, vers] = await Promise.all([
+  const [art, vers, links] = await Promise.all([
     db.from("seo_articles")
       .select(`id, title, slug, meta_title, meta_description, excerpt, content_html, featured_image_url, featured_image_alt,
         featured_image_prompt, primary_keyword, secondary_keywords, category, cta_type, origin, status, seo_score, quality_flags,
-        current_version, updated_at, seo_content_plans(id, title, planned_publish_at)`)
+        current_version, updated_at, seo_analysis, seo_content_plans(id, title, planned_publish_at)`)
       .eq("id", id)
       .maybeSingle(),
     db.from("seo_article_versions")
@@ -96,7 +102,13 @@ export async function getArticle(id: string): Promise<ArticleDetail | null> {
       .eq("article_id", id)
       .order("version_number", { ascending: false })
       .limit(100),
+    db.from("seo_article_links")
+      .select("id, target_url, anchor_text, reason, target_type")
+      .eq("article_id", id)
+      .eq("status", "SUGGESTED")
+      .order("created_at"),
   ]);
+  throwIfDbError(links.error, "Loading link suggestions");
   throwIfDbError(art.error, "Loading article");
   throwIfDbError(vers.error, "Loading versions");
   if (!art.data) return null;
@@ -106,6 +118,7 @@ export async function getArticle(id: string): Promise<ArticleDetail | null> {
     content_html: string; featured_image_url: string | null; featured_image_alt: string | null; featured_image_prompt: string | null;
     primary_keyword: string | null; secondary_keywords: string[]; category: string | null; cta_type: string | null; origin: string;
     status: string; seo_score: number | null; quality_flags: QualityFlag[] | null; current_version: number; updated_at: string;
+    seo_analysis: SeoAnalysis | null;
     seo_content_plans: { id: string; title: string; planned_publish_at: string | null } | null;
   };
   const a = art.data as unknown as Raw;
@@ -121,5 +134,9 @@ export async function getArticle(id: string): Promise<ArticleDetail | null> {
     versions: ((vers.data ?? []) as unknown as V[]).map((v) => ({
       id: v.id, versionNumber: v.version_number, source: v.source, title: v.title, createdAt: v.created_at, createdByName: v.profiles?.full_name ?? null,
     })),
+    seoAnalysis: a.seo_analysis,
+    seoStale: Boolean(a.seo_analysis && a.seo_analysis.fingerprint !== articleFingerprint(a)),
+    linkSuggestions: ((links.data ?? []) as { id: string; target_url: string; anchor_text: string; reason: string | null; target_type: string }[])
+      .map((l) => ({ id: l.id, url: l.target_url, anchorText: l.anchor_text, reason: l.reason, targetType: l.target_type })),
   };
 }

@@ -156,3 +156,22 @@ export function parseKeywordImport(text: string, format: "lines" | "csv"): Impor
   const { unique, duplicates } = dedupeKeywords(valid);
   return { rows: unique, errors, duplicatesInFile: duplicates.length };
 }
+
+const SUBJECT_WORDS: [RegExp, (typeof KEYWORD_SUBJECTS)[number]][] = [
+  [/\b(math|maths|mathematics|imo|ioqm)\b/i, "Mathematics"],
+  [/\b(science|nso|physics|chemistry|biology)\b/i, "Science"],
+  [/\b(english|ieo|grammar)\b/i, "English"],
+  [/\b(reasoning|logical)\b/i, "Reasoning"],
+  [/\b(gk|general knowledge|igko)\b/i, "General Knowledge"],
+  [/\b(cyber|computer|nco|coding)\b/i, "Computers"],
+];
+
+/** Best-effort class and subject from keyword text, e.g. "maths olympiad class 5" → 5, Mathematics. */
+export function inferClassAndSubject(text: string): { targetClass: number | null; subject: string | null } {
+  const m = /\b(?:class|grade|std)\s*(\d{1,2})\b/i.exec(text);
+  const cls = m ? Number(m[1]) : null;
+  return {
+    targetClass: cls && cls >= 1 && cls <= 12 ? cls : null,
+    subject: SUBJECT_WORDS.find(([re]) => re.test(text))?.[1] ?? null,
+  };
+}

@@ -20,10 +20,12 @@ interface Props {
   editable: boolean;
   defaultCta: CtaType;
   onChange: (html: string) => void;
+  /** Gives the parent the editor instance (for applying link suggestions, CTA changes). */
+  onReady?: (editor: Editor) => void;
 }
 
 /** TipTap editor for SEO articles. Output is sanitized again on the server. */
-export function RichTextEditor({ initialHtml, editable, defaultCta, onChange }: Props) {
+export function RichTextEditor({ initialHtml, editable, defaultCta, onChange, onReady }: Props) {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -46,6 +48,10 @@ export function RichTextEditor({ initialHtml, editable, defaultCta, onChange }: 
   useEffect(() => {
     editor?.setEditable(editable);
   }, [editor, editable]);
+
+  useEffect(() => {
+    if (editor && onReady) onReady(editor);
+  }, [editor, onReady]);
 
   if (!editor) return <div className="min-h-[480px]" aria-busy />;
 

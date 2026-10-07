@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  extractCtas, extractLinks, htmlToText, markdownToArticleHtml, sanitizeArticleHtml, wordCount,
+  extractCtas, extractLinks, htmlToReviewMarkdown, htmlToText, markdownToArticleHtml, sanitizeArticleHtml, wordCount,
 } from "@/lib/seo-agent/article-html";
 
 describe("sanitizeArticleHtml (§34)", () => {
@@ -73,6 +73,22 @@ describe("markdownToArticleHtml (writer output)", () => {
 
   it("reports when no CTA marker was placed", () => {
     expect(markdownToArticleHtml("Just text.", "AI_TUTOR", policy).ctaPlaced).toBe(false);
+  });
+});
+
+describe("htmlToReviewMarkdown (what the SEO reviewer sees)", () => {
+  it("keeps headings, lists, tables, links and CTA blocks visible", () => {
+    const html = '<h2>Plan</h2><p>Use <a href="/brain-booster">Brain Booster</a> <strong>daily</strong>.</p>'
+      + "<ul><li><p>One</p><ul><li><p>Nested</p></li></ul></li><li><p>Two</p></li></ul><ol><li><p>First</p></li></ol>"
+      + "<table><tbody><tr><th><p>Week</p></th><th><p>Focus</p></th></tr><tr><td><p>1</p></td><td><p>Numbers</p></td></tr></tbody></table>"
+      + '<div data-cta="MOCK_TEST"></div><blockquote><p>Quote</p></blockquote><hr>';
+    expect(htmlToReviewMarkdown(html)).toBe([
+      "## Plan",
+      "Use [Brain Booster](/brain-booster) **daily**.",
+      "- One", "  - Nested", "- Two", "1. First",
+      "| Week | Focus |", "| 1 | Numbers |",
+      "[CTA block: MOCK_TEST]", "> Quote", "---",
+    ].join("\n"));
   });
 });
 

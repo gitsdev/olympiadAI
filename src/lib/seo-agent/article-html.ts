@@ -214,3 +214,63 @@ export function extractCtas(html: string): CtaType[] {
   });
   return found.reverse();
 }
+
+/**
+ * Markdown-like text for AI review: keeps headings (##), list items (-),
+ * table rows (| a | b |), links ([text](url)) and CTA markers, so the
+ * reviewer sees structure and link targets instead of flattened text.
+ */
+export function htmlToReviewMarkdown(html: string): string {
+  const out: string[] = [];
+  const inline = (n: RootContent | ElementContent): string => {
+    if (n.type === "text") return (n as Text).value;
+    if (n.type !== "element") return "";
+    const inner = n.children.map(inline).join("");
+    if (n.tagName === "a") return `[${inner}](${String(n.properties?.href ?? "")})`;
+    if (n.tagName === "strong") return `**${inner}**`;
+    if (n.tagName === "em") return `*${inner}*`;
+    if (n.tagName === "br") return " ";
+    if (n.tagName === "img") return `![${String(n.properties?.alt ?? "")}]`;
+    return inner;
+  };
+  const isList = (c: ElementContent) => c.type === "element" && (c.tagName === "ul" || c.tagName === "ol");
+  const block = (n: RootContent | ElementContent, listDepth = 0) => {
+    if (n.type !== "element") {
+      const t = inline(n).trim();
+      if (t) out.push(t);
+      return;
+    }
+    const tag = n.tagName;
+    if (/^h[1-4]$/.test(tag)) out.push(`${"#".repeat(Number(tag[1]))} ${inline(n).trim()}`);
+    else if (tag === "p") out.push(inline(n).trim());
+    else if (tag === "ul" || tag === "ol") {
+      let i = 0;
+      for (const li of n.children) {
+        if (li.type !== "element" || li.tagName !== "li") continue;
+        i++;
+        const text = li.children.filter((c) => !isList(c)).map(inline).join(" ").trim();
+        out.push(`${"  ".repeat(listDepth)}${tag === "ol" ? `${i}.` : "-"} ${text}`);
+        for (const c of li.children) if (isList(c)) block(c, listDepth + 1);
+      }
+    } else if (tag === "table") {
+      const rows: Element[] = [];
+      const collect = (e: Element) => {
+        for (const c of e.children) {
+          if (c.type !== "element") continue;
+          if (c.tagName === "tr") rows.push(c);
+          else collect(c);
+        }
+      };
+      collect(n);
+      for (const r of rows) {
+        const cells = r.children.filter((c): c is Element => c.type === "element").map((c) => inline(c).trim());
+        out.push(`| ${cells.join(" | ")} |`);
+      }
+    } else if (tag === "blockquote") out.push(`> ${inline(n).trim()}`);
+    else if (tag === "hr") out.push("---");
+    else if (tag === "div" && n.properties?.dataCta) out.push(`[CTA block: ${String(n.properties.dataCta)}]`);
+    else for (const c of n.children) block(c, listDepth);
+  };
+  for (const c of parse(html).children) block(c);
+  return out.filter(Boolean).join("\n");
+}

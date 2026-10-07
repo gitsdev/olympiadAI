@@ -7,10 +7,12 @@ import { Node, NodeViewWrapper, ReactNodeViewRenderer, mergeAttributes, type Nod
 import { Megaphone, Trash2 } from "lucide-react";
 import { CTA_LABELS, CTA_TYPES } from "@/lib/seo-agent/constants";
 import { CTA_DESTINATIONS } from "@/lib/seo-agent/site-pages";
+import { CTA_COPY } from "@/lib/seo-agent/cta";
 
 function CtaView({ node, updateAttributes, deleteNode, editor, selected }: NodeViewProps) {
   const type = node.attrs.ctaType as keyof typeof CTA_DESTINATIONS;
   const dest = CTA_DESTINATIONS[type] ?? CTA_DESTINATIONS.MOCK_TEST;
+  const copy = CTA_COPY[type] ?? CTA_COPY.MOCK_TEST;
   return (
     <NodeViewWrapper
       contentEditable={false}
@@ -23,9 +25,9 @@ function CtaView({ node, updateAttributes, deleteNode, editor, selected }: NodeV
     >
       <Megaphone size={18} style={{ color: "var(--gold-700)" }} aria-hidden />
       <div className="flex flex-col flex-1 min-w-[180px]">
-        <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--fg-muted)" }}>CTA block</span>
-        <span className="text-[14px] font-bold" style={{ color: "var(--ink-900)", fontFamily: "var(--font-display)" }}>{dest.label}</span>
-        <span className="text-[12px]" style={{ color: "var(--fg-muted)" }}>{dest.description} → {dest.path}</span>
+        <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--fg-muted)" }}>CTA block · {dest.label}</span>
+        <span className="text-[14px] font-bold" style={{ color: "var(--ink-900)", fontFamily: "var(--font-display)" }}>{copy.headline}</span>
+        <span className="text-[12px]" style={{ color: "var(--fg-muted)" }}>{copy.body} [{copy.button} → {dest.path}]</span>
       </div>
       {editor.isEditable && (
         <>

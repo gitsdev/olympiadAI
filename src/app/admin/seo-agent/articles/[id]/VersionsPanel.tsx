@@ -13,6 +13,7 @@ import {
 } from "@/actions/seo-agent/articles";
 import { formatZoned } from "@/lib/seo-agent/datetime";
 import type { ArticleVersionRow } from "@/lib/seo-agent/articles-data";
+import { withCtaCards } from "@/lib/seo-agent/cta";
 import "@/components/seo-agent/editor/article-prose.css";
 
 const SOURCE_LABEL: Record<string, { label: string; tone: "cobalt" | "green" | "amber" }> = {
@@ -119,7 +120,7 @@ export function VersionsPanel({ articleId, versions, timezone, editable, hasUnsa
             <article className="seo-prose">
               <h1>{viewing.title}</h1>
               {/* Sanitized on the server (sanitizeArticleHtml) before it reaches the browser. */}
-              <div dangerouslySetInnerHTML={{ __html: viewing.contentHtml }} />
+              <div dangerouslySetInnerHTML={{ __html: withCtaCards(viewing.contentHtml) }} />
             </article>
           )}
         </DialogContent>

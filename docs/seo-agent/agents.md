@@ -125,4 +125,28 @@ The editor always loads from this sanitized HTML; client-submitted TipTap JSON i
 
 Since Phase 4 the provider streams every request (`beta.messages.stream(...).finalMessage()`), so long outputs like full articles (up to 32k output tokens) can't hit HTTP timeouts. Routes that run the writer set `maxDuration = 300`.
 
+## SEO Agent (`agents/seo-analyst.ts`), Phase 5
+
+**Trigger:** **SEO check** in the editor (the article is saved first). Server action `runSeoCheck` in `src/actions/seo-agent/seo.ts`; logged as `SEOAgent · seo_check`, usage category `SEO`.
+
+**Two halves:**
+1. **Deterministic checks** (`seo-checks.ts`, unit-tested): title / meta title / meta description length and keyword; H1s in the body, number of H2s, skipped heading levels; keyword in the first 100 words, in a heading and in the slug; keyword stuffing (> 3% for the exact phrase); word count; average sentence length and over-long paragraphs; internal links (none, one, or links to pages that don't exist); external links; CTA blocks; excerpt, featured image and alt text.
+2. **AI review** (`prompts/seo-analysis.ts`): scores intent match, completeness, readability, CTA relevance and overall quality (0–10 with a note), recommends the best CTA, lists up to 10 concrete recommendations, and fact-checks the article (§39): unsupported statistics, rankings, invented claims, citations or organisations, competition details and possibly outdated information, each quoted from the text with a severity. The reviewer sees the article as Markdown (links, lists and tables visible) plus a list of verified OlympiadIQ pages, so real product pages aren't flagged as invented.
+
+**Score:** 12 categories with fixed weights (`seo-categories.ts`, summing to 100). Where both exist, a category blends the worst automatic check (40%) with the AI's judgement (60%). Any HIGH-severity fact issue caps Overall quality. The result is stored in `seo_articles.seo_score` and `seo_analysis`, together with a fingerprint of the checked content; the editor shows "out of date" when the saved article no longer matches. It is always labelled an **internal content-quality score, not a Google ranking score**, and never promises rankings.
+
+**Critical list:** HIGH-severity fact issues and failed meta/link/CTA checks go into `analysis.critical`. Phase 6/7 auto-publish will refuse to publish while this list is non-empty.
+
+**Measured live (2026-10-07)** on the 2,300-word test article: ~31 s, ~9k input / 2.9k output tokens (~$0.09). Score 92, no critical items, 8 specific recommendations (e.g. a contradiction between the FAQ and the study plan, and clarifying that SOF's IMO is not the senior International Mathematical Olympiad).
+
+## Internal Linking Agent (`agents/internal-linker.ts`), Phase 5
+
+**Trigger:** **Find link suggestions** in the editor. Logged as `InternalLinker · suggest_internal_links`, category `SEO`. Candidates are published blog posts, topic pages for the keyword's class/subject (inferred from the keyword text), and public feature pages, excluding the article itself.
+
+**Validation:** the URL must be a candidate and not already linked; the anchor must be 2–8 words copied from the running text (not a heading), and the prompt forbids anchors like "official syllabus" on OlympiadIQ pages. Results are stored as `SUGGESTED` rows. **Apply** links the first matching phrase (skipping headings and existing links), and it becomes `INSERTED` on save. **Dismiss** marks it `REJECTED`, so it is never suggested again (`link-sync.ts` rules, unit-tested). ~3 s, ~$0.03 per run.
+
+## CTA system (`cta.ts`), Phase 5
+
+One definition per CTA (`MOCK_TEST`, `AI_TUTOR`, `BATTLE`, `BRAIN_BOOSTER`): headline, text and button label, plus the destination from `site-pages.ts`. The copy only describes features in the brand profile. The editor card, preview, version views and (Phase 6) publishing all render from it. The planner and writer choose a CTA; the SEO Agent re-evaluates the fit; the admin can switch any block by hand or with **Use this CTA**.
+
 ## Coming in later phases, SEO analysis and internal linking (Phase 5), Strategy (Phase 9), Backlink and Outreach (Phase 10). Each will use `runAgentTask` and `generateStructuredOutput`, and keep its prompt in `prompts/`.

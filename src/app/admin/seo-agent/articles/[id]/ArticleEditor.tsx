@@ -3,18 +3,24 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CalendarClock, CheckCircle2, Copy, Gauge, Loader2, RefreshCw, Save, ShieldAlert } from "lucide-react";
+import type { Editor } from "@tiptap/react";
+import { CalendarClock, CheckCircle2, Copy, Gauge, Loader2, Monitor, RefreshCw, Save, ShieldAlert, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { OACard, OACardHeader, OACardTitle } from "@/components/ui";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { Field, inputCls, inputStyle } from "@/components/seo-agent/FormField";
 import { RichTextEditor } from "@/components/seo-agent/editor/RichTextEditor";
 import { regenerateArticle, saveArticle } from "@/actions/seo-agent/articles";
+import { dismissLinkSuggestion, findLinkSuggestions, runSeoCheck } from "@/actions/seo-agent/seo";
+import { applyLinkAtText, setAllCtas } from "@/components/seo-agent/editor/commands";
+import { withCtaCards } from "@/lib/seo-agent/cta";
 import { BLOG_CATEGORIES, CTA_LABELS, CTA_TYPES, type CtaType } from "@/lib/seo-agent/constants";
 import { META_DESCRIPTION_RANGE, META_TITLE_RANGE, type VersionMode } from "@/lib/seo-agent/articles";
 import type { ArticleDetail } from "@/lib/seo-agent/articles-data";
 import { cn } from "@/lib/utils";
 import { VersionsPanel } from "./VersionsPanel";
+import { SearchPreview, SeoPanel } from "./SeoPanel";
+import { LinkSuggestionsPanel } from "./LinkSuggestionsPanel";
 import "@/components/seo-agent/editor/article-prose.css";
 
 const AUTOSAVE_MS = 30_000;
@@ -58,12 +64,17 @@ export function ArticleEditor({ article, editable, timezone, blogBaseUrl, defaul
   const [status, setStatus] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
   const [regenOpen, setRegenOpen] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
+  const [seoRunning, setSeoRunning] = useState(false);
+  const [findingLinks, setFindingLinks] = useState(false);
+  const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
+  const [editor, setEditor] = useState<Editor | null>(null);
   const savingRef = useRef(false);
 
   const setField = <K extends keyof typeof meta>(k: K, v: (typeof meta)[K]) => { setMeta((m) => ({ ...m, [k]: v })); setDirty(true); };
 
-  const save = useCallback(async (mode: VersionMode) => {
-    if (savingRef.current) return;
+  /** Returns true once the article is saved. */
+  const save = useCallback(async (mode: VersionMode): Promise<boolean> => {
+    if (savingRef.current) return false;
     savingRef.current = true;
     setSaving(mode);
     const res = await saveArticle(article.id, { ...meta, ctaType: meta.ctaType || null, contentHtml: htmlRef.current }, mode);
@@ -71,12 +82,13 @@ export function ArticleEditor({ article, editable, timezone, blogBaseUrl, defaul
     setSaving(null);
     if (!res.ok) {
       setStatus({ kind: "error", text: res.error });
-      return;
+      return false;
     }
     setDirty(false);
     const time = new Date(res.savedAt).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", timeZone: timezone });
     setStatus({ kind: "ok", text: res.version ? `Saved as version ${res.version} at ${time}` : mode === "none" ? `Autosaved at ${time}` : `Saved at ${time} (no changes since the last version)` });
     if (mode !== "none") router.refresh();
+    return true;
   }, [article.id, meta, router, timezone]);
 
   // Autosave: keeps the draft safe without creating a version each time.
@@ -103,6 +115,40 @@ export function ArticleEditor({ article, editable, timezone, blogBaseUrl, defaul
     router.refresh();
   }
 
+  /** SEO checks and link suggestions read the saved article, so save pending edits first. */
+  async function saveIfDirty(): Promise<boolean> {
+    return !dirty || !editable || (await save("auto"));
+  }
+
+  async function seoCheck() {
+    setSeoRunning(true);
+    setStatus(null);
+    if (await saveIfDirty()) {
+      const res = await runSeoCheck(article.id);
+      setStatus(res.ok ? { kind: "ok", text: `SEO check done: ${res.score}/100 (internal score)` } : { kind: "error", text: res.error });
+      if (res.ok) router.refresh();
+    }
+    setSeoRunning(false);
+  }
+
+  async function findLinks() {
+    setFindingLinks(true);
+    setStatus(null);
+    if (await saveIfDirty()) {
+      const res = await findLinkSuggestions(article.id);
+      setStatus(res.ok ? { kind: "ok", text: `${res.added} new link suggestion(s)` } : { kind: "error", text: res.error });
+      if (res.ok) router.refresh();
+    }
+    setFindingLinks(false);
+  }
+
+  function switchCta(type: CtaType) {
+    if (!editor) return;
+    const n = setAllCtas(editor, type);
+    setField("ctaType", type);
+    setStatus({ kind: "ok", text: `Switched ${n} CTA block(s) to ${CTA_LABELS[type]}. Save to keep it.` });
+  }
+
   const url = `${blogBaseUrl.replace(/\/$/, "")}/${meta.slug}`;
   const verify = article.qualityFlags;
 
@@ -122,7 +168,9 @@ export function ArticleEditor({ article, editable, timezone, blogBaseUrl, defaul
             </Button>
           </>
         )}
-        <Button variant="outline" disabled title="SEO check arrives in Phase 5"><Gauge size={14} /> SEO check</Button>
+        <Button variant="outline" onClick={seoCheck} disabled={seoRunning || regenerating || saving !== null}>
+          {seoRunning ? <Loader2 size={14} className="animate-spin" /> : <Gauge size={14} />} SEO check
+        </Button>
         <Button variant="outline" disabled title="Approval arrives in Phase 6"><CheckCircle2 size={14} /> Approve</Button>
         <Button variant="outline" disabled title="Scheduling arrives in Phase 6"><CalendarClock size={14} /> Schedule</Button>
         <span role="status" className="text-[12.5px] ml-1" style={{ color: status?.kind === "error" ? "var(--danger-tx)" : "var(--fg-muted)" }}>
@@ -143,7 +191,14 @@ export function ArticleEditor({ article, editable, timezone, blogBaseUrl, defaul
                 </button>
               ))}
             </div>
-            <span className="text-[12px] font-mono truncate" style={{ color: "var(--fg-muted)" }}>{url}</span>
+            {tab === "preview" ? (
+              <div className="flex gap-1" role="group" aria-label="Preview width">
+                <Button size="sm" variant={device === "desktop" ? "secondary" : "ghost"} onClick={() => setDevice("desktop")} aria-pressed={device === "desktop"}><Monitor size={14} /> Desktop</Button>
+                <Button size="sm" variant={device === "mobile" ? "secondary" : "ghost"} onClick={() => setDevice("mobile")} aria-pressed={device === "mobile"}><Smartphone size={14} /> Mobile</Button>
+              </div>
+            ) : (
+              <span className="text-[12px] font-mono truncate" style={{ color: "var(--fg-muted)" }}>{url}</span>
+            )}
           </div>
 
           <input
@@ -161,22 +216,57 @@ export function ArticleEditor({ article, editable, timezone, blogBaseUrl, defaul
               editable={editable && !regenerating}
               defaultCta={(meta.ctaType || defaultCta) as CtaType}
               onChange={(html) => { htmlRef.current = html; setDirty(true); }}
+              onReady={setEditor}
             />
           </div>
           {tab === "preview" && (
-            <article className="seo-prose">
-              {meta.featuredImageUrl && (
-                // eslint-disable-next-line @next/next/no-img-element -- admin preview of an arbitrary https image URL
-                <img src={meta.featuredImageUrl} alt={meta.featuredImageAlt} />
-              )}
-              {/* The editor's own HTML; it is sanitized on the server on every save. */}
-              <div dangerouslySetInnerHTML={{ __html: previewHtml }} />
-            </article>
+            <div className="flex flex-col gap-4">
+              <SearchPreview title={meta.title} metaTitle={meta.metaTitle} metaDescription={meta.metaDescription} excerpt={meta.excerpt} url={url} />
+              <article className={cn("seo-prose", device === "mobile" && "seo-preview-mobile")}>
+                <h1>{meta.title}</h1>
+                {meta.featuredImageUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element -- admin preview of an arbitrary https image URL
+                  <img src={meta.featuredImageUrl} alt={meta.featuredImageAlt} />
+                )}
+                {/* TipTap output (schema-limited); stored copies are sanitized on the server on every save. */}
+                <div dangerouslySetInnerHTML={{ __html: withCtaCards(previewHtml) }} />
+              </article>
+            </div>
           )}
         </OACard>
 
         {/* Sidebar */}
         <div className="flex flex-col gap-4">
+          <OACard>
+            <OACardHeader><OACardTitle className="text-[15px] flex items-center gap-2"><Gauge size={16} /> SEO check</OACardTitle></OACardHeader>
+            <SeoPanel
+              analysis={article.seoAnalysis}
+              stale={article.seoStale}
+              dirty={dirty}
+              running={seoRunning}
+              editable={editable}
+              timezone={timezone}
+              onRun={seoCheck}
+              onUseCta={switchCta}
+            />
+          </OACard>
+
+          <OACard>
+            <OACardHeader><OACardTitle className="text-[15px]">Internal link suggestions</OACardTitle></OACardHeader>
+            <LinkSuggestionsPanel
+              suggestions={article.linkSuggestions}
+              editable={editable}
+              finding={findingLinks}
+              onFind={findLinks}
+              onApply={(s) => (editor ? applyLinkAtText(editor, s.anchorText, s.url) : false)}
+              onDismiss={async (s) => {
+                const res = await dismissLinkSuggestion(s.id);
+                if (!res.ok) setStatus({ kind: "error", text: res.error });
+                else router.refresh();
+              }}
+            />
+          </OACard>
+
           {verify.length > 0 && (
             <OACard>
               <OACardHeader><OACardTitle className="text-[15px] flex items-center gap-2"><ShieldAlert size={16} style={{ color: "var(--warning-tx)" }} /> Check before publishing</OACardTitle></OACardHeader>

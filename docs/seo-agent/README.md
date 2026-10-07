@@ -19,7 +19,7 @@ The MVP is built in phases (spec §47). A phase is marked done only after type c
 | 2 | Keyword management, keyword analysis agent, clusters, AI provider layer, agent task log, AI usage | ✅ Done |
 | 3 | Content opportunities, Content Planner Agent, content calendar | ✅ Done |
 | 4 | Content Writer Agent, TipTap article editor, autosave, versioning (view / compare / restore) | ✅ Done |
-| 5 | SEO analysis, internal links, CTA system | Not started |
+| 5 | SEO Agent (internal score + fact check), Internal Linking Agent, CTA system, search/mobile preview | ✅ Done |
 | 6 | Approval, scheduling, publishing adapter | Not started |
 | 7 | Vercel Cron (tomorrow's article, scheduled publishing) | Not started |
 | 8 | Google Search Console sync | Not started |
@@ -70,5 +70,8 @@ npm run lint
    - **Sidebar:** URL slug, meta title and description with length guidance, excerpt, blog category, featured image URL and alt text, the AI image prompt, and **Check before publishing** (every claim the writer said needs verifying, plus any links it removed).
    - **Versions:** every AI generation, manual edit and restore, with who and when. **View** any version, **Compare** two (word-level diff plus changed fields), or **Restore** one (saved as a new version; nothing is lost).
    - **Regenerate** rewrites the article from its plan; the old text stays in history.
-   - SEO check (Phase 5) and approval/scheduling (Phase 6) are visible but not active yet.
+   - **SEO check** (button or sidebar): a 0–100 internal content-quality score (not a Google ranking) across 12 areas, with a breakdown, prioritised recommendations, a fact check of claims that need verifying, a CTA recommendation (**Use this CTA** switches every CTA block), and a "Must fix before publishing" list. Unsaved edits are saved first, and the score is flagged as out of date when the article changes afterwards.
+   - **Internal link suggestions:** the Internal Linking Agent proposes links to real OlympiadIQ pages using phrases already in the text. **Apply** links the phrase in place; **Dismiss** hides it for good.
+   - **Preview** now shows a Google-style search result and a desktop/mobile toggle, with CTA blocks rendered as the real cards.
+   - Approval and scheduling (Phase 6) are visible but not active yet.
 7. **Agent Tasks:** shows every run, with input, output or error, tokens, cost and duration. **AI Usage:** shows cost for today and this month, broken down by area, by model and by day.

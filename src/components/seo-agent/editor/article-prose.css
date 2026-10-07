@@ -43,19 +43,30 @@
 .seo-prose .selectedCell { background: var(--cobalt-50); }
 .seo-prose .tableWrapper { overflow-x: auto; }
 
-/* CTA block as stored HTML (preview / version view). The editor uses a React node view instead. */
-.seo-prose div[data-cta] {
+/* CTA card (preview / version view; rendered by withCtaCards() from src/lib/seo-agent/cta.ts). */
+.seo-prose .seo-cta-card {
   border-radius: var(--r-lg);
-  padding: 1em 1.2em;
+  padding: 1.1em 1.3em;
   background: linear-gradient(135deg, var(--gold-100), var(--cobalt-50));
-  border: 1px solid var(--gold-300, var(--line-300));
-  font-weight: 600;
-  font-family: var(--font-display);
+  border: 1px solid var(--line-300);
+  margin: 1.4em 0;
 }
-.seo-prose div[data-cta="MOCK_TEST"]::before { content: "▶ CTA: Try OlympiadIQ's Free Unlimited Mock Tests"; }
-.seo-prose div[data-cta="AI_TUTOR"]::before { content: "▶ CTA: Get step-by-step help from the AI Tutor"; }
-.seo-prose div[data-cta="BATTLE"]::before { content: "▶ CTA: Challenge friends in Battle with Friends"; }
-.seo-prose div[data-cta="BRAIN_BOOSTER"]::before { content: "▶ CTA: Play free Brain Booster Games"; }
+.seo-prose .seo-cta-card > * + * { margin-top: 0.4em; }
+.seo-prose .seo-cta-headline { font-family: var(--font-display); font-weight: 700; font-size: 1.1em; }
+.seo-prose .seo-cta-body { color: var(--ink-700); }
+.seo-prose a.seo-cta-button {
+  display: inline-block;
+  margin-top: 0.6em;
+  padding: 0.5em 1em;
+  border-radius: var(--r-md);
+  background: var(--cobalt-500);
+  color: white;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* Preview widths */
+.seo-preview-mobile { max-width: 390px; margin: 0 auto; font-size: 15px; border: 1px solid var(--line-200); border-radius: 20px; padding: 16px; }
 
 /* Placeholder for an empty editor */
 .seo-prose p.is-editor-empty:first-child::before {
