@@ -1,4 +1,5 @@
-import { CalendarClock, CheckCircle2, PencilLine, RefreshCw, Sunrise } from "lucide-react";
+import Link from "next/link";
+import { CalendarClock, CheckCircle2, PencilLine, RefreshCw, Sparkles, Sunrise } from "lucide-react";
 import { OACard, OACardHeader, OACardTitle } from "@/components/ui";
 import { EmptyState } from "@/components/admin/EmptyState";
 import { formatZoned } from "@/lib/seo-agent/datetime";
@@ -11,12 +12,12 @@ interface Props {
   timezone: string;
 }
 
-// Action buttons are wired up as their phases land (editor: 4, approval +
-// scheduling: 6). Until then they render disabled with an explanation.
-const ACTIONS = [
-  { label: "Edit Article", Icon: PencilLine, phase: 4 },
+const btn = "inline-flex items-center gap-1.5 h-9 px-3 rounded-[var(--r-md)] border text-[13px] font-semibold";
+const btnStyle = { borderColor: "var(--line-300)", color: "var(--ink-700)" };
+
+// Approval and scheduling are wired up in Phase 6; until then they render disabled.
+const LATER = [
   { label: "Approve", Icon: CheckCircle2, phase: 6 },
-  { label: "Regenerate", Icon: RefreshCw, phase: 4 },
   { label: "Schedule", Icon: CalendarClock, phase: 6 },
 ];
 
@@ -69,15 +70,23 @@ export function TomorrowArticleCard({ article, tomorrowDate, timezone }: Props) 
           </dl>
 
           <div className="flex flex-wrap gap-2">
-            {ACTIONS.map(({ label, Icon, phase }) => (
-              <button
-                key={label}
-                type="button"
-                disabled
-                title={`Available from build phase ${phase}`}
-                className="inline-flex items-center gap-1.5 h-9 px-3 rounded-[var(--r-md)] border text-[13px] font-semibold opacity-50 cursor-not-allowed"
-                style={{ borderColor: "var(--line-300)", color: "var(--ink-700)" }}
-              >
+            {article.articleId ? (
+              <>
+                <Link href={`/admin/seo-agent/articles/${article.articleId}`} className={btn} style={btnStyle}>
+                  <PencilLine size={15} aria-hidden /> Edit Article
+                </Link>
+                <Link href={`/admin/seo-agent/articles/${article.articleId}`} className={btn} style={btnStyle} title="Regenerate from the editor">
+                  <RefreshCw size={15} aria-hidden /> Regenerate
+                </Link>
+              </>
+            ) : article.planId ? (
+              <Link href={`/admin/seo-agent/calendar/${article.planId}`} className={btn} style={btnStyle}>
+                <Sparkles size={15} aria-hidden /> Generate article
+              </Link>
+            ) : null}
+            {LATER.map(({ label, Icon, phase }) => (
+              <button key={label} type="button" disabled title={`Available from build phase ${phase}`}
+                className={`${btn} opacity-50 cursor-not-allowed`} style={btnStyle}>
                 <Icon size={15} aria-hidden /> {label}
               </button>
             ))}

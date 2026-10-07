@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDown, ArrowUp, Plus, Sparkles, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { ArrowDown, ArrowUp, FileText, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { OACard, OACardHeader, OACardTitle } from "@/components/ui";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { Field, FormError, inputCls, inputStyle } from "@/components/seo-agent/FormField";
+import { GenerateArticleButton } from "@/components/seo-agent/GenerateArticleButton";
 import { createPlan, deletePlan, updatePlan } from "@/actions/seo-agent/content";
 import { CTA_LABELS, CTA_TYPES, SEARCH_INTENTS, humanizeStatus } from "@/lib/seo-agent/constants";
 import {
@@ -37,11 +39,13 @@ interface Props {
   /** False once the plan's article is in progress. */
   editable: boolean;
   timezone: string;
+  /** The article generated from this plan, if any. */
+  article?: { id: string; status: string } | null;
 }
 
 const lines = (s: string) => s.split("\n").map((x) => x.trim()).filter(Boolean);
 
-export function PlanForm({ planId, initial, editable, timezone }: Props) {
+export function PlanForm({ planId, initial, editable, timezone, article }: Props) {
   const router = useRouter();
   const [v, setV] = useState(initial);
   const [secondaryText, setSecondaryText] = useState(initial.secondaryKeywords.join("\n"));
@@ -49,9 +53,11 @@ export function PlanForm({ planId, initial, editable, timezone }: Props) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  // Unsaved edits block generation, so the writer always works from what you see.
+  const [dirty, setDirty] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const set = <K extends keyof PlanFormValues>(k: K, val: PlanFormValues[K]) => { setV((s) => ({ ...s, [k]: val })); setSaved(false); };
+  const set = <K extends keyof PlanFormValues>(k: K, val: PlanFormValues[K]) => { setV((s) => ({ ...s, [k]: val })); setSaved(false); setDirty(true); };
 
   function setSection(i: number, heading: string) {
     set("outline", v.outline.map((s, j) => (j === i ? { ...s, heading } : s)));
@@ -59,6 +65,7 @@ export function PlanForm({ planId, initial, editable, timezone }: Props) {
   function setSectionPoints(i: number, text: string) {
     setOutlineText((t) => t.map((x, j) => (j === i ? text : x)));
     setSaved(false);
+    setDirty(true);
   }
   function addSection() {
     set("outline", [...v.outline, { heading: "", points: [] }]);
@@ -103,6 +110,7 @@ export function PlanForm({ planId, initial, editable, timezone }: Props) {
     setPending(false);
     if (!res.ok) { setError(res.error); return; }
     setSaved(true);
+    setDirty(false);
     if (!planId && "planId" in res) router.replace(`/admin/seo-agent/calendar/${res.planId}`);
     else router.refresh();
   }
@@ -149,7 +157,7 @@ export function PlanForm({ planId, initial, editable, timezone }: Props) {
           </Field>
           <div className="sm:col-span-2">
             <Field label="Secondary keywords (one per line)">
-              <textarea className={inputCls} style={inputStyle} rows={3} value={secondaryText} onChange={(e) => { setSecondaryText(e.target.value); setSaved(false); }} />
+              <textarea className={inputCls} style={inputStyle} rows={3} value={secondaryText} onChange={(e) => { setSecondaryText(e.target.value); setSaved(false); setDirty(true); }} />
             </Field>
           </div>
         </fieldset>
@@ -254,10 +262,17 @@ export function PlanForm({ planId, initial, editable, timezone }: Props) {
 
       <div className="flex items-center gap-2 flex-wrap sticky bottom-0 py-3" style={{ background: "var(--paper)" }}>
         {!ro && <Button onClick={save} disabled={pending}>{pending ? "Saving…" : planId ? "Save plan" : "Create plan"}</Button>}
-        {planId && (
-          <Button variant="outline" disabled title="Article generation arrives in Phase 4">
-            <Sparkles size={14} /> Generate article
-          </Button>
+        {planId && article && (
+          <Link href={`/admin/seo-agent/articles/${article.id}`} className="inline-flex items-center gap-1.5 h-9 px-3 rounded-[var(--r-md)] border text-[13px] font-semibold"
+            style={{ borderColor: "var(--line-300)", color: "var(--ink-900)" }}>
+            <FileText size={14} /> Open article
+          </Link>
+        )}
+        {planId && !article && (
+          <GenerateArticleButton
+            planId={planId}
+            disabledReason={dirty ? "Save your changes first" : !["IDEA", "PLANNED"].includes(initial.status) ? "This plan isn't ready for writing" : undefined}
+          />
         )}
         {planId && !ro && <Button variant="ghost" onClick={() => setConfirmDelete(true)}>Delete</Button>}
         {saved && <span role="status" className="text-[12.5px]" style={{ color: "var(--success-tx)" }}>Saved</span>}

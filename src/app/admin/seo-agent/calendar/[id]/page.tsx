@@ -16,6 +16,8 @@ import { PlanForm } from "../PlanForm";
 
 export const metadata: Metadata = { title: "Content Plan | SEO Agent", description: "Edit a content plan." };
 export const dynamic = "force-dynamic";
+// "Generate article" runs the Content Writer Agent (a full article) in a server action on this route.
+export const maxDuration = 300;
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -76,6 +78,7 @@ export default async function PlanPage({ params, searchParams }: PageProps) {
           planId={p.id}
           editable={DELETABLE_PLAN_STATUSES.includes(p.status)}
           timezone={tz}
+          article={p.article}
           initial={{
             title: p.title,
             primaryKeyword: p.primaryKeyword,

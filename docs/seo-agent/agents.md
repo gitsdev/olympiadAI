@@ -93,6 +93,36 @@ Cost comes from Settings → AI → Model pricing (USD per 1M tokens). If a mode
 
 **Measured live (2026-10-07):** one plan for "maths olympiad class 5" took ~25 s and about 3.9k input / 2k output tokens (~$0.055 on Opus 5.5).
 
-## Coming in later phases
+## Content Writer Agent (`agents/content-writer.ts`), Phase 4
 
-Content Writer (Phase 4), SEO analysis and internal linking (Phase 5), Strategy (Phase 9), Backlink and Outreach (Phase 10). Each will use `runAgentTask` and `generateStructuredOutput`, and keep its prompt in `prompts/`.
+**Trigger:** **Generate article** on a plan (status Idea or Planned), or **Regenerate** in the editor. Server actions in `src/actions/seo-agent/articles.ts`; logged as `ContentWriter · generate_article / regenerate_article`, usage category `CONTENT`.
+
+**Input:** the plan (title, keywords, intent, type, audience, outline, notes incl. fact-check notes), the CTA, the plan's internal links (the only internal URLs allowed), existing article titles (to avoid duplication) and the brand profile.
+
+**Prompt** (`prompts/article-writing.ts`): the §11 quality rules and §39 honesty rules in full: people first, answer intent early, no keyword stuffing or density targets, no copying, no filler, no invented statistics/facts/citations, short paragraphs, tables and FAQ only where useful, warm Indian English for children and parents. The writer returns title, slug, meta title/description, excerpt, the body as **Markdown** with a `[[CTA]]` marker, CTA type, a text-free featured-image prompt with alt text, and `needsVerification`: every claim an editor must check.
+
+**Post-processing** (`postProcessArticle` + `article-html.ts`):
+- Markdown → HTML (GFM tables). Raw HTML inside the Markdown is never interpreted.
+- `[[CTA]]` becomes a CTA block (`<div data-cta="TYPE"></div>`); extra markers are dropped. If there's no marker, the block is appended at the end and flagged.
+- Internal links outside the allowlist are unwrapped (text kept) and flagged; external links are kept but flagged for review.
+- Everything is sanitized with the article allowlist (below) and the claims to verify are stored in `seo_articles.quality_flags`.
+
+**Saved as** (`articles-persist.ts`): a `DRAFT` article with a slug unique across unarchived drafts and live blog posts (and not a reserved `/blog` route), version 1 (`AI_GENERATED`, linked to the agent task), link/CTA rows, and the plan moves to `DRAFT`. Generation claims the plan (`GENERATING`) first, so double-clicks can't run two writers; on any failure the plan returns to its previous status and a half-saved article is deleted. A `GENERATING` claim older than 15 minutes (a crashed run) can be retried.
+
+**Measured live (2026-10-07):** "maths olympiad class 5" took 74 s, about 4.7k input / 7.4k output tokens (~$0.17 on Opus 5.5): 2,300 words, 10 sections, 2 tables, 6 worked examples, one CTA, 6 valid internal links, 7 claims flagged for verification.
+
+## Article HTML safety (`article-html.ts`)
+
+All article HTML goes through one allowlist (`rehype-sanitize`), used for writer output, every editor save, restores and version views:
+- tags: `p h1–h4 strong em u s code pre br ul ol li a img blockquote hr table thead tbody tr th td` and `div` only as an empty CTA block with a known `data-cta` type
+- attributes: `a[href,title]`, `img[src,alt,title]`, `th/td[colspan,rowspan]`; no `style`, `class`, event handlers, `id`, `target` or `rel`
+- protocols: links `http/https/mailto` (or site-relative), images `https` only
+- `script`/`style` contents are removed entirely
+
+The editor always loads from this sanitized HTML; client-submitted TipTap JSON is never trusted or stored.
+
+## Claude provider: streaming
+
+Since Phase 4 the provider streams every request (`beta.messages.stream(...).finalMessage()`), so long outputs like full articles (up to 32k output tokens) can't hit HTTP timeouts. Routes that run the writer set `maxDuration = 300`.
+
+## Coming in later phases, SEO analysis and internal linking (Phase 5), Strategy (Phase 9), Backlink and Outreach (Phase 10). Each will use `runAgentTask` and `generateStructuredOutput`, and keep its prompt in `prompts/`.

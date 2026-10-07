@@ -231,6 +231,7 @@ export interface PlanDetail {
   createdAt: string;
   cluster: { id: string; name: string } | null;
   opportunity: { type: string; reason: string } | null;
+  article: { id: string; status: string } | null;
 }
 
 export async function getPlan(id: string): Promise<PlanDetail | null> {
@@ -239,7 +240,7 @@ export async function getPlan(id: string): Promise<PlanDetail | null> {
     .from("seo_content_plans")
     .select(`id, title, primary_keyword, secondary_keywords, search_intent, content_type, target_audience, outline,
       recommended_cta, suggested_internal_links, planned_publish_at, status, notes, created_at,
-      seo_keyword_clusters(id, name), seo_content_opportunities(type, reason)`)
+      seo_keyword_clusters(id, name), seo_content_opportunities(type, reason), seo_articles(id, status, created_at)`)
     .eq("id", id)
     .maybeSingle();
   throwIfDbError(error, "Loading content plan");
@@ -250,6 +251,7 @@ export async function getPlan(id: string): Promise<PlanDetail | null> {
     content_type: string | null; target_audience: string | null; outline: OutlineSection[] | null; recommended_cta: string | null;
     suggested_internal_links: PlanInternalLink[] | null; planned_publish_at: string | null; status: string; notes: string | null;
     created_at: string; seo_keyword_clusters: { id: string; name: string } | null; seo_content_opportunities: { type: string; reason: string } | null;
+    seo_articles: { id: string; status: string; created_at: string }[];
   };
   const r = data as unknown as Raw;
   return {
@@ -259,5 +261,7 @@ export async function getPlan(id: string): Promise<PlanDetail | null> {
     internalLinks: Array.isArray(r.suggested_internal_links) ? r.suggested_internal_links : [],
     plannedPublishAt: r.planned_publish_at, status: r.status, notes: r.notes, createdAt: r.created_at,
     cluster: r.seo_keyword_clusters, opportunity: r.seo_content_opportunities,
+    article: (r.seo_articles ?? []).filter((a) => a.status !== "ARCHIVED").sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .map(({ id, status }) => ({ id, status }))[0] ?? null,
   };
 }

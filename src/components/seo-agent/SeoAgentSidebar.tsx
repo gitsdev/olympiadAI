@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { ArrowLeft, Bot, X } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,8 @@ interface SeoAgentSidebarProps {
 
 export function SeoAgentSidebar({ mobileOpen, onClose }: SeoAgentSidebarProps) {
   const pathname = usePathname();
+  const search = useSearchParams();
+  const allHrefs = SEO_NAV.flatMap((g) => g.items.map((i) => i.href));
 
   return (
     <>
@@ -67,7 +69,7 @@ export function SeoAgentSidebar({ mobileOpen, onClose }: SeoAgentSidebarProps) {
               {group.label && <div className="px-2 pt-4 pb-1.5 t-overline">{group.label}</div>}
               <div className="flex flex-col gap-0.5">
                 {group.items.map((item) => (
-                  <NavItem key={item.href} item={item} active={isActive(pathname, item.href)} onClick={onClose} />
+                  <NavItem key={item.href} item={item} active={isActive(pathname, search, item.href, allHrefs)} onClick={onClose} />
                 ))}
               </div>
             </div>
@@ -78,9 +80,20 @@ export function SeoAgentSidebar({ mobileOpen, onClose }: SeoAgentSidebarProps) {
   );
 }
 
-function isActive(pathname: string, href: string): boolean {
-  const path = href.split("?")[0];
-  return pathname === path || pathname.startsWith(`${path}/`);
+/**
+ * Items can share a path and differ by query (Articles / Drafts / Published).
+ * A query item is active when its params match; the plain item is active
+ * only when no more specific sibling is.
+ */
+function isActive(pathname: string, search: URLSearchParams, href: string, allHrefs: string[]): boolean {
+  const [path, qs] = href.split("?");
+  if (!(pathname === path || pathname.startsWith(`${path}/`))) return false;
+  if (qs) {
+    if (pathname !== path) return false;
+    for (const [k, v] of new URLSearchParams(qs)) if (search.get(k) !== v) return false;
+    return true;
+  }
+  return !allHrefs.some((h) => h !== href && h.startsWith(`${path}?`) && isActive(pathname, search, h, []));
 }
 
 function NavItem({ item, active, onClick }: { item: SeoNavItem; active: boolean; onClick: () => void }) {

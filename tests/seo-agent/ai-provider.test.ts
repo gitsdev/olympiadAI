@@ -8,10 +8,15 @@ import { FakeProvider } from "./helpers";
 
 type CreateParams = Record<string, unknown> & { output_config?: { effort?: string; format?: { type: string } } };
 
-/** A stand-in for the Anthropic SDK client: no network in tests. */
+/**
+ * A stand-in for the Anthropic SDK client: no network in tests. The provider
+ * streams (`beta.messages.stream(...).finalMessage()`); `create` records the
+ * params of each streamed request.
+ */
 function fakeClient(reply: (params: CreateParams) => unknown) {
   const create = vi.fn(async (params: CreateParams) => reply(params));
-  return { client: { beta: { messages: { create } } } as unknown as Anthropic, create };
+  const stream = (params: CreateParams) => ({ finalMessage: () => create(params) });
+  return { client: { beta: { messages: { stream } } } as unknown as Anthropic, create };
 }
 
 const okMessage = {

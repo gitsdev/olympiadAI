@@ -36,9 +36,9 @@ export const SEO_NAV: SeoNavGroup[] = [
     label: "Content",
     items: [
       { href: `${SEO_AGENT_BASE}/calendar`, label: "Content Calendar", Icon: CalendarDays },
-      { href: `${SEO_AGENT_BASE}/articles`, label: "Articles", Icon: FileText, comingInPhase: 4 },
-      { href: `${SEO_AGENT_BASE}/articles?status=DRAFT`, label: "Drafts", Icon: FilePen, comingInPhase: 4 },
-      { href: `${SEO_AGENT_BASE}/articles?status=PUBLISHED`, label: "Published", Icon: FileCheck2, comingInPhase: 4 },
+      { href: `${SEO_AGENT_BASE}/articles`, label: "Articles", Icon: FileText },
+      { href: `${SEO_AGENT_BASE}/articles?status=DRAFT`, label: "Drafts", Icon: FilePen },
+      { href: `${SEO_AGENT_BASE}/articles?status=PUBLISHED`, label: "Published", Icon: FileCheck2 },
     ],
   },
   {

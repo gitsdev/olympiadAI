@@ -18,7 +18,7 @@ The MVP is built in phases (spec §47). A phase is marked done only after type c
 | 1 | Setup, auth, database, admin dashboard, settings | ✅ Done |
 | 2 | Keyword management, keyword analysis agent, clusters, AI provider layer, agent task log, AI usage | ✅ Done |
 | 3 | Content opportunities, Content Planner Agent, content calendar | ✅ Done |
-| 4 | Article generation, TipTap editor, versioning | Not started |
+| 4 | Content Writer Agent, TipTap article editor, autosave, versioning (view / compare / restore) | ✅ Done |
 | 5 | SEO analysis, internal links, CTA system | Not started |
 | 6 | Approval, scheduling, publishing adapter | Not started |
 | 7 | Vercel Cron (tomorrow's article, scheduled publishing) | Not started |
@@ -64,4 +64,11 @@ npm run lint
 3. **Keyword Clusters:** review each cluster's primary keyword, variants, common questions, recommended title, and the reason for the recommendation. Archive clusters you don't want.
 4. **Content Opportunities:** every recommendation with its reason and cannibalisation risk. For `NEW_ARTICLE`, click **Create content plan**: the Content Planner Agent drafts a title, outline, CTA, internal links (real pages only) and things to fact-check, and schedules it on the next free day at your default publishing time. You can also start a plan from a cluster card. `UPDATE_EXISTING`/`MERGE_ARTICLES` are handled by editing the post in **Blog** for now.
 5. **Content Calendar:** a month view in your timezone. Drag a plan to another day to reschedule it (it keeps its time). Click a plan to edit any field, reorder the outline, or change links and CTA. **New plan** creates one by hand. Ideas without a date are listed on the right. Plans become read-only once their article is being written (Phase 4+).
-6. **Agent Tasks:** shows every run, with input, output or error, tokens, cost and duration. **AI Usage:** shows cost for today and this month, broken down by area, by model and by day.
+6. **Articles:** open a plan and click **Generate article** (1–3 minutes). The Content Writer drafts the full article and you land in the editor.
+   - **Editor:** H1–H3, bold, italic, lists, tables, links, images, quotes, rules and **CTA blocks** (a card you can switch between Mock Tests, AI Tutor, Battle and Brain Booster). **Preview** shows it as readers will see it.
+   - **Saving:** autosave every 30 s while you type. **Save draft** saves and creates a version if anything changed since the last one. **Save version** always creates one.
+   - **Sidebar:** URL slug, meta title and description with length guidance, excerpt, blog category, featured image URL and alt text, the AI image prompt, and **Check before publishing** (every claim the writer said needs verifying, plus any links it removed).
+   - **Versions:** every AI generation, manual edit and restore, with who and when. **View** any version, **Compare** two (word-level diff plus changed fields), or **Restore** one (saved as a new version; nothing is lost).
+   - **Regenerate** rewrites the article from its plan; the old text stays in history.
+   - SEO check (Phase 5) and approval/scheduling (Phase 6) are visible but not active yet.
+7. **Agent Tasks:** shows every run, with input, output or error, tokens, cost and duration. **AI Usage:** shows cost for today and this month, broken down by area, by model and by day.

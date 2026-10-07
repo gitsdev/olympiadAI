@@ -6,8 +6,9 @@ import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { BaseAIProvider } from "./provider";
 import { AIProviderError, type GenerateTextRequest, type GenerateTextResult } from "./types";
 
-// Non-streaming requests: 16k leaves room for adaptive thinking plus the JSON
-// answer while staying well inside the SDK's HTTP timeout.
+// Leaves room for adaptive thinking plus the JSON answer. Requests are
+// streamed (and collected with finalMessage()), so long outputs such as full
+// articles don't run into HTTP timeouts.
 const DEFAULT_MAX_TOKENS = 16_000;
 
 export class AnthropicProvider extends BaseAIProvider {
@@ -24,7 +25,7 @@ export class AnthropicProvider extends BaseAIProvider {
   async generateText(req: GenerateTextRequest): Promise<GenerateTextResult> {
     let res: Anthropic.Beta.BetaMessage;
     try {
-      res = await this.client.beta.messages.create({
+      res = await this.client.beta.messages.stream({
         model: this.model,
         max_tokens: req.maxOutputTokens ?? DEFAULT_MAX_TOKENS,
         system: req.system,
@@ -42,7 +43,7 @@ export class AnthropicProvider extends BaseAIProvider {
         // its recommended fallback model instead of returning a refusal.
         betas: ["server-side-fallback-2026-07-01"],
         fallbacks: "default",
-      });
+      }).finalMessage();
     } catch (err) {
       throw toProviderError(err);
     }
