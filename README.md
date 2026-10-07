@@ -1,5 +1,10 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## SEO Agent
+
+The admin SEO automation section (`/admin/seo-agent`) is documented in [docs/seo-agent/](docs/seo-agent/README.md).
+
+
 ## Getting Started
 
 First, run the development server:

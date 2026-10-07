@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Users, FileText, Sparkles, TrendingUp, Swords,
-  Newspaper, Settings, X, ShieldCheck, Mail, Search,
+  Newspaper, Settings, X, ShieldCheck, Mail, Search, Bot,
 } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { cn } from "@/lib/utils";
@@ -22,6 +22,7 @@ const NAV_ITEMS = [
 const SECONDARY_ITEMS = [
   { href: "/admin/blog", label: "Blog", Icon: Newspaper },
   { href: "/admin/seo", label: "SEO", Icon: Search },
+  { href: "/admin/seo-agent", label: "SEO Agent", Icon: Bot },
   { href: "/admin/settings", label: "Settings", Icon: Settings },
 ];
 
