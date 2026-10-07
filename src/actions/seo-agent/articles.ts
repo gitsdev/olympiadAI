@@ -2,176 +2,38 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireAdmin } from "@/lib/admin/auth";
 import { seoDb, throwIfDbError } from "@/lib/seo-agent/db";
 import { errorMessage, seoLog } from "@/lib/seo-agent/logger";
 import { getSeoSettings } from "@/lib/seo-agent/settings-data";
-import type { SeoSettings } from "@/lib/seo-agent/settings-schema";
-import { createAIProvider } from "@/lib/seo-agent/ai";
-import { runAgentTask } from "@/lib/seo-agent/agents/run-task";
-import { supabaseTaskStore } from "@/lib/seo-agent/agents/task-store";
-import { writeArticle, type ProcessedArticle } from "@/lib/seo-agent/agents/content-writer";
+import { generateArticleCore, PipelineError, PLAN_COLS, runWriter, type PlanRow } from "@/lib/seo-agent/pipeline";
 import { htmlToText, sanitizeArticleHtml } from "@/lib/seo-agent/article-html";
 import { diffWords } from "diff";
 import {
   articleSaveSchema, differsFromVersion, EDITABLE_ARTICLE_STATUSES, versionMetadata, type VersionMode,
 } from "@/lib/seo-agent/articles";
 import { addArticleVersion, syncArticleLinksAndCtas, uniqueArticleSlug } from "@/lib/seo-agent/articles-persist";
-import { CTA_DESTINATIONS } from "@/lib/seo-agent/site-pages";
-import type { CtaType } from "@/lib/seo-agent/constants";
-import type { OutlineSection, PlanInternalLink } from "@/lib/seo-agent/content-plans";
+import type { PlanInternalLink } from "@/lib/seo-agent/content-plans";
 
 type Result<T = object> = ({ ok: true } & T) | { ok: false; error: string };
 
 const uuid = z.uuid();
-/** A GENERATING claim older than this is treated as a crashed run and may be retried. */
-const STALE_GENERATION_MS = 15 * 60_000;
 
 function revalidate() {
   revalidatePath("/admin/seo-agent", "layout");
-}
-
-interface PlanRow {
-  id: string; title: string; primary_keyword: string; secondary_keywords: string[]; search_intent: string | null;
-  content_type: string | null; target_audience: string | null; outline: OutlineSection[] | null; recommended_cta: string | null;
-  suggested_internal_links: PlanInternalLink[] | null; notes: string | null; status: string;
-}
-
-const PLAN_COLS = "id, title, primary_keyword, secondary_keywords, search_intent, content_type, target_audience, outline, recommended_cta, suggested_internal_links, notes, status";
-
-async function existingTitles(db: SupabaseClient, excludeArticleId?: string): Promise<string[]> {
-  const [posts, arts] = await Promise.all([
-    db.from("blog_posts").select("title").eq("status", "published").limit(150),
-    db.from("seo_articles").select("id, title").not("status", "in", "(ARCHIVED,REJECTED)").limit(150),
-  ]);
-  throwIfDbError(posts.error, "Loading blog titles");
-  throwIfDbError(arts.error, "Loading article titles");
-  return [
-    ...((posts.data ?? []) as { title: string }[]).map((p) => p.title),
-    ...((arts.data ?? []) as { id: string; title: string }[]).filter((a) => a.id !== excludeArticleId).map((a) => a.title),
-  ];
-}
-
-/** Runs the Content Writer Agent for a plan (shared by generate and regenerate). */
-async function runWriter(
-  db: SupabaseClient,
-  settings: SeoSettings,
-  plan: PlanRow,
-  adminId: string,
-  opts: { taskType: string; articleId?: string; persist: (draft: ProcessedArticle, taskId: string) => Promise<string> },
-): Promise<{ articleId: string; flags: number; words: number }> {
-  const provider = createAIProvider(settings);
-  const ctaType = (plan.recommended_cta ?? settings.defaultCta) as CtaType;
-  const links = Array.isArray(plan.suggested_internal_links) ? plan.suggested_internal_links : [];
-
-  return runAgentTask(
-    {
-      agentType: "ContentWriter",
-      taskType: opts.taskType,
-      category: "CONTENT",
-      entityType: "article",
-      entityId: opts.articleId,
-      inputSummary: `Plan "${plan.title}" (${plan.primary_keyword}); ${(plan.outline ?? []).length} sections, ${links.length} links, CTA ${ctaType}`,
-      createdBy: adminId,
-    },
-    { store: supabaseTaskStore(db), provider, pricing: settings.aiPricing },
-    async ({ ai, taskId }) => {
-      const draft = await writeArticle(ai, {
-        brand: settings.brand,
-        plan: {
-          title: plan.title, primaryKeyword: plan.primary_keyword, secondaryKeywords: plan.secondary_keywords,
-          searchIntent: plan.search_intent, contentType: plan.content_type, targetAudience: plan.target_audience,
-          outline: plan.outline ?? [], notes: plan.notes,
-        },
-        cta: { type: ctaType, ...CTA_DESTINATIONS[ctaType] },
-        internalLinks: links,
-        existingTitles: await existingTitles(db, opts.articleId),
-      });
-      const articleId = await opts.persist(draft, taskId);
-      return {
-        result: { articleId, flags: draft.qualityFlags.length, words: draft.wordCount },
-        entityId: articleId,
-        outputSummary: `"${draft.title}": ${draft.wordCount} words, slug /${draft.slug}, CTA ${draft.ctaType}, ${draft.qualityFlags.length} item(s) to review`,
-      };
-    },
-  );
 }
 
 /** Plan → new AI draft article (status DRAFT, version 1). */
 export async function generateArticleFromPlan(planId: string): Promise<Result<{ articleId: string }>> {
   const admin = await requireAdmin();
   if (!uuid.safeParse(planId).success) return { ok: false, error: "Invalid plan." };
-  const db = await seoDb();
-
-  // Claim the plan so a double-click can't start two writers.
-  const staleBefore = new Date(Date.now() - STALE_GENERATION_MS).toISOString();
-  const { data: before } = await db.from("seo_content_plans").select("status").eq("id", planId).maybeSingle();
-  const prevStatus = (before as { status: string } | null)?.status;
-  if (!prevStatus) return { ok: false, error: "Plan not found." };
-  const { data: claimed, error: claimErr } = await db
-    .from("seo_content_plans")
-    .update({ status: "GENERATING" })
-    .eq("id", planId)
-    .or(`status.in.(IDEA,PLANNED),and(status.eq.GENERATING,updated_at.lt.${staleBefore})`)
-    .select(PLAN_COLS)
-    .maybeSingle();
-  if (claimErr) return { ok: false, error: claimErr.message };
-  if (!claimed) {
-    return { ok: false, error: prevStatus === "GENERATING" ? "This article is already being generated." : "This plan already has an article." };
-  }
-  const plan = claimed as PlanRow;
-  const restoreStatus = prevStatus === "GENERATING" ? "PLANNED" : prevStatus;
-
   try {
-    const settings = await getSeoSettings();
-    const out = await runWriter(db, settings, plan, admin.id, {
-      taskType: "generate_article",
-      persist: async (draft, taskId) => {
-        const slug = await uniqueArticleSlug(db, draft.slug);
-        const { data, error } = await db.from("seo_articles").insert({
-          content_plan_id: plan.id,
-          title: draft.title,
-          slug,
-          meta_title: draft.metaTitle,
-          meta_description: draft.metaDescription,
-          excerpt: draft.excerpt,
-          content_html: draft.contentHtml,
-          featured_image_prompt: draft.featuredImagePrompt,
-          featured_image_alt: draft.featuredImageAlt,
-          primary_keyword: plan.primary_keyword,
-          secondary_keywords: plan.secondary_keywords,
-          category: settings.defaultArticleCategory,
-          cta_type: draft.ctaType,
-          origin: "AI",
-          status: "DRAFT",
-          quality_flags: draft.qualityFlags,
-          created_by: admin.id,
-        }).select("id").single();
-        throwIfDbError(error, "Saving article");
-        const articleId = (data as { id: string }).id;
-        try {
-          await addArticleVersion(db, articleId, {
-            title: draft.title,
-            content_html: draft.contentHtml,
-            metadata: versionMetadata({ slug, metaTitle: draft.metaTitle, metaDescription: draft.metaDescription, excerpt: draft.excerpt,
-              featuredImageUrl: null, featuredImageAlt: draft.featuredImageAlt, category: settings.defaultArticleCategory, ctaType: draft.ctaType }),
-          }, { source: "AI_GENERATED", createdBy: null, agentTaskId: taskId });
-          await syncArticleLinksAndCtas(db, articleId, draft.contentHtml, { source: "AI", suggestions: plan.suggested_internal_links ?? [] });
-          const { error: planErr } = await db.from("seo_content_plans").update({ status: "DRAFT" }).eq("id", plan.id);
-          throwIfDbError(planErr, "Updating plan status");
-        } catch (e) {
-          // Don't leave a half-saved article behind.
-          await db.from("seo_articles").delete().eq("id", articleId);
-          throw e;
-        }
-        return articleId;
-      },
-    });
+    const db = await seoDb();
+    const { articleId } = await generateArticleCore(db, await getSeoSettings(), planId, { createdBy: admin.id, triggeredBy: "USER" as const });
     revalidate();
-    return { ok: true, articleId: out.articleId };
+    return { ok: true, articleId };
   } catch (err) {
-    await db.from("seo_content_plans").update({ status: restoreStatus }).eq("id", planId).eq("status", "GENERATING");
+    if (err instanceof PipelineError) return { ok: false, error: err.message };
     seoLog.error("article.generate_failed", { planId, error: errorMessage(err) });
     return { ok: false, error: `Article generation failed: ${errorMessage(err)}` };
   }
@@ -199,7 +61,7 @@ export async function regenerateArticle(articleId: string): Promise<Result> {
     throwIfDbError(planRes.error, "Loading plan");
     const plan = planRes.data as PlanRow;
 
-    await runWriter(db, settings, plan, admin.id, {
+    await runWriter(db, settings, plan, { createdBy: admin.id, triggeredBy: "USER" as const }, {
       taskType: "regenerate_article",
       articleId,
       persist: async (draft, taskId) => {

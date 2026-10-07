@@ -21,7 +21,7 @@ The MVP is built in phases (spec §47). A phase is marked done only after type c
 | 4 | Content Writer Agent, TipTap article editor, autosave, versioning (view / compare / restore) | ✅ Done |
 | 5 | SEO Agent (internal score + fact check), Internal Linking Agent, CTA system, search/mobile preview | ✅ Done |
 | 6 | Approval workflow, scheduling (IST), publishing into the live blog, `POST /api/content/publish`, image upload | ✅ Done |
-| 7 | Vercel Cron (tomorrow's article, scheduled publishing) | Not started |
+| 7 | Vercel Cron: tomorrow's article (daily), scheduled publishing, locks, housekeeping, run-now buttons | ✅ Done |
 | 8 | Google Search Console sync | Not started |
 | 9 | SEO performance and opportunity engine, weekly report | Not started |
 | 10 | Backlink opportunities, outreach drafts, tracker | Not started |
@@ -57,7 +57,9 @@ npm run lint
 
 - [publishing.md](publishing.md): approval workflow, scheduling, the publishing pipeline and the publish API
 
-`cron.md` and `search-console.md` will be added in the phases that build those features.
+- [cron.md](cron.md): the scheduled jobs, Vercel plan limits, security and failure handling
+
+`search-console.md` will be added in the phases that build those features.
 
 ## Using it
 
@@ -76,4 +78,5 @@ npm run lint
    - **Internal link suggestions:** the Internal Linking Agent proposes links to real OlympiadIQ pages using phrases already in the text. **Apply** links the phrase in place; **Dismiss** hides it for good.
    - **Preview** now shows a Google-style search result and a desktop/mobile toggle, with CTA blocks rendered as the real cards.
    - **Approve, Schedule, Publish:** submit for review, approve (refused while a publishing check fails), schedule a date and time in IST, or publish now. Approved articles are read-only until you withdraw approval. The **Publishing checks** card lists everything that would block or warn before going live. **Upload image** stores the cover in Supabase Storage. Details: [publishing.md](publishing.md).
-7. **Agent Tasks:** shows every run, with input, output or error, tokens, cost and duration. **AI Usage:** shows cost for today and this month, broken down by area, by model and by day.
+7. **Automation:** every evening (~20:00 IST) the agent prepares tomorrow's article: it picks a topic, plans and writes it, runs the SEO check and link suggestions, and leaves it in **Review** for you (or schedules it, in auto-publish mode, only if every check passes). Scheduled articles publish at ~10:00 IST (and again around 20:00). **Agent Tasks** has buttons to run either job now. See [cron.md](cron.md).
+8. **Agent Tasks:** shows every run, with input, output or error, tokens, cost and duration. **AI Usage:** shows cost for today and this month, broken down by area, by model and by day.

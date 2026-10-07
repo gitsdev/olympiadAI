@@ -16,6 +16,7 @@ import { getSeoSettings } from "@/lib/seo-agent/settings-data";
 import { listAgentTasks, TASKS_PAGE_SIZE, type AgentTaskRow } from "@/lib/seo-agent/tasks-data";
 import { SeoSchemaMissingError } from "@/lib/seo-agent/db";
 import { cn } from "@/lib/utils";
+import { AutomationPanel } from "./AutomationPanel";
 
 export const metadata: Metadata = {
   title: "Agent Tasks | SEO Agent",
@@ -23,6 +24,17 @@ export const metadata: Metadata = {
 };
 
 export const dynamic = "force-dynamic";
+// "Prepare tomorrow's article now" runs the whole daily job (plan + write + SEO) in a server action here.
+export const maxDuration = 300;
+
+/** Cron times from vercel.json (UTC), shown in the configured timezone. Keep in sync with vercel.json. */
+const CRON_UTC = { daily: "14:30", publish: "04:30" };
+
+function cronLabel(utcTime: string, tz: string): string {
+  const [h, m] = utcTime.split(":").map(Number);
+  const d = new Date(Date.UTC(2026, 0, 15, h, m));
+  return d.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", timeZone: tz, timeZoneName: "short" });
+}
 
 interface PageProps {
   searchParams: Promise<Record<string, string | undefined>>;
@@ -31,7 +43,16 @@ interface PageProps {
 async function load(f: { status?: string; agent?: string; page: number }) {
   try {
     const [settings, tasks] = await Promise.all([getSeoSettings(), listAgentTasks(f)]);
-    return { tz: settings.timezone, ...tasks };
+    return {
+      tz: settings.timezone,
+      schedule: {
+        daily: cronLabel(CRON_UTC.daily, settings.timezone),
+        publish: cronLabel(CRON_UTC.publish, settings.timezone),
+        mode: settings.publishingMode,
+        frequency: settings.articleGenerationFrequency,
+      },
+      ...tasks,
+    };
   } catch (err) {
     if (err instanceof SeoSchemaMissingError) return null;
     throw err;
@@ -72,6 +93,8 @@ export default async function AgentTasksPage({ searchParams }: PageProps) {
       {!data ? (
         <SchemaMissingNotice />
       ) : (
+        <div className="flex flex-col gap-4">
+        <AutomationPanel schedule={data.schedule} />
         <OACard className="flex flex-col gap-4">
           <div className="flex flex-wrap gap-1.5" aria-label="Filter by status">
             {[undefined, ...AGENT_TASK_STATUSES].map((s) => (
@@ -142,6 +165,7 @@ export default async function AgentTasksPage({ searchParams }: PageProps) {
           )}
           <Pagination page={filters.page} totalPages={totalPages(data.count, TASKS_PAGE_SIZE)} totalCount={data.count} pageSize={TASKS_PAGE_SIZE} />
         </OACard>
+        </div>
       )}
     </SeoAgentShell>
   );

@@ -9,7 +9,7 @@ Every variable below is **server-only**. Never give any of them a `NEXT_PUBLIC_`
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Phase 1 (already set) | Supabase project |
 | `SUPABASE_SERVICE_ROLE_KEY` | Phase 6/7 (already set) | Cron and publishing pipeline, which have no user session |
 | `ANTHROPIC_API_KEY` | Phase 2 (**required now**) | Claude, the SEO Agent's AI provider. Without it, Analyze fails with a clear error and no task is logged. Create one at https://platform.claude.com → API keys |
-| `CRON_SECRET` | Phase 7 | Vercel Cron sends `Authorization: Bearer $CRON_SECRET` to `/api/cron/*` |
+| `CRON_SECRET` | Phase 7 (**required for automation**) | Vercel Cron sends `Authorization: Bearer $CRON_SECRET` to `/api/cron/*`. Without it (or if it's shorter than 16 characters) every cron call gets 401 and nothing runs automatically |
 | `BLOG_API_SECRET` | Phase 6 (only if you call the publish API from outside the app) | Protects `POST /api/content/publish`; at least 16 characters, or the API rejects every call |
 | Google Search Console credentials | Phase 8 | Documented in `search-console.md` once that phase is built |
 
@@ -28,6 +28,6 @@ Generate secrets with `openssl rand -hex 32`. Add them under Vercel → Project 
 
 ## Vercel
 
-Deploy as usual. Phase 7 will add the cron schedules to `vercel.json`.
+Deploy as usual. `vercel.json` defines two daily cron jobs (see [cron.md](cron.md)); they're valid on the Hobby plan. On Pro you can make scheduled publishing exact by changing its schedule to `*/5 * * * *`. Check **Project → Settings → Cron Jobs** after deploying to see them and their last runs.
 
 Keyword analysis runs in a server action on `/admin/seo-agent/keywords`, which sets `maxDuration = 120`. Large batches (up to 50 keywords) can take a minute.

@@ -6,16 +6,10 @@ import { requireAdmin } from "@/lib/admin/auth";
 import { seoDb } from "@/lib/seo-agent/db";
 import { errorMessage, seoLog } from "@/lib/seo-agent/logger";
 import { getSeoSettings } from "@/lib/seo-agent/settings-data";
-import { createAIProvider } from "@/lib/seo-agent/ai";
-import { runAgentTask } from "@/lib/seo-agent/agents/run-task";
-import { supabaseTaskStore } from "@/lib/seo-agent/agents/task-store";
-import { planContent } from "@/lib/seo-agent/agents/content-planner";
-import { getPlanningContext, getTakenPlanDates } from "@/lib/seo-agent/content-data";
+import { planOpportunityCore, PipelineError } from "@/lib/seo-agent/pipeline";
 import {
-  DELETABLE_PLAN_STATUSES, nextFreePublishDate, planInputSchema, planInputToRow, rescheduleTo,
+  DELETABLE_PLAN_STATUSES, planInputSchema, planInputToRow, rescheduleTo,
 } from "@/lib/seo-agent/content-plans";
-import { CTA_DESTINATIONS } from "@/lib/seo-agent/site-pages";
-import { CTA_TYPES } from "@/lib/seo-agent/constants";
 import { zonedDateString } from "@/lib/seo-agent/datetime";
 
 type Result<T = object> = ({ ok: true } & T) | { ok: false; error: string };
@@ -38,72 +32,13 @@ function firstIssue(err: z.ZodError): string {
 export async function createPlanFromOpportunity(opportunityId: string): Promise<Result<{ planId: string; warnings: string[] }>> {
   const admin = await requireAdmin();
   if (!uuid.safeParse(opportunityId).success) return { ok: false, error: "Invalid opportunity." };
-
   try {
     const db = await seoDb();
-    const settings = await getSeoSettings();
-    const ctx = await getPlanningContext(db, opportunityId);
-    if (ctx.opportunity.type !== "NEW_ARTICLE") {
-      return { ok: false, error: "Only NEW_ARTICLE recommendations become new content plans. Updating existing posts comes in a later phase." };
-    }
-    if (ctx.opportunity.status !== "OPEN") return { ok: false, error: "This recommendation has already been handled." };
-    const provider = createAIProvider(settings);
-
-    const result = await runAgentTask(
-      {
-        agentType: "ContentPlanner",
-        taskType: "create_content_plan",
-        category: "CONTENT",
-        entityType: "content_plan",
-        inputSummary: `Cluster "${ctx.cluster.name}" (${ctx.cluster.primaryKeyword}); ${ctx.linkCandidates.length} link candidates`,
-        createdBy: admin.id,
-      },
-      { store: supabaseTaskStore(db), provider, pricing: settings.aiPricing },
-      async ({ ai }) => {
-        const plan = await planContent(ai, {
-          brand: settings.brand,
-          cluster: ctx.cluster,
-          opportunityReason: ctx.opportunity.reason,
-          linkCandidates: ctx.linkCandidates,
-          ctaOptions: CTA_TYPES.map((type) => ({ type, label: CTA_DESTINATIONS[type].label, description: CTA_DESTINATIONS[type].description })),
-        });
-
-        const publishAt = nextFreePublishDate(await getTakenPlanDates(db, settings.timezone), new Date(), settings.timezone, settings.defaultPublishTime);
-        const { data, error } = await db.from("seo_content_plans").insert({
-          cluster_id: ctx.cluster.id,
-          opportunity_id: ctx.opportunity.id,
-          title: plan.title,
-          primary_keyword: ctx.cluster.primaryKeyword,
-          secondary_keywords: plan.secondaryKeywords,
-          search_intent: plan.searchIntent,
-          content_type: plan.contentType,
-          target_audience: plan.targetAudience,
-          outline: plan.outline,
-          recommended_cta: plan.recommendedCta,
-          suggested_internal_links: plan.internalLinks,
-          planned_publish_at: publishAt.toISOString(),
-          status: "PLANNED",
-          notes: plan.notes || null,
-          created_by: admin.id,
-        }).select("id").single();
-        if (error) throw new Error(`Saving plan: ${error.message}`);
-        const planId = (data as { id: string }).id;
-
-        const { error: oppErr } = await db.from("seo_content_opportunities").update({ status: "ACCEPTED" }).eq("id", ctx.opportunity.id);
-        if (oppErr) throw new Error(`Updating opportunity: ${oppErr.message}`);
-
-        return {
-          result: { planId, warnings: plan.warnings },
-          entityId: planId,
-          outputSummary: `"${plan.title}": ${plan.outline.length} sections, ${plan.internalLinks.length} internal links, CTA ${plan.recommendedCta}, planned ${zonedDateString(publishAt, settings.timezone)}`
-            + (plan.warnings.length ? ` | ${plan.warnings.length} warning(s)` : ""),
-        };
-      },
-    );
-
+    const { planId, warnings } = await planOpportunityCore(db, await getSeoSettings(), opportunityId, { createdBy: admin.id, triggeredBy: "USER" as const });
     revalidate();
-    return { ok: true, ...result };
+    return { ok: true, planId, warnings };
   } catch (err) {
+    if (err instanceof PipelineError) return { ok: false, error: err.message };
     seoLog.error("content.plan_failed", { opportunityId, error: errorMessage(err) });
     return { ok: false, error: `Content planning failed: ${errorMessage(err)}` };
   }

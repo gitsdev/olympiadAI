@@ -11,12 +11,7 @@ import {
   type ImportError,
 } from "@/lib/seo-agent/keywords";
 import { getSeoSettings } from "@/lib/seo-agent/settings-data";
-import { createAIProvider } from "@/lib/seo-agent/ai";
-import { runAgentTask } from "@/lib/seo-agent/agents/run-task";
-import { supabaseTaskStore } from "@/lib/seo-agent/agents/task-store";
-import { analyzeKeywords } from "@/lib/seo-agent/agents/keyword-analysis";
-import { getAnalysisContext, getKeywordsForAnalysis } from "@/lib/seo-agent/keywords-data";
-import { persistKeywordAnalysis, type SavedCluster } from "@/lib/seo-agent/clusters-persist";
+import { analyzeKeywordsCore, PipelineError, type AnalysisSummary } from "@/lib/seo-agent/pipeline";
 
 type Result<T = object> = ({ ok: true } & T) | { ok: false; error: string };
 
@@ -125,10 +120,7 @@ export async function importKeywords(text: string, format: "lines" | "csv"): Pro
   return { ok: true, inserted, alreadyExisted: rows.length - inserted, duplicatesInFile, errors };
 }
 
-export interface AnalysisSummary {
-  clusters: SavedCluster[];
-  warnings: string[];
-}
+export type { AnalysisSummary } from "@/lib/seo-agent/pipeline";
 
 /**
  * Runs the Keyword Analysis Agent on the selected keywords and saves the
@@ -141,38 +133,11 @@ export async function analyzeSelectedKeywords(ids: string[]): Promise<Result<Ana
 
   try {
     const db = await seoDb();
-    const settings = await getSeoSettings();
-    const keywords = await getKeywordsForAnalysis(db, parsed.data);
-    if (keywords.length === 0) return { ok: false, error: "None of the selected keywords can be analysed (archived or deleted)." };
-    const context = await getAnalysisContext(db);
-    // Throws before any task is created if the provider isn't configured.
-    const provider = createAIProvider(settings);
-
-    const summary = await runAgentTask(
-      {
-        agentType: "KeywordAgent",
-        taskType: "analyze_keywords",
-        category: "KEYWORD_ANALYSIS",
-        entityType: "keyword",
-        entityId: keywords.length === 1 ? keywords[0].id : undefined,
-        inputSummary: `${keywords.length} keyword(s): ${keywords.map((k) => k.keyword).join(", ")}`,
-        createdBy: admin.id,
-      },
-      { store: supabaseTaskStore(db), provider, pricing: settings.aiPricing },
-      async ({ ai, taskId }) => {
-        const analysis = await analyzeKeywords(ai, { brand: settings.brand, keywords, ...context });
-        const clusters = await persistKeywordAnalysis(db, analysis, taskId);
-        return {
-          result: { clusters, warnings: analysis.warnings },
-          outputSummary: `${clusters.length} cluster(s): ${clusters.map((c) => `${c.name} → "${c.recommendedTitle}" (${c.opportunityType})`).join("; ")}`
-            + (analysis.warnings.length ? ` | ${analysis.warnings.length} warning(s)` : ""),
-        };
-      },
-    );
-
+    const summary = await analyzeKeywordsCore(db, await getSeoSettings(), parsed.data, { createdBy: admin.id, triggeredBy: "USER" as const });
     revalidate();
     return { ok: true, ...summary };
   } catch (err) {
+    if (err instanceof PipelineError) return { ok: false, error: err.message };
     seoLog.error("keyword.analysis_failed", { error: errorMessage(err) });
     return { ok: false, error: `Keyword analysis failed: ${errorMessage(err)}` };
   }
