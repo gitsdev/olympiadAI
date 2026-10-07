@@ -88,11 +88,13 @@ const clip = (s: string | undefined | null, n = 500) => (s ? (s.length > n ? `${
 class MeteredProvider extends BaseAIProvider {
   readonly id: string;
   readonly model: string;
+  override readonly nativeStructuredOutput: boolean;
 
   constructor(private readonly inner: AIProvider, private readonly onUsage: (model: string, usage: AIUsage) => Promise<void>) {
     super();
     this.id = inner.id;
     this.model = inner.model;
+    this.nativeStructuredOutput = inner.nativeStructuredOutput;
   }
 
   async generateText(req: GenerateTextRequest): Promise<GenerateTextResult> {

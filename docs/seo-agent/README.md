@@ -30,12 +30,12 @@ Sidebar items for unfinished phases are shown with a "Soon" label and are not li
 
 ## Setup
 
-1. **Apply the migrations, in order.** Open the Supabase SQL editor and run [`013_seo_agent.sql`](../../supabase/migrations/013_seo_agent.sql), then [`014_seo_keywords_overview.sql`](../../supabase/migrations/014_seo_keywords_overview.sql). Both only add objects and are safe to re-run. Until 013 has been run, the SEO Agent pages show a "database not set up" notice.
+1. **Apply the migrations, in order.** Open the Supabase SQL editor and run [`013_seo_agent.sql`](../../supabase/migrations/013_seo_agent.sql), then [`014_seo_keywords_overview.sql`](../../supabase/migrations/014_seo_keywords_overview.sql), then [`015_seo_agent_claude.sql`](../../supabase/migrations/015_seo_agent_claude.sql). All are additive and are safe to re-run. Until 013 has been run, the SEO Agent pages show a "database not set up" notice.
 2. **Make sure you are a platform admin.** This uses the same check as the rest of `/admin`:
    ```sql
    update profiles set role = 'platform_admin' where email = '<you>';
    ```
-3. **Set environment variables** (see [deployment.md](deployment.md)). Keyword analysis needs `OPENAI_API_KEY`.
+3. **Set environment variables** (see [deployment.md](deployment.md)). Keyword analysis needs `ANTHROPIC_API_KEY` (the SEO Agent runs on Claude).
 4. Open `/admin/seo-agent`. You can also reach it from **SEO Agent** in the main admin sidebar.
 
 ## Local development

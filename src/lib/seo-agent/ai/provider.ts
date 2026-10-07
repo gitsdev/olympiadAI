@@ -21,9 +21,10 @@ export function describeIssues(err: z.ZodError): string[] {
   return err.issues.slice(0, 15).map((i) => `${i.path.length ? i.path.join(".") : "(root)"}: ${i.message}`);
 }
 
-function schemaInstructions<T>(schema: ZodType<T>, name: string): string {
+function schemaInstructions<T>(schema: ZodType<T>, name: string, native: boolean): string {
   let jsonSchema = "";
-  try {
+  // Providers that enforce the schema natively don't need it repeated in the prompt.
+  if (!native) try {
     jsonSchema = JSON.stringify(z.toJSONSchema(schema), null, 1);
   } catch {
     // Some Zod features (transforms) have no JSON Schema form; the prompt's
@@ -42,10 +43,11 @@ function addUsage(a: AIUsage, b: AIUsage): AIUsage {
 export abstract class BaseAIProvider implements AIProvider {
   abstract readonly id: string;
   abstract readonly model: string;
+  readonly nativeStructuredOutput: boolean = false;
   abstract generateText(req: GenerateTextRequest): Promise<GenerateTextResult>;
 
   async generateStructuredOutput<T>(req: StructuredRequest<T>): Promise<StructuredResult<T>> {
-    const system = `${req.system}\n\n${schemaInstructions(req.schema, req.schemaName)}`;
+    const system = `${req.system}\n\n${schemaInstructions(req.schema, req.schemaName, this.nativeStructuredOutput)}`;
     let usage: AIUsage = { inputTokens: 0, outputTokens: 0 };
     let model = this.model;
     let prompt = req.prompt;
@@ -53,7 +55,8 @@ export abstract class BaseAIProvider implements AIProvider {
 
     for (let attempt = 1; attempt <= 2; attempt++) {
       const res = await this.generateText({
-        system, prompt, responseFormat: "json", maxOutputTokens: req.maxOutputTokens,
+        system, prompt, responseFormat: "json", outputSchema: req.schema,
+        maxOutputTokens: req.maxOutputTokens, effort: req.effort,
       });
       usage = addUsage(usage, res.usage);
       model = res.model;

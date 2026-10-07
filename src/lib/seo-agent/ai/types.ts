@@ -8,14 +8,18 @@ export interface AIUsage {
   outputTokens: number;
 }
 
+export type AIEffort = "low" | "medium" | "high" | "xhigh" | "max";
+
 export interface GenerateTextRequest {
   system: string;
   prompt: string;
   /** "json" asks the model for a single JSON object. */
   responseFormat?: "text" | "json";
+  /** When set, providers with native structured outputs constrain the reply to this schema. */
+  outputSchema?: ZodType;
   maxOutputTokens?: number;
-  /** Omitted by default: some models only accept their default temperature. */
-  temperature?: number;
+  /** Reasoning depth / token spend, for providers that support it. */
+  effort?: AIEffort;
 }
 
 export interface GenerateTextResult {
@@ -31,6 +35,7 @@ export interface StructuredRequest<T> {
   /** Short name used in prompts and errors, e.g. "KeywordAnalysis". */
   schemaName: string;
   maxOutputTokens?: number;
+  effort?: AIEffort;
 }
 
 export interface StructuredResult<T> {
@@ -44,6 +49,8 @@ export interface StructuredResult<T> {
 export interface AIProvider {
   readonly id: string;
   readonly model: string;
+  /** True if the provider enforces `outputSchema` itself (no schema text needed in the prompt). */
+  readonly nativeStructuredOutput: boolean;
   generateText(req: GenerateTextRequest): Promise<GenerateTextResult>;
   /** JSON output validated against `schema`; retries once on invalid output. */
   generateStructuredOutput<T>(req: StructuredRequest<T>): Promise<StructuredResult<T>>;

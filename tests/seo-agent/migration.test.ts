@@ -25,6 +25,7 @@ const STUBS = `
 
 const migration = readFileSync(join(process.cwd(), "supabase/migrations/013_seo_agent.sql"), "utf8");
 const overviewView = readFileSync(join(process.cwd(), "supabase/migrations/014_seo_keywords_overview.sql"), "utf8");
+const claudeSwitch = readFileSync(join(process.cwd(), "supabase/migrations/015_seo_agent_claude.sql"), "utf8");
 let db: PGlite;
 
 /** Runs `sql` as the `authenticated` role with auth.uid() = uid (like a Supabase session). */
@@ -200,5 +201,38 @@ describe("migration 014 + keyword import", () => {
   it("respects RLS through the view (security_invoker)", async () => {
     expect((await asUser<{ n: number }>(STUDENT, "select count(*)::int n from seo_keywords_overview"))[0].n).toBe(0);
     expect((await asUser<{ n: number }>(ADMIN, "select count(*)::int n from seo_keywords_overview"))[0].n).toBeGreaterThan(0);
+  });
+});
+
+describe("migration 015 (Claude provider)", () => {
+  it("moves settings from OpenAI to Claude Opus 5.5 and seeds its price", async () => {
+    await db.exec("update seo_settings set ai_model = 'gpt-4o-mini', ai_pricing = '{\"gpt-4o-mini\": {\"input\": 1, \"output\": 2}}'");
+    await db.exec(claudeSwitch);
+    const { rows } = await db.query<{ ai_provider: string; ai_model: string; ai_pricing: Record<string, unknown> }>("select ai_provider, ai_model, ai_pricing from seo_settings");
+    expect(rows[0]).toEqual({
+      ai_provider: "anthropic",
+      ai_model: "claude-opus-5-5",
+      ai_pricing: { "gpt-4o-mini": { input: 1, output: 2 }, "claude-opus-5-5": { input: 4, output: 20 } },
+    });
+  });
+
+  it("is idempotent and keeps an admin-edited price", async () => {
+    await db.exec(`update seo_settings set ai_pricing = '{"claude-opus-5-5": {"input": 9, "output": 9}}'`);
+    await db.exec(claudeSwitch);
+    const { rows } = await db.query<{ ai_pricing: unknown }>("select ai_pricing from seo_settings");
+    expect(rows[0].ai_pricing).toEqual({ "claude-opus-5-5": { input: 9, output: 9 } });
+  });
+
+  it("rejects OpenAI as a provider from now on", async () => {
+    await expect(db.exec("update seo_settings set ai_provider = 'openai'")).rejects.toThrow(/ai_provider_check/);
+  });
+
+  it("matches the app's settings defaults", async () => {
+    const { DEFAULT_SEO_SETTINGS } = await import("@/lib/seo-agent/settings-schema");
+    const { rows } = await db.query<{ p: string; m: string }>(
+      "select column_default p, (select column_default from information_schema.columns where table_name = 'seo_settings' and column_name = 'ai_model') m from information_schema.columns where table_name = 'seo_settings' and column_name = 'ai_provider'",
+    );
+    expect(rows[0].p).toContain(DEFAULT_SEO_SETTINGS.aiProvider);
+    expect(rows[0].m).toContain(DEFAULT_SEO_SETTINGS.aiModel);
   });
 });

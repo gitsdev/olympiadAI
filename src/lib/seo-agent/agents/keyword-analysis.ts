@@ -211,7 +211,7 @@ export async function analyzeKeywords(ai: AIProvider, input: KeywordAnalysisInpu
   });
 
   const { data } = await ai.analyze({
-    system, prompt, schema: keywordAnalysisSchema, schemaName: "KeywordAnalysis", maxOutputTokens: 6000,
+    system, prompt, schema: keywordAnalysisSchema, schemaName: "KeywordAnalysis", maxOutputTokens: 16000, effort: "medium",
   });
   return postProcessAnalysis(data, unique, input.existingContent, input.existingClusters);
 }

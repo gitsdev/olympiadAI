@@ -4,6 +4,7 @@ Migrations (run in order; each only adds objects and is safe to re-run, which th
 
 - [`013_seo_agent.sql`](../../supabase/migrations/013_seo_agent.sql): all tables, constraints, RLS and lock functions
 - [`014_seo_keywords_overview.sql`](../../supabase/migrations/014_seo_keywords_overview.sql): the `seo_keywords_overview` view, with one row per keyword plus its active cluster memberships (`clusters` jsonb, `is_clustered`). The Keywords page uses it so the "clustered / not clustered" filter and pagination are handled in SQL. It is created `with (security_invoker = true)`, so the caller's RLS still applies.
+- [`015_seo_agent_claude.sql`](../../supabase/migrations/015_seo_agent_claude.sql): switches `seo_settings.ai_provider` to `anthropic` (now the only allowed value), sets the default model to `claude-opus-5-5`, and seeds that model's published price if it isn't already set.
 
 ## Tables
 

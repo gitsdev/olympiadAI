@@ -43,7 +43,7 @@ Server-only modules (anything that reads secrets or uses the DB clients) start w
 | `POST /api/content/publish` (Phase 6) | `BLOG_API_SECRET` | service role | secret check + validation |
 
 - Admin UI code deliberately uses the session client, not the service-role key. That way RLS is a second, independent check. The rest of the existing admin uses the service role behind `requireAdmin()`.
-- Secrets (`OPENAI_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET`, `BLOG_API_SECRET`) are only read in server code. The Settings page sends the browser a configured/missing flag for each one, never the value.
+- Secrets (`ANTHROPIC_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET`, `BLOG_API_SECRET`) are only read in server code. The Settings page sends the browser a configured/missing flag for each one, never the value.
 - All server-action input is validated with Zod (`seoSettingsSchema` so far).
 - Logs go through `seoLog`, which redacts any key that looks like a credential.
 
@@ -59,4 +59,4 @@ Server-only modules (anything that reads secrets or uses the DB clients) start w
   - `seo_try_acquire_lock()` stops overlapping cron runs.
 - **No guessed numbers.** AI cost is `null` ("unknown") until the admin enters model pricing in Settings. The content score is labelled as internal, not a Google metric.
 - **Timezone:** timestamps are stored as UTC `timestamptz` and shown in `seo_settings.timezone` (default `Asia/Kolkata`) via `lib/seo-agent/datetime.ts`.
-- **AI provider:** the spec asks for OpenAI first, behind a provider interface (Phase 2). The rest of the app uses Gemini and Groq. The SEO Agent's provider will be separate and swappable.
+- **AI provider: Claude.** The spec started with OpenAI behind a provider interface. On 2026-10-07 the user chose to replace OpenAI with Claude (Opus 5.5 by default) through the official Anthropic SDK; migration 015 switched the settings row. The rest of the app (tutor, question generation) still uses Gemini, Groq and OpenAI TTS; the SEO Agent's provider is separate.

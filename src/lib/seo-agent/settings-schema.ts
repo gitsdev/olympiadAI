@@ -62,9 +62,12 @@ export const DEFAULT_BRAND: BrandProfile = {
 
 /** Matches the column defaults in 013_seo_agent.sql. */
 export const DEFAULT_SEO_SETTINGS: SeoSettings = {
-  aiProvider: "openai",
-  aiModel: "gpt-4o-mini",
-  aiPricing: {},
+  aiProvider: "anthropic",
+  aiModel: "claude-opus-5-5",
+  // Anthropic's published price for the default model (USD per 1M tokens,
+  // as of Sept 2026). Editable in Settings; other models stay unpriced
+  // until the admin enters them.
+  aiPricing: { "claude-opus-5-5": { input: 4, output: 20 } },
   publishingMode: "MANUAL_APPROVAL",
   defaultPublishTime: "10:00",
   timezone: DEFAULT_TIMEZONE,

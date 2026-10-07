@@ -17,7 +17,7 @@ export async function getSeoSettings(): Promise<SeoSettings> {
  */
 export function getSecretStatus() {
   return [
-    { name: "OPENAI_API_KEY", purpose: "AI provider (OpenAI)", configured: Boolean(process.env.OPENAI_API_KEY) },
+    { name: "ANTHROPIC_API_KEY", purpose: "AI provider (Claude)", configured: Boolean(process.env.ANTHROPIC_API_KEY) },
     { name: "SUPABASE_SERVICE_ROLE_KEY", purpose: "Cron + publishing pipeline", configured: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY) },
     { name: "CRON_SECRET", purpose: "Protects /api/cron/* (Vercel Cron)", configured: Boolean(process.env.CRON_SECRET) },
     { name: "BLOG_API_SECRET", purpose: "Protects /api/content/publish", configured: Boolean(process.env.BLOG_API_SECRET) },

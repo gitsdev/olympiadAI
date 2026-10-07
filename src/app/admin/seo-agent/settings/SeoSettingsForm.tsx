@@ -148,10 +148,10 @@ export function SeoSettingsForm({ initial, secrets }: { initial: SeoSettings; se
             <Field label="Provider" error={err("aiProvider")}>
               <select className={inputCls} style={inputStyle} value={s.aiProvider}
                 onChange={(e) => set("aiProvider", e.target.value as SeoSettings["aiProvider"])}>
-                {AI_PROVIDERS.map((p) => <option key={p} value={p}>{p === "openai" ? "OpenAI" : p}</option>)}
+                {AI_PROVIDERS.map((p) => <option key={p} value={p}>{p === "anthropic" ? "Anthropic (Claude)" : p}</option>)}
               </select>
             </Field>
-            <Field label="Model" hint="Any model ID your OpenAI key can use." error={err("aiModel")}>
+            <Field label="Model" hint="A Claude model ID, e.g. claude-opus-5-5 or claude-sonnet-5-5." error={err("aiModel")}>
               <input className={inputCls} style={inputStyle} value={s.aiModel} onChange={(e) => set("aiModel", e.target.value)} />
             </Field>
           </div>

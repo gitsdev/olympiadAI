@@ -6,17 +6,25 @@
 |---|---|
 | `types.ts` | `AIProvider` interface (`generateText`, `generateStructuredOutput`, `analyze`, `estimateUsage`) and the error types |
 | `provider.ts` | `BaseAIProvider`, which handles structured output the same way for every provider |
-| `openai.ts` | `OpenAIProvider`: Chat Completions over `fetch` (no SDK). The only file that knows OpenAI's API |
-| `index.ts` | `createAIProvider(settings)`. Reads `OPENAI_API_KEY` on the server (`server-only`) |
+| `anthropic.ts` | `AnthropicProvider`: Claude via the official `@anthropic-ai/sdk`. The only file that knows Anthropic's API |
+| `index.ts` | `createAIProvider(settings)`. Reads `ANTHROPIC_API_KEY` on the server (`server-only`) |
 | `prompts/` | All prompt text. Edit wording here, never inside components or agents |
 
-**Adding a provider** (for example Gemini or Anthropic): write a class that extends `BaseAIProvider` and implements `generateText`. Then add it to `AI_PROVIDERS` in `constants.ts`, to the CHECK on `seo_settings.ai_provider`, and to the switch in `createAIProvider`. The agents don't change.
+### Claude specifics
+
+- **Default model:** `claude-opus-5-5`, set in Settings → AI. Any Claude model ID works; add its price under Model pricing.
+- **Native structured outputs:** the Zod schema is sent as `output_config.format`, so Claude's reply is constrained to the schema's shape. The API can't enforce length or range limits (`min`, `max`); `BaseAIProvider` still checks those with Zod and retries once if they fail.
+- **Effort:** set explicitly on every call (`medium` by default; keyword analysis uses `medium`). Opus 5.5 always uses adaptive thinking. It can't be turned off; effort is the control.
+- **Refusals:** requests send `fallbacks: "default"` (beta `server-side-fallback-2026-07-01`). If a safety classifier declines, Anthropic re-runs the request on its recommended fallback model. If that also declines, the task fails with a clear error. The fallback run is billed at the fallback model's rates; cost tracking prices calls at the configured model's rate.
+- **Errors:** SDK errors map to `AIProviderError`. 429/5xx/529 and connection errors are retryable. The SDK itself retries transient failures twice.
+
+**Adding a provider** (for example Gemini): write a class that extends `BaseAIProvider` and implements `generateText`. Then add it to `AI_PROVIDERS` in `constants.ts`, to the CHECK on `seo_settings.ai_provider`, and to the switch in `createAIProvider`. The agents don't change.
 
 ### Structured output (spec §36)
 
 `generateStructuredOutput({ system, prompt, schema, schemaName })`:
 
-1. Asks for JSON mode and adds the Zod schema to the system prompt as JSON Schema.
+1. Passes the Zod schema to the provider: as native structured output where supported (Claude), otherwise as JSON mode plus the schema in the system prompt.
 2. Parses the reply (tolerating a markdown fence) and validates it with Zod.
 3. If parsing or validation fails, retries **once**, telling the model exactly which fields were wrong.
 4. If it fails again, throws `StructuredOutputError`, so the agent task is marked **FAILED**. Malformed output is never accepted.

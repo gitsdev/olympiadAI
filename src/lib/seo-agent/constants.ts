@@ -38,7 +38,7 @@ export type PublishingMode = (typeof PUBLISHING_MODES)[number];
 export const FREQUENCIES = ["DAILY", "WEEKLY", "OFF"] as const;
 export type Frequency = (typeof FREQUENCIES)[number];
 
-export const AI_PROVIDERS = ["openai"] as const;
+export const AI_PROVIDERS = ["anthropic"] as const;
 export type AiProviderId = (typeof AI_PROVIDERS)[number];
 
 export const AI_USAGE_CATEGORIES = ["CONTENT", "SEO", "KEYWORD_ANALYSIS", "BACKLINKS", "OTHER"] as const;

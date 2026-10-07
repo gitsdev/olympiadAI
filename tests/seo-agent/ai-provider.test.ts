@@ -1,66 +1,100 @@
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { OpenAIProvider } from "@/lib/seo-agent/ai/openai";
+import Anthropic from "@anthropic-ai/sdk";
+import { AnthropicProvider } from "@/lib/seo-agent/ai/anthropic";
 import { extractJson } from "@/lib/seo-agent/ai/provider";
 import { AIProviderError, StructuredOutputError } from "@/lib/seo-agent/ai/types";
 import { FakeProvider } from "./helpers";
 
-function mockFetch(status: number, body: unknown) {
-  return vi.fn(async () => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } }));
+type CreateParams = Record<string, unknown> & { output_config?: { effort?: string; format?: { type: string } } };
+
+/** A stand-in for the Anthropic SDK client: no network in tests. */
+function fakeClient(reply: (params: CreateParams) => unknown) {
+  const create = vi.fn(async (params: CreateParams) => reply(params));
+  return { client: { beta: { messages: { create } } } as unknown as Anthropic, create };
 }
 
-const okBody = {
-  model: "gpt-test-2026-01-01",
-  choices: [{ message: { content: '{"a":1}' }, finish_reason: "stop" }],
-  usage: { prompt_tokens: 120, completion_tokens: 30 },
+const okMessage = {
+  model: "claude-opus-5-5",
+  stop_reason: "end_turn",
+  content: [
+    { type: "thinking", thinking: "", signature: "x" },
+    { type: "text", text: '{"a":' },
+    { type: "text", text: "1}" },
+  ],
+  usage: { input_tokens: 120, output_tokens: 30 },
 };
 
-describe("OpenAIProvider", () => {
-  it("sends a chat completion with JSON mode and parses usage", async () => {
-    const fetchImpl = mockFetch(200, okBody);
-    const p = new OpenAIProvider("sk-test", "gpt-test", fetchImpl as unknown as typeof fetch);
-    const res = await p.generateText({ system: "sys", prompt: "hi", responseFormat: "json", maxOutputTokens: 500 });
+describe("AnthropicProvider", () => {
+  it("calls Claude with structured output, explicit effort and server-side fallback", async () => {
+    const { client, create } = fakeClient(() => okMessage);
+    const p = new AnthropicProvider("", "claude-opus-5-5", client);
+    const res = await p.generateText({ system: "sys", prompt: "hi", outputSchema: z.object({ a: z.number() }), maxOutputTokens: 500 });
 
-    expect(res).toEqual({ text: '{"a":1}', model: "gpt-test-2026-01-01", usage: { inputTokens: 120, outputTokens: 30 } });
-    const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
-    expect(url).toBe("https://api.openai.com/v1/chat/completions");
-    expect((init.headers as Record<string, string>).Authorization).toBe("Bearer sk-test");
-    const body = JSON.parse(init.body as string);
-    expect(body).toMatchObject({ model: "gpt-test", response_format: { type: "json_object" }, max_completion_tokens: 500 });
-    expect(body.messages).toEqual([{ role: "system", content: "sys" }, { role: "user", content: "hi" }]);
-    expect(body).not.toHaveProperty("temperature");
+    // Thinking blocks are skipped; text blocks are joined.
+    expect(res).toEqual({ text: '{"a":1}', model: "claude-opus-5-5", usage: { inputTokens: 120, outputTokens: 30 } });
+    const params = create.mock.calls[0][0];
+    expect(params).toMatchObject({
+      model: "claude-opus-5-5",
+      max_tokens: 500,
+      system: "sys",
+      messages: [{ role: "user", content: "hi" }],
+      betas: ["server-side-fallback-2026-07-01"],
+      fallbacks: "default",
+    });
+    expect(params.output_config?.effort).toBe("medium");
+    expect(params.output_config?.format?.type).toBe("json_schema");
+    // Opus 5.5 rejects sampling params and disabled thinking.
+    expect(params).not.toHaveProperty("temperature");
+    expect(params).not.toHaveProperty("thinking");
+  });
+
+  it("sends no output format for plain text and honours a requested effort", async () => {
+    const { client, create } = fakeClient(() => okMessage);
+    await new AnthropicProvider("", "claude-opus-5-5", client).generateText({ system: "s", prompt: "p", effort: "high" });
+    expect(create.mock.calls[0][0].output_config).toEqual({ effort: "high" });
+    expect(create.mock.calls[0][0].max_tokens).toBe(16000);
   });
 
   it("refuses to construct without an API key", () => {
-    expect(() => new OpenAIProvider("", "gpt-test")).toThrow(/OPENAI_API_KEY/);
+    expect(() => new AnthropicProvider("", "claude-opus-5-5")).toThrow(/ANTHROPIC_API_KEY/);
   });
 
   it.each([
     [401, false],
     [400, false],
     [429, true],
-    [503, true],
+    [529, true],
   ])("maps HTTP %i to AIProviderError (retryable=%s)", async (status, retryable) => {
-    const p = new OpenAIProvider("sk", "m", mockFetch(status, { error: { message: "nope" } }) as unknown as typeof fetch);
-    const err = await p.generateText({ system: "s", prompt: "p" }).catch((e) => e);
+    const { client } = fakeClient(() => {
+      throw Anthropic.APIError.generate(status, { error: { message: "nope" } }, "nope", new Headers());
+    });
+    const err = (await new AnthropicProvider("", "m", client).generateText({ system: "s", prompt: "p" }).catch((e: unknown) => e)) as AIProviderError;
     expect(err).toBeInstanceOf(AIProviderError);
     expect(err.status).toBe(status);
     expect(err.retryable).toBe(retryable);
-    expect(err.message).toContain("nope");
   });
 
-  it("treats network failures as retryable", async () => {
-    const p = new OpenAIProvider("sk", "m", (async () => { throw new TypeError("fetch failed"); }) as unknown as typeof fetch);
-    const err = await p.generateText({ system: "s", prompt: "p" }).catch((e) => e);
+  it("treats connection failures as retryable", async () => {
+    const { client } = fakeClient(() => { throw new Anthropic.APIConnectionError({ message: "socket hang up" }); });
+    const err = (await new AnthropicProvider("", "m", client).generateText({ system: "s", prompt: "p" }).catch((e: unknown) => e)) as AIProviderError;
     expect(err).toBeInstanceOf(AIProviderError);
     expect(err.retryable).toBe(true);
   });
 
-  it("surfaces refusals and empty replies as errors", async () => {
-    const refusal = { choices: [{ message: { content: null, refusal: "can't help" } }] };
-    const empty = { choices: [{ message: { content: "" }, finish_reason: "length" }] };
-    await expect(new OpenAIProvider("sk", "m", mockFetch(200, refusal) as unknown as typeof fetch).generateText({ system: "s", prompt: "p" })).rejects.toThrow(/refused/);
-    await expect(new OpenAIProvider("sk", "m", mockFetch(200, empty) as unknown as typeof fetch).generateText({ system: "s", prompt: "p" })).rejects.toThrow(/finish_reason: length/);
+  it("surfaces refusals, truncation and empty replies as errors", async () => {
+    const run = (msg: unknown) => new AnthropicProvider("", "m", fakeClient(() => msg).client).generateText({ system: "s", prompt: "p" });
+    await expect(run({ ...okMessage, stop_reason: "refusal", content: [] })).rejects.toThrow(/declined/);
+    await expect(run({ ...okMessage, stop_reason: "max_tokens" })).rejects.toThrow(/cut off/);
+    await expect(run({ ...okMessage, content: [{ type: "thinking", thinking: "", signature: "x" }] })).rejects.toThrow(/no text/);
+  });
+
+  it("does not repeat the JSON schema in the prompt (the API enforces it)", async () => {
+    const { client, create } = fakeClient(() => ({ ...okMessage, content: [{ type: "text", text: '{"title":"Hello","score":5}' }] }));
+    await new AnthropicProvider("", "m", client).generateStructuredOutput({
+      system: "sys", prompt: "p", schemaName: "Thing", schema: z.object({ title: z.string(), score: z.number() }),
+    });
+    expect(create.mock.calls[0][0].system).not.toContain("JSON Schema");
   });
 });
 
