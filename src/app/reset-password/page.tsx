@@ -1,8 +1,16 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { AlertTriangle } from "lucide-react";
 import { Logo } from "@/components/brand";
 import { getSession } from "@/actions/auth";
 import ResetPasswordForm from "./ResetPasswordForm";
+
+export const metadata: Metadata = {
+  title: "Reset Password | OlympiadIQ",
+  description:
+    "Choose a new password for your OlympiadIQ account to get back to your AI tutor, practice questions and mock tests.",
+  robots: { index: false, follow: false },
+};
 
 export default async function ResetPasswordPage() {
   const user = await getSession();

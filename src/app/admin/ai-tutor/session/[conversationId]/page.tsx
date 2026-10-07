@@ -5,6 +5,12 @@ import { getConversationById } from "@/lib/admin/ai-tutor";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { AITutorConversation } from "@/components/admin/AITutorConversation";
 import { OACard } from "@/components/ui";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "AI Tutor Session | OlympiadIQ Admin",
+  description: "Transcript of a student's AI tutor session on OlympiadIQ.",
+};
 
 export const dynamic = "force-dynamic";
 

@@ -3,6 +3,12 @@ import { Plus } from "lucide-react";
 import { listAllPosts } from "@/actions/blog";
 import { OABadge } from "@/components/ui";
 import { DeletePostButton } from "./DeletePostButton";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Blog Posts | OlympiadIQ Admin",
+  description: "Manage OlympiadIQ blog posts — drafts, published articles and categories.",
+};
 
 export const dynamic = "force-dynamic";
 

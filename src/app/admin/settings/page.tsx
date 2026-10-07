@@ -6,6 +6,12 @@ import { SettingsForm } from "@/components/admin/SettingsForm";
 import { OACard, OACardHeader, OACardTitle } from "@/components/ui";
 import { EmptyState } from "@/components/admin/EmptyState";
 import { ClipboardList } from "lucide-react";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Settings | OlympiadIQ Admin",
+  description: "OlympiadIQ admin settings and recent audit log.",
+};
 
 export const dynamic = "force-dynamic";
 

@@ -1,8 +1,20 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Brain, Gauge, Eye, Timer, Lock, ArrowRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { OACard } from "@/components/ui";
 import { PublicHeader } from "@/components/layout";
+
+const TITLE = "Brain Booster — Free Brain Games for Kids | OlympiadIQ";
+const DESCRIPTION =
+  "Free timed brain-training games for kids — Number Ninja, Memory Match, Pattern Blitz and Code Breaker build the speed, focus and logic Olympiad exams demand.";
+
+export const metadata: Metadata = {
+  title: TITLE,
+  description: DESCRIPTION,
+  alternates: { canonical: "/brain-booster" },
+  openGraph: { url: "/brain-booster", title: TITLE, description: DESCRIPTION },
+};
 
 const BENEFITS = [
   { Icon: Gauge, title: "Faster processing", desc: "Short, timed challenges train the brain to recognise patterns and react quicker." },

@@ -9,6 +9,12 @@ import { StatCard } from "@/components/admin/StatCard";
 import { OACard, OACardHeader, OACardTitle } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { CampaignPanel } from "./CampaignPanel";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Emails | OlympiadIQ Admin",
+  description: "Send OlympiadIQ email campaigns and per-student re-engagement emails.",
+};
 
 export const dynamic = "force-dynamic";
 

@@ -1,8 +1,20 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PublicHeader } from "@/components/layout";
 import { PatternBlitzGame } from "./PatternBlitzGame";
+
+const TITLE = "Pattern Blitz — Free Pattern Recognition Game | OlympiadIQ";
+const DESCRIPTION =
+  "Play Pattern Blitz free: spot the next shape in the sequence before time runs out. Builds the pattern-recognition skills tested in Olympiad reasoning sections.";
+
+export const metadata: Metadata = {
+  title: TITLE,
+  description: DESCRIPTION,
+  alternates: { canonical: "/brain-booster/pattern-blitz" },
+  openGraph: { url: "/brain-booster/pattern-blitz", title: TITLE, description: DESCRIPTION },
+};
 
 export default async function PatternBlitzPage() {
   const supabase = await createClient();

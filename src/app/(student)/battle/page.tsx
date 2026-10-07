@@ -2,6 +2,14 @@ import { getStudentProfile } from "@/actions/student";
 import { getOrCreateStudentBattleStats, getRecentBattles, getBattleConfig, getActiveBattles } from "@/lib/battle/battle-data";
 import { getMyBattleInvitations } from "@/actions/battle-invitations";
 import BattleClient from "./BattleClient";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Quiz Battle | OlympiadIQ",
+  description:
+    "Challenge an AI opponent to a timed quiz battle — answer Olympiad-style questions faster and more accurately to win points.",
+  robots: { index: false, follow: false },
+};
 
 export default async function BattlePage() {
   const student = await getStudentProfile();

@@ -12,6 +12,12 @@ import { TrendChart } from "@/components/admin/TrendChart";
 import { StatCard } from "@/components/admin/StatCard";
 import { OACard, OACardHeader, OACardTitle } from "@/components/ui";
 import { Sparkles, Users, MessageSquare } from "lucide-react";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "AI Tutor | OlympiadIQ Admin",
+  description: "AI tutor usage and engagement across the OlympiadIQ platform.",
+};
 
 export const dynamic = "force-dynamic";
 

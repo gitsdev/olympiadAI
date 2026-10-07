@@ -1,8 +1,20 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PublicHeader } from "@/components/layout";
 import { CodeBreakerGame } from "./CodeBreakerGame";
+
+const TITLE = "Code Breaker — Free Logic Puzzle for Kids | OlympiadIQ";
+const DESCRIPTION =
+  "Play Code Breaker free: crack the secret colour code using feedback clues. A logic puzzle that builds the deductive reasoning Olympiad exams reward.";
+
+export const metadata: Metadata = {
+  title: TITLE,
+  description: DESCRIPTION,
+  alternates: { canonical: "/brain-booster/code-breaker" },
+  openGraph: { url: "/brain-booster/code-breaker", title: TITLE, description: DESCRIPTION },
+};
 
 export default async function CodeBreakerPage() {
   const supabase = await createClient();

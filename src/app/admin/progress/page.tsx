@@ -9,6 +9,12 @@ import { AttentionStudentsTable } from "@/components/admin/AttentionStudentsTabl
 import { InactivityThresholdSelect } from "./InactivityThresholdSelect";
 import { OACard, OACardHeader, OACardTitle } from "@/components/ui";
 import Link from "next/link";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Progress | OlympiadIQ Admin",
+  description: "Student mastery, readiness and practice activity across OlympiadIQ.",
+};
 
 export const dynamic = "force-dynamic";
 

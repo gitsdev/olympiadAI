@@ -8,6 +8,12 @@ import { SearchInput } from "@/components/admin/SearchInput";
 import { Pagination } from "@/components/admin/Pagination";
 import type { AdminBattleFilters } from "@/types/admin";
 import type { BattleStatus, BattleMode, BattleOutcome, Subject } from "@/types/database";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Battles | OlympiadIQ Admin",
+  description: "Quiz battles played across OlympiadIQ — modes, outcomes and subjects.",
+};
 
 export const dynamic = "force-dynamic";
 

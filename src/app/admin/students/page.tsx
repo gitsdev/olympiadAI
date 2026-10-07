@@ -9,6 +9,12 @@ import { Pagination } from "@/components/admin/Pagination";
 import { StudentsExportButton } from "./StudentsExportButton";
 import type { AdminStudentFilters } from "@/types/admin";
 import type { Board, StudentAccountStatus } from "@/types/database";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Students | OlympiadIQ Admin",
+  description: "All OlympiadIQ students with board, class, signup source, activity and progress.",
+};
 
 export const dynamic = "force-dynamic";
 

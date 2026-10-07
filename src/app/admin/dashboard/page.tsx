@@ -11,6 +11,12 @@ import { TrendChart } from "@/components/admin/TrendChart";
 import { PlatformSubjectPerformance } from "@/components/admin/SubjectProgress";
 import { AttentionStudentsTable } from "@/components/admin/AttentionStudentsTable";
 import { OACard, OACardHeader, OACardTitle } from "@/components/ui";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Admin Dashboard | OlympiadIQ",
+  description: "Platform-wide OlympiadIQ metrics — signups, active students, tests taken and engagement.",
+};
 
 export const dynamic = "force-dynamic";
 

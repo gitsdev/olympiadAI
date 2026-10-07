@@ -17,6 +17,12 @@ import { MockTestTable } from "@/components/admin/MockTestTable";
 import { MockTestPerformanceChart } from "@/components/admin/MockTestPerformanceChart";
 import { AITutorSessionList } from "@/components/admin/AITutorSessionList";
 import { OACard, OACardHeader, OACardTitle } from "@/components/ui";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Student Profile | OlympiadIQ Admin",
+  description: "Student 360° profile — activity, mock test history, AI tutor usage and mastery.",
+};
 
 export const dynamic = "force-dynamic";
 

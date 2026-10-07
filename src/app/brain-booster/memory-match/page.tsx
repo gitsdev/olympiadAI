@@ -1,8 +1,20 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PublicHeader } from "@/components/layout";
 import { MemoryMatchGame } from "./MemoryMatchGame";
+
+const TITLE = "Memory Match — Free Memory Game for Kids | OlympiadIQ";
+const DESCRIPTION =
+  "Play Memory Match free: flip cards and match pairs to train visual memory and concentration — a fun warm-up for kids preparing for Maths and Science Olympiads.";
+
+export const metadata: Metadata = {
+  title: TITLE,
+  description: DESCRIPTION,
+  alternates: { canonical: "/brain-booster/memory-match" },
+  openGraph: { url: "/brain-booster/memory-match", title: TITLE, description: DESCRIPTION },
+};
 
 export default async function MemoryMatchPage() {
   const supabase = await createClient();

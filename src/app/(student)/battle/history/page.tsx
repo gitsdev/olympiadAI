@@ -4,6 +4,14 @@ import { AppShell } from "@/components/layout";
 import { OACard, OABadge, OASubjectDot } from "@/components/ui";
 import { getStudentProfile } from "@/actions/student";
 import { getBattleHistoryPage } from "@/lib/battle/battle-data";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Battle History | OlympiadIQ",
+  description:
+    "Review your past OlympiadIQ quiz battles — scores, wins, subjects and how you performed against your AI opponent.",
+  robots: { index: false, follow: false },
+};
 
 const PAGE_SIZE = 20;
 

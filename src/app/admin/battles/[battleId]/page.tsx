@@ -6,6 +6,12 @@ import { AdminShell } from "@/components/admin/AdminShell";
 import { StatCard } from "@/components/admin/StatCard";
 import { OACard, OACardHeader, OACardTitle, OABadge } from "@/components/ui";
 import { Target, Trophy, CheckCircle2, XCircle, TrendingUp } from "lucide-react";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Battle | OlympiadIQ Admin",
+  description: "Detailed review of a single OlympiadIQ quiz battle.",
+};
 
 export const dynamic = "force-dynamic";
 

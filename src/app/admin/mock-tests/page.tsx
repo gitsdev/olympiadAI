@@ -9,6 +9,12 @@ import { Pagination } from "@/components/admin/Pagination";
 import { MockTestsExportButton } from "./MockTestsExportButton";
 import type { AdminTestAttemptFilters, MockTestAttemptStatus } from "@/types/admin";
 import type { Subject } from "@/types/database";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Mock Tests | OlympiadIQ Admin",
+  description: "Mock test attempts across OlympiadIQ — scores, subjects and completion.",
+};
 
 export const dynamic = "force-dynamic";
 

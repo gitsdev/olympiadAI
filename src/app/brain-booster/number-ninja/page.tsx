@@ -1,8 +1,20 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PublicHeader } from "@/components/layout";
 import { NumberNinjaGame } from "./NumberNinjaGame";
+
+const TITLE = "Number Ninja — Free Speed & Focus Game for Kids | OlympiadIQ";
+const DESCRIPTION =
+  "Play Number Ninja free: tap the numbers 1 to N in order as fast as you can. A quick game that sharpens focus, visual scanning and speed for Olympiad exams.";
+
+export const metadata: Metadata = {
+  title: TITLE,
+  description: DESCRIPTION,
+  alternates: { canonical: "/brain-booster/number-ninja" },
+  openGraph: { url: "/brain-booster/number-ninja", title: TITLE, description: DESCRIPTION },
+};
 
 export default async function NumberNinjaPage() {
   const supabase = await createClient();

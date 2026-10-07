@@ -6,6 +6,12 @@ import { StatCard } from "@/components/admin/StatCard";
 import { OACard, OACardHeader, OACardTitle } from "@/components/ui";
 import { CompetitorTable } from "./CompetitorTable";
 import { KeywordExplorer } from "./KeywordExplorer";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "SEO | OlympiadIQ Admin",
+  description: "Track OlympiadIQ target keywords and competitors.",
+};
 
 export default async function AdminSeoPage() {
   const admin = await requireAdmin();

@@ -1,6 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Mail } from "lucide-react";
 import { Logo } from "@/components/brand";
+
+export const metadata: Metadata = {
+  title: "Confirm Your Email | OlympiadIQ",
+  description:
+    "Check your inbox and confirm your email address to activate your free OlympiadIQ account and start preparing for your Olympiad exams.",
+  robots: { index: false, follow: false },
+};
 
 export default function ConfirmPage() {
   return (

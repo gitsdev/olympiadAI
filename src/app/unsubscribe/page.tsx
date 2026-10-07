@@ -7,6 +7,7 @@ import { confirmUnsubscribe } from "@/actions/unsubscribe";
 
 export const metadata: Metadata = {
   title: "Unsubscribe | OlympiadIQ",
+  description: "Manage your OlympiadIQ email preferences and unsubscribe from practice reminders and progress emails.",
   robots: { index: false, follow: false },
 };
 

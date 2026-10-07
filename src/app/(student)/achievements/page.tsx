@@ -1,6 +1,14 @@
 import { getStudentProfile } from "@/actions/student";
 import { createClient } from "@/lib/supabase/server";
 import AchievementsClient from "./AchievementsClient";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Achievements | OlympiadIQ",
+  description:
+    "See the badges, points, streaks and milestones you've earned on OlympiadIQ while preparing for your Olympiad exams.",
+  robots: { index: false, follow: false },
+};
 
 async function getEarnedBadgeKeys(studentId: string): Promise<string[]> {
   const supabase = await createClient();

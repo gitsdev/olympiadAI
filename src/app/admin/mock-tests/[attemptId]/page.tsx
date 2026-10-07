@@ -7,6 +7,12 @@ import { StatCard } from "@/components/admin/StatCard";
 import { QuestionAnalysis } from "@/components/admin/QuestionAnalysis";
 import { OACard, OACardHeader, OACardTitle, OABadge } from "@/components/ui";
 import { Target, CheckCircle2, XCircle, MinusCircle, Clock } from "lucide-react";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Mock Test Attempt | OlympiadIQ Admin",
+  description: "Question-by-question review of a single OlympiadIQ mock test attempt.",
+};
 
 export const dynamic = "force-dynamic";
 
