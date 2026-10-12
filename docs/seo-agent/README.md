@@ -24,13 +24,13 @@ The MVP is built in phases (spec §47). A phase is marked done only after type c
 | 7 | Vercel Cron: tomorrow's article (daily), scheduled publishing, locks, housekeeping, run-now buttons | ✅ Done |
 | 8 | Google Search Console sync | Not started |
 | 9 | SEO performance and opportunity engine, weekly report | Not started |
-| 10 | Backlink opportunities, outreach drafts, tracker | Not started |
+| 10 | Backlink opportunities + AI evaluation (no invented metrics), outreach drafts (approve → copy, never sent), backlink tracker + weekly check | ✅ Done (built before 8–9 at the user's request) |
 
 Sidebar items for unfinished phases are shown with a "Soon" label and are not links.
 
 ## Setup
 
-1. **Apply the migrations, in order.** Open the Supabase SQL editor and run [`013_seo_agent.sql`](../../supabase/migrations/013_seo_agent.sql), then [`014_seo_keywords_overview.sql`](../../supabase/migrations/014_seo_keywords_overview.sql), then [`015_seo_agent_claude.sql`](../../supabase/migrations/015_seo_agent_claude.sql), then [`016_seo_agent_images.sql`](../../supabase/migrations/016_seo_agent_images.sql). All are additive and are safe to re-run. Until 013 has been run, the SEO Agent pages show a "database not set up" notice.
+1. **Apply the migrations, in order.** Open the Supabase SQL editor and run [`013_seo_agent.sql`](../../supabase/migrations/013_seo_agent.sql), then [`014_seo_keywords_overview.sql`](../../supabase/migrations/014_seo_keywords_overview.sql), then [`015_seo_agent_claude.sql`](../../supabase/migrations/015_seo_agent_claude.sql), then [`016_seo_agent_images.sql`](../../supabase/migrations/016_seo_agent_images.sql), then [`017_seo_backlinks.sql`](../../supabase/migrations/017_seo_backlinks.sql). All are additive and are safe to re-run. Until 013 has been run, the SEO Agent pages show a "database not set up" notice.
 2. **Make sure you are a platform admin.** This uses the same check as the rest of `/admin`:
    ```sql
    update profiles set role = 'platform_admin' where email = '<you>';
@@ -57,6 +57,7 @@ npm run lint
 
 - [publishing.md](publishing.md): approval workflow, scheduling, the publishing pipeline and the publish API
 
+- [backlinks.md](backlinks.md): backlink opportunities, the Backlink Agent, outreach drafting, the tracker, and safe page fetching
 - [cron.md](cron.md): the scheduled jobs, Vercel plan limits, security and failure handling
 
 `search-console.md` will be added in the phases that build those features.

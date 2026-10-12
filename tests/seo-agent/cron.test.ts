@@ -5,6 +5,7 @@ import { isRunDay, nextStatusAfterGeneration, pickKeywords } from "@/lib/seo-age
 import { GET as publishScheduled } from "@/app/api/cron/publish-scheduled/route";
 import { GET as dailyArticle } from "@/app/api/cron/daily-article/route";
 import { POST as publishApi } from "@/app/api/content/publish/route";
+import { GET as backlinksCron } from "@/app/api/cron/backlinks/route";
 
 const IST = "Asia/Kolkata";
 
@@ -50,7 +51,7 @@ describe("vercel.json", () => {
   const config = JSON.parse(readFileSync(join(process.cwd(), "vercel.json"), "utf8")) as { crons: { path: string; schedule: string }[] };
 
   it("schedules both jobs", () => {
-    expect(config.crons.map((c) => c.path).sort()).toEqual(["/api/cron/daily-article", "/api/cron/publish-scheduled"]);
+    expect(config.crons.map((c) => c.path).sort()).toEqual(["/api/cron/backlinks", "/api/cron/daily-article", "/api/cron/publish-scheduled"]);
   });
 
   it("runs each cron at most once a day, so deploys work on Vercel Hobby", () => {
@@ -84,6 +85,7 @@ describe("cron + publishing API authentication (no DB access when unauthorised)"
     const headers = auth ? { authorization: auth } : undefined;
     expect((await publishScheduled(new Request("https://x/api/cron/publish-scheduled", { headers }))).status).toBe(401);
     expect((await dailyArticle(new Request("https://x/api/cron/daily-article", { headers }))).status).toBe(401);
+    expect((await backlinksCron(new Request("https://x/api/cron/backlinks", { headers }))).status).toBe(401);
   });
 
   it("cron routes fail closed when CRON_SECRET isn't configured", async () => {

@@ -18,6 +18,7 @@ import {
 } from "../pipeline";
 import { buildPublishCheck, loadArticleForPublish, publishArticle } from "../publishing/publisher";
 import { isRunDay, LINKS_CUTOFF_MS, nextStatusAfterGeneration, pickKeywords, SEO_CHECK_CUTOFF_MS } from "./rules";
+import { checkTrackedBacklinks } from "../backlinks/service";
 
 export interface JobResult {
   ok: boolean;
@@ -208,6 +209,20 @@ export async function prepareTomorrowsArticle(db: SupabaseClient, actor: Actor, 
         };
       },
     );
+  });
+}
+
+// ── Backlink checks (spec §29) ───────────────────────────────────────────
+
+/** Rechecks tracked backlinks on the configured run day (default weekly, Mondays). */
+export async function checkBacklinksJob(db: SupabaseClient, actor: Actor, now = new Date()): Promise<JobResult> {
+  return withLock(db, "cron:backlinks", 290, async () => {
+    const settings = await getSeoSettings(db);
+    if (actor.triggeredBy === "CRON" && !isRunDay(settings.backlinkCheckFrequency, now, settings.timezone)) {
+      return { ok: true, skipped: "not-a-run-day", summary: `Backlink checks run ${settings.backlinkCheckFrequency.toLowerCase()}; not today.` };
+    }
+    const r = await checkTrackedBacklinks(db, actor);
+    return { ok: true, summary: `Checked ${r.checked} backlink(s): ${r.active} active, ${r.lost} lost, ${r.errors} unreachable.`, details: r };
   });
 }
 

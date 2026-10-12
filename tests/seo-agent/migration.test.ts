@@ -265,3 +265,31 @@ describe("publishing guarantees in the database (scheduling + approval)", () => 
       .rejects.toThrow(/requires_approval/);
   });
 });
+
+describe("migration 017 (backlinks)", () => {
+  const sql017 = readFileSync(join(process.cwd(), "supabase/migrations/017_seo_backlinks.sql"), "utf8");
+
+  it("applies idempotently", async () => {
+    await db.exec(sql017);
+    await db.exec(sql017);
+  });
+
+  it("only accepts http(s) URLs and one tracker row per source → target", async () => {
+    await expect(db.exec("insert into seo_backlink_prospects (website, url) values ('x', 'javascript:alert(1)')")).rejects.toThrow(/url_http/);
+    await db.exec("insert into seo_backlinks (source_url, target_url) values ('https://a.org/p', 'https://www.olympiadiq.in/')");
+    await expect(db.exec("insert into seo_backlinks (source_url, target_url) values ('HTTPS://A.ORG/p', 'https://www.olympiadiq.in/')")).rejects.toThrow(/uq_seo_backlinks_source_target/);
+  });
+
+  it("won't approve, copy or send outreach without an approval record", async () => {
+    await db.exec(`
+      insert into seo_backlink_prospects (id, website, url) values ('30000000-0000-0000-0000-000000000001', 'b', 'https://b.org');
+      insert into seo_outreach_campaigns (id, prospect_id, name) values ('30000000-0000-0000-0000-000000000002', '30000000-0000-0000-0000-000000000001', 'c');
+      insert into seo_outreach_messages (id, campaign_id, subject, body) values ('30000000-0000-0000-0000-000000000003', '30000000-0000-0000-0000-000000000002', 's', 'b');
+    `);
+    for (const status of ["APPROVED", "COPIED", "SENT"]) {
+      await expect(db.exec(`update seo_outreach_messages set status = '${status}' where id = '30000000-0000-0000-0000-000000000003'`)).rejects.toThrow(/requires_approval/);
+    }
+    await db.exec(`update seo_outreach_messages set status = 'APPROVED', approved_by = '${ADMIN}', approved_at = now() where id = '30000000-0000-0000-0000-000000000003'`);
+    await db.exec(`update seo_outreach_messages set status = 'COPIED' where id = '30000000-0000-0000-0000-000000000003'`);
+  });
+});

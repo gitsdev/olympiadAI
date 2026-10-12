@@ -64,6 +64,9 @@ export const STATUS_TONES: Record<string, StatusTone> = {
   // content opportunities / cannibalization risk
   NEW_ARTICLE: "cobalt", UPDATE_EXISTING: "amber", MERGE_ARTICLES: "amber", NO_ACTION: "neutral",
   NONE: "green", LOW: "green", MEDIUM: "amber", HIGH: "red",
+  // backlinks / outreach
+  PROSPECT: "neutral", CONTACTED: "cobalt", RESPONDED: "amber", ACCEPTED: "green", LOST: "red",
+  DATA_UNAVAILABLE: "neutral", COPIED: "green", SENT: "green",
 };
 
 /** "REVIEW_REQUIRED" → "Review required" */

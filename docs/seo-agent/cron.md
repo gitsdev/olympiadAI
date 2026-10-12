@@ -1,13 +1,14 @@
 # Scheduled jobs (Phase 7)
 
-Two Vercel Cron jobs, defined in [`vercel.json`](../../vercel.json). No n8n or other automation service is involved.
+Three Vercel Cron jobs, defined in [`vercel.json`](../../vercel.json). No n8n or other automation service is involved.
 
 | Job | Route | Schedule (UTC) | In IST | What it does |
 |---|---|---|---|---|
 | Scheduled publishing | `GET /api/cron/publish-scheduled` | `30 4 * * *` | ~10:00 | Publishes every `SCHEDULED` article whose time has come (up to 10 per run) through the normal publisher, which re-runs every check. |
 | Tomorrow's article | `GET /api/cron/daily-article` | `30 14 * * *` | ~20:00 | Prepares tomorrow's article (below), then runs scheduled publishing again. |
+| Backlink checks | `GET /api/cron/backlinks` | `0 3 * * *` | ~08:30 | On the day set in Settings → Backlink checking (default weekly, Mondays), rechecks up to 25 tracked backlinks. See [backlinks.md](backlinks.md). |
 
-Both are also on **SEO Agent → Agent Tasks** as **Prepare tomorrow's article now** and **Publish due articles now** (same code, recorded as run by you).
+The first two are also on **SEO Agent → Agent Tasks** as **Prepare tomorrow's article now** and **Publish due articles now** (same code, recorded as run by you).
 
 ## Vercel plan limits (checked 2026-10-08)
 

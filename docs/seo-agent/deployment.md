@@ -17,7 +17,7 @@ Generate secrets with `openssl rand -hex 32`. Add them under Vercel → Project 
 
 ## Supabase
 
-1. Run `supabase/migrations/013_seo_agent.sql`, then `014_seo_keywords_overview.sql`, `015_seo_agent_claude.sql` and `016_seo_agent_images.sql`, in the SQL editor.
+1. Run `supabase/migrations/013_seo_agent.sql`, then `014_seo_keywords_overview.sql`, `015_seo_agent_claude.sql`, `016_seo_agent_images.sql` and `017_seo_backlinks.sql`, in the SQL editor.
 2. Make sure your account is a platform admin: `update profiles set role = 'platform_admin' where email = '<you>';`
 3. Open `/admin/seo-agent/settings` and check the defaults:
    - timezone Asia/Kolkata

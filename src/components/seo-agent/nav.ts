@@ -44,9 +44,9 @@ export const SEO_NAV: SeoNavGroup[] = [
   {
     label: "Backlinks",
     items: [
-      { href: `${SEO_AGENT_BASE}/backlinks`, label: "Opportunities", Icon: Link2, comingInPhase: 10 },
-      { href: `${SEO_AGENT_BASE}/backlinks/outreach`, label: "Outreach", Icon: Send, comingInPhase: 10 },
-      { href: `${SEO_AGENT_BASE}/backlinks/tracker`, label: "Backlink Tracker", Icon: Activity, comingInPhase: 10 },
+      { href: `${SEO_AGENT_BASE}/backlinks`, label: "Opportunities", Icon: Link2 },
+      { href: `${SEO_AGENT_BASE}/backlinks/outreach`, label: "Outreach", Icon: Send },
+      { href: `${SEO_AGENT_BASE}/backlinks/tracker`, label: "Backlink Tracker", Icon: Activity },
     ],
   },
   {
