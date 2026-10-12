@@ -39,7 +39,26 @@ export interface TomorrowArticle {
   publishAt: string | null;
 }
 
+export interface AutomationRun {
+  at: string;
+  status: string;
+  triggeredBy: string;
+  summary: string | null;
+  error: string | null;
+}
+
+export interface AutomationStatus {
+  lastDaily: AutomationRun | null;
+  lastPublish: AutomationRun | null;
+  /** Topics the daily job can still use: open new-article recommendations + unanalysed active keywords. */
+  openRecommendations: number;
+  unanalysedKeywords: number;
+  /** Approved but not scheduled: these never publish by themselves. */
+  approvedUnscheduled: { id: string; title: string }[];
+}
+
 export interface SeoDashboardData {
+  automation: AutomationStatus;
   counts: DashboardCounts;
   avgContentScore: number | null;
   usageToday: UsageSummary;
@@ -123,6 +142,33 @@ async function findTomorrow(db: Db, start: Date, end: Date): Promise<TomorrowArt
   };
 }
 
+async function lastRun(db: Db, agentType: string): Promise<AutomationRun | null> {
+  const { data, error } = await db.from("seo_agent_tasks").select("created_at, status, triggered_by, output_summary, error")
+    .eq("agent_type", agentType).order("created_at", { ascending: false }).limit(1).maybeSingle();
+  throwIfDbError(error, "Loading automation runs");
+  const r = data as { created_at: string; status: string; triggered_by: string; output_summary: string | null; error: string | null } | null;
+  return r ? { at: r.created_at, status: r.status, triggeredBy: r.triggered_by, summary: r.output_summary, error: r.error } : null;
+}
+
+async function automationStatus(db: Db): Promise<AutomationStatus> {
+  const [lastDaily, lastPublish, opps, kws, approved] = await Promise.all([
+    lastRun(db, "DailyArticle"),
+    lastRun(db, "Scheduler"),
+    db.from("seo_content_opportunities").select("id", { count: "exact", head: true }).eq("status", "OPEN").eq("type", "NEW_ARTICLE"),
+    db.from("seo_keywords_overview").select("id", { count: "exact", head: true }).eq("status", "ACTIVE").eq("is_clustered", false),
+    db.from("seo_articles").select("id, title").eq("status", "APPROVED").order("updated_at", { ascending: false }).limit(10),
+  ]);
+  throwIfDbError(opps.error, "Counting recommendations");
+  throwIfDbError(kws.error, "Counting keywords");
+  throwIfDbError(approved.error, "Loading approved articles");
+  return {
+    lastDaily, lastPublish,
+    openRecommendations: opps.count ?? 0,
+    unanalysedKeywords: kws.count ?? 0,
+    approvedUnscheduled: (approved.data ?? []) as { id: string; title: string }[],
+  };
+}
+
 export async function getSeoDashboardData(tz: string, now = new Date()): Promise<SeoDashboardData> {
   const db = await seoDb();
   const today = zonedDayRange(now, tz, 0);
@@ -132,7 +178,7 @@ export async function getSeoDashboardData(tz: string, now = new Date()): Promise
   const [
     keywords, activeClusters, plannedArticles, draftArticles, awaitingReview,
     scheduledArticles, publishedArticles, backlinkOpportunities,
-    scoreRes, usageToday, usageMonth, tasksRes, tomorrowArticle,
+    scoreRes, usageToday, usageMonth, tasksRes, tomorrowArticle, automation,
   ] = await Promise.all([
     count(db, "seo_keywords", { op: "neq", column: "status", value: "ARCHIVED" }),
     count(db, "seo_keyword_clusters", { op: "eq", column: "status", value: "ACTIVE" }),
@@ -150,6 +196,7 @@ export async function getSeoDashboardData(tz: string, now = new Date()): Promise
       .order("created_at", { ascending: false })
       .limit(10),
     findTomorrow(db, tomorrow.start, tomorrow.end),
+    automationStatus(db),
   ]);
 
   throwIfDbError(scoreRes.error, "Loading content scores");
@@ -157,6 +204,7 @@ export async function getSeoDashboardData(tz: string, now = new Date()): Promise
   const scores = ((scoreRes.data ?? []) as { seo_score: number }[]).map((r) => r.seo_score);
 
   return {
+    automation,
     counts: {
       keywords, activeClusters, plannedArticles, draftArticles, awaitingReview,
       scheduledArticles, publishedArticles, backlinkOpportunities,

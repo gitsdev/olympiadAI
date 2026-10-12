@@ -26,6 +26,15 @@ export interface JobResult {
   details?: Record<string, unknown>;
 }
 
+/** Records a run that found nothing to do, so every scheduled run is visible in Agent Tasks. */
+async function logQuietRun(db: SupabaseClient, actor: Actor, agentType: string, taskType: string, result: JobResult): Promise<JobResult> {
+  return runPlainTask<JobResult>(
+    { agentType, taskType, inputSummary: result.skipped, triggeredBy: actor.triggeredBy, createdBy: actor.createdBy },
+    { store: supabaseTaskStore(db) },
+    async () => ({ result, outputSummary: result.summary }),
+  );
+}
+
 /** Runs `fn` only if the named lock is free; returns a "skipped" result otherwise. */
 async function withLock(db: SupabaseClient, job: string, ttlSeconds: number, fn: () => Promise<JobResult>): Promise<JobResult> {
   const owner = `${job}:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`;
@@ -68,7 +77,9 @@ export async function publishDueArticles(db: SupabaseClient, actor: Actor, now =
       .eq("status", "SCHEDULED").lte("scheduled_for", now.toISOString()).order("scheduled_for").limit(10);
     throwIfDbError(error, "Loading due articles");
     const due = (data ?? []) as { id: string; title: string; scheduled_for: string }[];
-    if (due.length === 0) return { ok: true, skipped: "nothing-due", summary: "No scheduled articles are due." };
+    if (due.length === 0) {
+      return logQuietRun(db, actor, "Scheduler", "publish_due", { ok: true, skipped: "nothing-due", summary: "No scheduled articles were due." });
+    }
 
     return runPlainTask<JobResult>(
       { agentType: "Scheduler", taskType: "publish_due", inputSummary: `${due.length} article(s) due`, triggeredBy: actor.triggeredBy, createdBy: actor.createdBy },
@@ -106,7 +117,8 @@ export async function prepareTomorrowsArticle(db: SupabaseClient, actor: Actor, 
     const settings = await getSeoSettings(db);
     const tz = settings.timezone;
     if (actor.triggeredBy === "CRON" && !isRunDay(settings.articleGenerationFrequency, now, tz)) {
-      return { ok: true, skipped: "not-a-run-day", summary: `Article generation is ${settings.articleGenerationFrequency.toLowerCase()}; not running today.` };
+      return logQuietRun(db, actor, "DailyArticle", "prepare_tomorrow",
+        { ok: true, skipped: "not-a-run-day", summary: `Article generation is ${settings.articleGenerationFrequency.toLowerCase()}; not running today.` });
     }
     const tomorrow = zonedDayRange(now, tz, 1);
     const startIso = tomorrow.start.toISOString();
@@ -122,7 +134,8 @@ export async function prepareTomorrowsArticle(db: SupabaseClient, actor: Actor, 
     throwIfDbError(pErr, "Checking tomorrow's plans");
     const tomorrowPlans = (plans ?? []) as { id: string; status: string; title: string }[];
     if ((arts ?? []).length || tomorrowPlans.some((p) => !ACTIVE_PLAN.includes(p.status))) {
-      return { ok: true, skipped: "already-prepared", summary: `Tomorrow (${tomorrow.date}) already has an article.` };
+      return logQuietRun(db, actor, "DailyArticle", "prepare_tomorrow",
+        { ok: true, skipped: "already-prepared", summary: `Tomorrow (${tomorrow.date}) already has an article.` });
     }
 
     return runPlainTask<JobResult>(
@@ -145,7 +158,8 @@ export async function prepareTomorrowsArticle(db: SupabaseClient, actor: Actor, 
             throwIfDbError(error, "Loading keywords");
             const picked = pickKeywords((kw ?? []) as { id: string; priority: string; created_at: string }[], 10);
             if (picked.length === 0) {
-              return { result: { ok: true, skipped: "no-keywords", summary: "No open recommendations and no unanalysed active keywords. Add keywords to keep the daily article going." }, outputSummary: "Nothing to write about: add keywords" };
+              const msg = "Nothing to write about: every keyword has been analysed and there are no open new-article recommendations. Add keywords to keep the daily article going.";
+              return { result: { ok: true, skipped: "no-keywords", summary: msg }, outputSummary: msg };
             }
             const analysis = await analyzeKeywordsCore(db, settings, picked.map((k) => k.id), actor);
             steps.push(`Analysed ${picked.length} keyword(s) → ${analysis.clusters.length} cluster(s)`);

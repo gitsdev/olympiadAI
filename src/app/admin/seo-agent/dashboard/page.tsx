@@ -7,6 +7,7 @@ import { SeoAgentShell } from "@/components/seo-agent/SeoAgentShell";
 import { SchemaMissingNotice } from "@/components/seo-agent/SchemaMissingNotice";
 import { TomorrowArticleCard } from "@/components/seo-agent/TomorrowArticleCard";
 import { AgentActivityList } from "@/components/seo-agent/AgentActivityList";
+import { AutomationCard } from "@/components/seo-agent/AutomationCard";
 import { StatCard } from "@/components/admin/StatCard";
 import { OACard, OACardHeader, OACardTitle } from "@/components/ui";
 import { getSeoSettings } from "@/lib/seo-agent/settings-data";
@@ -60,6 +61,7 @@ function DashboardBody({ settings, data }: NonNullable<Awaited<ReturnType<typeof
   return (
     <div className="flex flex-col gap-5">
       <TomorrowArticleCard article={data.tomorrow} tomorrowDate={data.tomorrowDate} timezone={settings.timezone} />
+      <AutomationCard status={data.automation} timezone={settings.timezone} />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard label="Keywords" value={String(c.keywords)} hint="Not archived" Icon={KeyRound} />

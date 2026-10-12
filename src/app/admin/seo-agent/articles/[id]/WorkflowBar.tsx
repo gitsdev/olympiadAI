@@ -112,6 +112,14 @@ export function WorkflowBar(p: Props) {
         {s === "SCHEDULED" && p.scheduledFor && (
           <span style={{ color: "var(--cobalt-700)" }}>Publishes automatically {formatZoned(p.scheduledFor, p.timezone)}</span>
         )}
+        {s === "APPROVED" && (
+          <span style={{ color: "var(--warning-tx)" }}>
+            Approved but not scheduled, so it won&apos;t publish by itself. Schedule it or use Publish now.
+          </span>
+        )}
+        {["DRAFT", "REVIEW", "REVIEW_REQUIRED"].includes(s) && p.plannedPublishAt && new Date(p.plannedPublishAt) > new Date() && (
+          <span>Approving schedules it for the planned time, {formatZoned(p.plannedPublishAt, p.timezone)}.</span>
+        )}
       </div>
 
       {error && (

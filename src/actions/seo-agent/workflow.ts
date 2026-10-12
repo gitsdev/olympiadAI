@@ -9,7 +9,9 @@ import { seoDb } from "@/lib/seo-agent/db";
 import { errorMessage, seoLog } from "@/lib/seo-agent/logger";
 import { getSeoSettings } from "@/lib/seo-agent/settings-data";
 import { EDITABLE_ARTICLE_STATUSES } from "@/lib/seo-agent/articles";
-import { canTransition, parseSchedule, planStatusFor, TRANSITIONS, type ValidationIssue, type WorkflowAction } from "@/lib/seo-agent/publishing/rules";
+import {
+  canTransition, MIN_SCHEDULE_LEAD_MS, parseSchedule, planStatusFor, TRANSITIONS, type ValidationIssue, type WorkflowAction,
+} from "@/lib/seo-agent/publishing/rules";
 import { buildPublishCheck, loadArticleForPublish, publishArticle, storeImage } from "@/lib/seo-agent/publishing/publisher";
 
 type Result<T = object> = ({ ok: true } & T) | { ok: false; error: string; issues?: ValidationIssue[] };
@@ -44,8 +46,13 @@ export async function submitForReview(articleId: string): Promise<Result> {
   return transition(articleId, "SUBMIT_FOR_REVIEW");
 }
 
-/** Records the human approval (§18). Blocked while hard validation errors remain. */
-export async function approveArticle(articleId: string): Promise<Result> {
+/**
+ * Records the human approval (§18). Blocked while hard validation errors
+ * remain. If the content plan's publication time is still ahead, the
+ * article is scheduled for it straight away (approve → schedule → automatic
+ * publishing); otherwise it stays Approved and needs a schedule or Publish now.
+ */
+export async function approveArticle(articleId: string): Promise<Result<{ scheduledFor: string | null }>> {
   const admin = await requireAdmin();
   if (!uuid.safeParse(articleId).success) return { ok: false, error: "Invalid article." };
   try {
@@ -63,8 +70,22 @@ export async function approveArticle(articleId: string): Promise<Result> {
       approved_by: admin.id,
       approved_at: new Date().toISOString(),
     });
-    if (res.ok) await logAdminAction(admin.id, "seo_article_approved", "seo_article", articleId, { title: a.title });
-    return res;
+    if (!res.ok) return res;
+    await logAdminAction(admin.id, "seo_article_approved", "seo_article", articleId, { title: a.title });
+
+    let scheduledFor: string | null = null;
+    if (a.content_plan_id) {
+      const { data: plan } = await db.from("seo_content_plans").select("planned_publish_at").eq("id", a.content_plan_id).maybeSingle();
+      const at = (plan as { planned_publish_at: string | null } | null)?.planned_publish_at;
+      if (at && new Date(at).getTime() > Date.now() + MIN_SCHEDULE_LEAD_MS) {
+        const s = await transition(articleId, "SCHEDULE", { scheduled_for: at });
+        if (s.ok) {
+          scheduledFor = at;
+          await logAdminAction(admin.id, "seo_article_scheduled", "seo_article", articleId, { at, via: "approve" });
+        }
+      }
+    }
+    return { ok: true, scheduledFor };
   } catch (err) {
     seoLog.error("workflow.approve_failed", { articleId, error: errorMessage(err) });
     return { ok: false, error: `Approval failed: ${errorMessage(err)}` };
