@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { MailCheck } from "lucide-react";
+import { AlertTriangle, MailCheck } from "lucide-react";
 import { Logo } from "@/components/brand";
 import { createClient } from "@/lib/supabase/server";
 import { logout } from "@/actions/auth";
@@ -53,6 +53,18 @@ export default async function VerifyEmailPage() {
           <span className="font-semibold break-all" style={{ color: "var(--ink-900)" }}>{user.email}</span>.
           Enter it below to unlock your account.
         </p>
+
+        <div
+          role="note"
+          className="mb-6 flex items-start gap-2.5 px-3.5 py-3 rounded-[var(--r-md)] border text-left text-[13px] leading-[1.5]"
+          style={{ background: "var(--warning-bg)", color: "var(--warning-tx)", borderColor: "var(--gold-300)" }}
+        >
+          <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+          <p>
+            <strong>Can&rsquo;t find the email?</strong> Check your <strong>Junk</strong> or <strong>Spam</strong> folder.
+            If it&rsquo;s there, mark it as &ldquo;Not spam&rdquo; so future emails reach your inbox.
+          </p>
+        </div>
 
         <VerifyEmailForm />
 
