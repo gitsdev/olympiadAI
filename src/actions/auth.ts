@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { ATTRIBUTION_COOKIE, classifySource, parseAttribution } from "@/lib/attribution";
+import { issueVerificationCode } from "@/lib/email-verification";
 
 export async function login(formData: FormData) {
   const supabase = await createClient();
@@ -26,21 +27,30 @@ export async function signup(formData: FormData) {
   const email    = (formData.get("email")     as string).trim();
   const password =  formData.get("password")  as string;
 
-  const { data, error } = await supabase.auth.signUp({
+  if (password.length < 6) return { error: "Password must be at least 6 characters." };
+
+  // Created via the admin API (not auth.signUp) so Supabase never sends its own
+  // confirmation email — the email is verified by our Brevo OTP instead, and
+  // the email_otp_pending flag keeps the user on /verify-email until then.
+  const { createServiceClient } = await import("@/lib/supabase/service");
+  const service = createServiceClient();
+  const { data, error } = await service.auth.admin.createUser({
     email,
     password,
-    options: {
-      data: { full_name: fullName, role: "student" },
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/onboarding`,
-    },
+    email_confirm: true,
+    user_metadata: { full_name: fullName, role: "student" },
+    app_metadata: { email_otp_pending: true },
   });
 
-  if (error) return { error: error.message };
+  if (error) {
+    if (error.code === "email_exists" || /already.*registered/i.test(error.message)) {
+      return { error: "An account with this email already exists. Try signing in instead." };
+    }
+    return { error: error.message };
+  }
   if (!data.user) return { error: "Signup failed — please try again." };
 
   // Create the profile row using service role so RLS and triggers are not a factor
-  const { createServiceClient } = await import("@/lib/supabase/service");
-  const service = createServiceClient();
   const attribution = parseAttribution((await cookies()).get(ATTRIBUTION_COOKIE)?.value);
   const { error: profileError } = await service.from("profiles").upsert(
     {
@@ -50,18 +60,21 @@ export async function signup(formData: FormData) {
       role:      "student",
       signup_source:      classifySource(attribution),
       signup_attribution: attribution,
+      email_verified:     false,
     },
     { onConflict: "id" }
   );
 
   if (profileError) return { error: profileError.message };
 
+  const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+  if (signInError) return { error: signInError.message };
+
+  // A failed send isn't fatal — /verify-email offers "Resend code".
+  await issueVerificationCode({ id: data.user.id, email, name: fullName });
+
   revalidatePath("/", "layout");
-
-  // No session yet — email confirmation required
-  if (!data.session) redirect("/signup/confirm");
-
-  redirect("/onboarding");
+  redirect("/verify-email");
 }
 
 export async function requestPasswordReset(formData: FormData) {

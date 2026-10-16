@@ -41,6 +41,7 @@ export interface ProfileRow {
   role: "student" | "parent" | "teacher" | "school_admin" | "platform_admin";
   avatar_url: string | null; created_at: string; updated_at: string;
   email_opt_out: boolean; unsubscribe_token: string;
+  email_verified: boolean; email_verified_at: string | null;
 }
 
 export type StudentAccountStatus = "active" | "suspended";
@@ -243,7 +244,7 @@ export interface Database {
       profiles: {
         Row: ProfileRow;
         Insert: { id: string; email: string; full_name: string; role?: ProfileRow["role"]; avatar_url?: string | null };
-        Update: Partial<{ email: string; full_name: string; role: ProfileRow["role"]; avatar_url: string | null; email_opt_out: boolean }>;
+        Update: Partial<{ email: string; full_name: string; role: ProfileRow["role"]; avatar_url: string | null; email_opt_out: boolean; email_verified: boolean; email_verified_at: string | null }>;
       };
       students: {
         Row: StudentRow;

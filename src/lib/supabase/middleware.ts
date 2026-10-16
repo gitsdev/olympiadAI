@@ -49,6 +49,28 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Email OTP gate — signed-in users who haven't verified their email can
+  // only reach /verify-email (plus public pages). Mirrors
+  // isEmailOtpPending() in src/lib/email-verification.ts, inlined because
+  // that module is server-only (node:crypto, service role).
+  const otpPending = user?.app_metadata?.email_otp_pending === true;
+  if (otpPending) {
+    if (pathname.startsWith("/api/") && pathname !== "/api/unsubscribe") {
+      return NextResponse.json({ error: "Please verify your email first." }, { status: 403 });
+    }
+    const gated = (!isPublic || pathname === "/onboarding" || pathname === "/login") && pathname !== "/verify-email";
+    if (gated) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/verify-email";
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
+  } else if (user && pathname === "/verify-email") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/dashboard";
+    return NextResponse.redirect(url);
+  }
+
   // Redirect logged-in users away from login/onboarding
   if (user && (pathname === "/login")) {
     const url = request.nextUrl.clone();
