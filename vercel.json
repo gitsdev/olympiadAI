@@ -12,6 +12,10 @@
     {
       "path": "/api/cron/backlinks",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/question-paper",
+      "schedule": "0 2 * * *"
     }
   ]
 }

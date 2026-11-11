@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Home, Sparkles, PencilLine, BarChart2, Swords,
-  Route, FileText, Trophy, Flame, X, Zap, Brain,
+  Route, FileText, Trophy, Flame, X, Zap, Brain, FileCheck2,
 } from "lucide-react";
 import { Logo } from "@/components/brand";
 import { OAAvatar } from "@/components/ui";
@@ -21,6 +21,7 @@ const NAV_ITEMS = [
 const LIBRARY_ITEMS = [
   { href: "/learn",         label: "Learning paths", Icon: Route },
   { href: "/tests",         label: "Mock tests",     Icon: FileText },
+  { href: "/question-paper-solver", label: "Paper Solver", Icon: FileCheck2 },
   { href: "/maths-tricks",  label: "Maths Tricks",   Icon: Zap },
   { href: "/achievements",  label: "Achievements",   Icon: Trophy },
   { href: "/brain-booster", label: "Brain Booster",  Icon: Brain },
@@ -77,7 +78,7 @@ export function Sidebar({ userName, board, cls, streakDays, mobileOpen, onClose 
       <div className="px-5 pt-5 pb-2 t-overline">Library</div>
       <nav className="flex flex-col gap-0.5 px-3">
         {LIBRARY_ITEMS.map(({ href, label, Icon }) => (
-          <NavItem key={href} href={href} label={label} Icon={Icon} active={pathname === href} onClick={onClose} />
+          <NavItem key={href} href={href} label={label} Icon={Icon} active={pathname === href || (href === "/question-paper-solver" && pathname.startsWith(`${href}/`))} onClick={onClose} />
         ))}
       </nav>
 

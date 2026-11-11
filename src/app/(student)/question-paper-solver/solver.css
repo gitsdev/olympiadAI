@@ -1,0 +1,28 @@
+/* Question Paper Solver — Markdown/maths content inside answer cards. */
+
+.qps-md { font-size: 14px; line-height: 1.65; color: var(--ink-900); overflow-wrap: anywhere; }
+.qps-md > :first-child { margin-top: 0; }
+.qps-md > :last-child { margin-bottom: 0; }
+.qps-md p { margin: 0.35em 0; }
+.qps-md h1, .qps-md h2, .qps-md h3, .qps-md h4 {
+  font-family: var(--font-display); font-weight: 700; letter-spacing: -0.01em;
+  font-size: 14.5px; margin: 0.9em 0 0.3em; color: var(--ink-900);
+}
+.qps-md ul, .qps-md ol { margin: 0.35em 0; padding-left: 1.4em; }
+.qps-md ul { list-style: disc; }
+.qps-md ol { list-style: decimal; }
+.qps-md li { margin: 0.15em 0; }
+.qps-md strong { font-weight: 700; }
+.qps-md code { font-family: var(--font-mono); font-size: 0.9em; background: var(--fill-100); padding: 0.05em 0.35em; border-radius: 4px; }
+.qps-md blockquote { border-left: 3px solid var(--line-200); padding-left: 0.8em; color: var(--ink-700); margin: 0.4em 0; }
+.qps-md table { border-collapse: collapse; margin: 0.5em 0; font-size: 13px; display: block; overflow-x: auto; max-width: 100%; }
+.qps-md th, .qps-md td { border: 1px solid var(--line-200); padding: 4px 10px; text-align: left; vertical-align: top; }
+.qps-md th { background: var(--cobalt-50); font-weight: 600; }
+.qps-md .katex { font-size: 1.06em; }
+.qps-md .katex-display { margin: 0.5em 0; overflow-x: auto; overflow-y: hidden; padding: 2px 0; }
+.qps-md-inline { display: inline; }
+.qps-md-inline p { display: inline; margin: 0; }
+
+@media print {
+  .qps-no-print { display: none !important; }
+}

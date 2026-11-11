@@ -18,7 +18,7 @@ const NAV_TIMEOUT_MS = 15_000; // safety net if a navigation never lands
 
 // Real-time screens manage their own loading UI; a blocking overlay there
 // would get in the way of chat replies and timed answers.
-const NO_FETCH_TRACKING_PREFIXES = ["/tutor", "/battle"];
+const NO_FETCH_TRACKING_PREFIXES = ["/tutor", "/battle", "/question-paper-solver"];
 
 let armedUntil = 0;
 let inflight = 0;

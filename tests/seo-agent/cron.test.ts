@@ -51,7 +51,8 @@ describe("vercel.json", () => {
   const config = JSON.parse(readFileSync(join(process.cwd(), "vercel.json"), "utf8")) as { crons: { path: string; schedule: string }[] };
 
   it("schedules both jobs", () => {
-    expect(config.crons.map((c) => c.path).sort()).toEqual(["/api/cron/backlinks", "/api/cron/daily-article", "/api/cron/publish-scheduled"]);
+    // Other features (e.g. the Question Paper Solver) add their own crons.
+    expect(config.crons.map((c) => c.path)).toEqual(expect.arrayContaining(["/api/cron/backlinks", "/api/cron/daily-article", "/api/cron/publish-scheduled"]));
   });
 
   it("runs each cron at most once a day, so deploys work on Vercel Hobby", () => {
