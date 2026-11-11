@@ -3,6 +3,7 @@ import { Bricolage_Grotesque, Hanken_Grotesk, JetBrains_Mono } from "next/font/g
 import { GoogleAnalytics } from "@next/third-parties/google";
 import "./globals.css";
 import { AttributionCapture } from "@/components/attribution/AttributionCapture";
+import { GlobalSpinner } from "@/components/layout/GlobalSpinner";
 
 const bricolage = Bricolage_Grotesque({
   variable: "--font-bricolage",
@@ -70,6 +71,7 @@ export default function RootLayout({
       <body className="min-h-full antialiased" style={{ fontFamily: "var(--font-sans)" }}>
         {children}
         <AttributionCapture />
+        <GlobalSpinner />
       </body>
       {process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID && (
         <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID} />
