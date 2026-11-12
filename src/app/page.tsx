@@ -3,7 +3,7 @@ import {
   Sparkles, PencilLine, Target, BarChart2, Route, Trophy,
   ArrowRight, Play, Check, CircleCheck, Star, Users,
   BookOpen, Sigma, FlaskConical, Globe2, ShieldCheck,
-  Brain, Gauge, Eye, Bot, Flame,
+  Brain, Gauge, Eye, Bot, Flame, Upload, ScanText, FileCheck2, ArrowDown,
 } from "lucide-react";
 import { OAButton, OACard, OARing, OASubjectDot, OAAvatar, SUBJECT_COLORS, type Subject } from "@/components/ui";
 import { MktNav } from "./MktNav";
@@ -229,6 +229,183 @@ function Subjects() {
               <p className="text-[12.5px] leading-[1.5]" style={{ color: "var(--ink-700)" }}>{desc}</p>
             </OACard>
           ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ── AI Question Paper Solver ────────────────────────────────────────── */
+const SOLVER_STEPS = [
+  { Icon: Upload,    title: "Upload any paper",       desc: "PDF or Word, typed or scanned — school exams, Olympiads, practice tests." },
+  { Icon: ScanText,  title: "AI reads every question", desc: "Equations, diagrams, MCQs, match-the-following — in the original order." },
+  { Icon: FileCheck2, title: "Get the answer sheet",   desc: "Step-by-step solutions you can edit, then download as PDF or Word." },
+];
+
+const SOLVER_TAGS = ["Classes 1–10", "CBSE · ICSE", "Maths · Science · English · GK", "Step-by-step maths", "Unclear questions flagged, never guessed"];
+
+/** Mock "question paper" sheet for the visual. */
+function PaperMock() {
+  return (
+    <div
+      className="relative w-full max-w-[300px] rounded-[var(--r-md)] p-5 sm:p-6 -rotate-2"
+      style={{ background: "#fff", border: "1px solid var(--line-200)", boxShadow: "var(--shadow-md)", fontFamily: "Georgia, 'Times New Roman', serif" }}
+      aria-hidden
+    >
+      <p className="text-center text-[13px] font-bold" style={{ color: "var(--ink-900)" }}>Half-Yearly Examination</p>
+      <p className="text-center text-[10.5px] mb-3" style={{ color: "var(--ink-500)" }}>Class 7 · Mathematics · CBSE</p>
+      <div className="h-px mb-3" style={{ background: "var(--ink-900)", opacity: 0.6 }} />
+      <p className="text-[10.5px] font-bold mb-1.5" style={{ color: "var(--ink-900)" }}>Section A</p>
+      <div className="flex flex-col gap-2 text-[12px] leading-snug" style={{ color: "var(--ink-900)" }}>
+        <p>1. The value of ¾ + ¼ is<br /><span className="pl-3 text-[11px]" style={{ color: "var(--ink-700)" }}>(a) ½ &nbsp;(b) 1 &nbsp;(c) 2 &nbsp;(d) ³⁄₁₆</span></p>
+        <p>2. Find x if x² = 49, x &gt; 0.</p>
+        <p>3. Find the area of the right triangle shown.</p>
+        <svg width="96" height="58" viewBox="0 0 96 58" className="ml-3">
+          <polygon points="6,52 90,52 6,6" fill="none" stroke="currentColor" strokeWidth="1.4" />
+          <rect x="6" y="44" width="8" height="8" fill="none" stroke="currentColor" strokeWidth="1" />
+          <text x="40" y="57" fontSize="8">10 cm</text>
+          <text x="0" y="32" fontSize="8" transform="rotate(-90 6 32)">6 cm</text>
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+/** Mock answer-sheet card for the visual. */
+function AnswerMock() {
+  return (
+    <div
+      className="w-full max-w-[320px] rounded-[var(--r-lg)] overflow-hidden rotate-1"
+      style={{ background: "var(--surface)", border: "1px solid var(--line-200)", boxShadow: "var(--shadow-lg)" }}
+      aria-hidden
+    >
+      <div className="px-4 py-3 flex items-center justify-between" style={{ background: "var(--cobalt-50)" }}>
+        <span className="font-bold text-[13px]" style={{ fontFamily: "var(--font-display)", color: "var(--ink-900)" }}>
+          Question Paper Solutions
+        </span>
+        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "var(--success-bg)", color: "var(--success)" }}>
+          3/3 solved
+        </span>
+      </div>
+      <div className="p-4 flex flex-col gap-3 text-[12px]" style={{ color: "var(--ink-900)" }}>
+        <div>
+          <p className="font-bold text-[12.5px] mb-1" style={{ fontFamily: "var(--font-display)" }}>Question 1</p>
+          <div className="inline-flex items-center gap-1.5 rounded-[var(--r-sm)] px-2 py-1" style={{ background: "var(--success-bg)" }}>
+            <Check size={12} style={{ color: "var(--success)" }} />
+            <span className="font-semibold">(b) 1</span>
+          </div>
+          <p className="mt-1" style={{ color: "var(--ink-700)" }}>Same denominator → add numerators: ⁴⁄₄ = 1</p>
+        </div>
+        <div>
+          <p className="font-bold text-[12.5px] mb-1" style={{ fontFamily: "var(--font-display)" }}>Question 2</p>
+          <p style={{ color: "var(--ink-700)" }}>1. x² = 49 &nbsp;2. x = √49 &nbsp;3. x = 7</p>
+          <div className="mt-1.5 rounded-r-[var(--r-sm)] border-l-[3px] px-2 py-1 font-bold" style={{ borderColor: "var(--cobalt-500)", background: "var(--cobalt-50)" }}>
+            <span className="text-[9.5px] tracking-wider mr-1.5" style={{ color: "var(--cobalt-700)" }}>FINAL ANSWER</span>x = 7
+          </div>
+        </div>
+        <div>
+          <p className="font-bold text-[12.5px] mb-1" style={{ fontFamily: "var(--font-display)" }}>Question 3</p>
+          <p style={{ color: "var(--ink-700)" }}>Area = ½ × 10 × 6 = <strong style={{ color: "var(--ink-900)" }}>30 cm²</strong></p>
+        </div>
+        <div className="flex gap-2 pt-1">
+          <span className="flex-1 text-center text-[11px] font-semibold rounded-[var(--r-sm)] py-1.5 text-white" style={{ background: "var(--cobalt-500)" }}>
+            Download PDF
+          </span>
+          <span className="flex-1 text-center text-[11px] font-semibold rounded-[var(--r-sm)] py-1.5" style={{ border: "1px solid var(--line-300)", color: "var(--ink-900)" }}>
+            Download Word
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SolverPromo() {
+  return (
+    <section
+      id="paper-solver"
+      className="scroll-mt-20 relative overflow-hidden py-12 sm:py-20 px-5 sm:px-8 border-t border-[var(--line-200)]"
+      style={{ background: "linear-gradient(180deg, var(--gold-50) 0%, var(--paper) 100%)" }}
+    >
+      <div className="absolute inset-0 graph-bg opacity-60 pointer-events-none" style={{ backgroundSize: "24px 24px" }} />
+      <div className="relative max-w-[1160px] mx-auto">
+        <div className="text-center max-w-[680px] mx-auto mb-10 sm:mb-12">
+          <div
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-bold mb-4"
+            style={{ background: "var(--ink-900)", color: "var(--gold-400)" }}
+          >
+            <Sparkles size={13} /> NEW · AI Question Paper Solver
+          </div>
+          <h2
+            className="font-bold leading-[1.12] tracking-tight mb-3.5"
+            style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.025em", color: "var(--ink-900)", fontSize: "clamp(26px, 4vw, 40px)" }}
+          >
+            Upload a question paper.<br className="hidden sm:block" /> Get a complete answer sheet.
+          </h2>
+          <p className="text-[15px] sm:text-[17px] leading-[1.6]" style={{ color: "var(--ink-700)" }}>
+            Every question answered in the original order, with explanations written for your class —
+            ready to check, edit and download in minutes.
+          </p>
+        </div>
+
+        {/* Paper → answer sheet visual */}
+        <div className="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-4 mb-10 sm:mb-12">
+          <PaperMock />
+          <div className="flex flex-col items-center gap-1.5 shrink-0" aria-hidden>
+            <div
+              className="w-12 h-12 rounded-full flex items-center justify-center"
+              style={{ background: "var(--gold-400)", boxShadow: "var(--shadow-md)" }}
+            >
+              <Sparkles size={20} style={{ color: "var(--ink-900)" }} />
+            </div>
+            <ArrowDown size={22} className="md:hidden" style={{ color: "var(--gold-700)" }} />
+            <ArrowRight size={22} className="hidden md:block" style={{ color: "var(--gold-700)" }} />
+          </div>
+          <AnswerMock />
+        </div>
+
+        {/* Steps */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+          {SOLVER_STEPS.map(({ Icon, title, desc }, i) => (
+            <div
+              key={title}
+              className="rounded-[var(--r-lg)] p-5 flex gap-3.5"
+              style={{ background: "oklch(1 0 0 / 0.75)", border: "1px solid var(--gold-100)", backdropFilter: "blur(4px)" }}
+            >
+              <div className="shrink-0 flex flex-col items-center gap-1.5">
+                <div className="w-10 h-10 rounded-[var(--r-md)] flex items-center justify-center" style={{ background: "var(--gold-100)" }}>
+                  <Icon size={19} style={{ color: "var(--gold-700)" }} />
+                </div>
+                <span className="text-[11px] font-bold" style={{ fontFamily: "var(--font-mono)", color: "var(--gold-700)" }}>0{i + 1}</span>
+              </div>
+              <div>
+                <h3 className="font-bold text-[15.5px] mb-1 tracking-tight" style={{ fontFamily: "var(--font-display)", color: "var(--ink-900)" }}>
+                  {title}
+                </h3>
+                <p className="text-[13px] leading-[1.55]" style={{ color: "var(--ink-700)" }}>{desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap justify-center gap-2 mb-8">
+          {SOLVER_TAGS.map((t) => (
+            <span
+              key={t}
+              className="text-[12.5px] font-semibold px-3 py-1.5 rounded-full"
+              style={{ background: "var(--surface)", border: "1px solid var(--line-200)", color: "var(--ink-700)" }}
+            >
+              {t}
+            </span>
+          ))}
+        </div>
+
+        <div className="flex justify-center">
+          <Link href="/onboarding" className="w-full sm:w-auto">
+            <OAButton variant="gold" size="lg" className="w-full sm:w-auto">
+              Solve your first paper <ArrowRight size={18} />
+            </OAButton>
+          </Link>
         </div>
       </div>
     </section>
@@ -678,6 +855,7 @@ export default function MarketingPage() {
       <Hero />
       <Features />
       <Subjects />
+      <SolverPromo />
       <BattlePromo />
       <BrainBoosterPromo />
       <HowItWorks />
