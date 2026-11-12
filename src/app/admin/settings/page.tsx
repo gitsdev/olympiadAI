@@ -29,6 +29,8 @@ const ACTION_LABELS: Record<string, string> = {
   reengagement_emails_sent: "Sent re-engagement emails",
   campaign_emails_sent: "Sent bulk campaign emails",
   campaign_email_sent: "Emailed student",
+  maintenance_enabled: "Turned ON maintenance mode",
+  maintenance_disabled: "Turned off maintenance mode",
 };
 
 export default async function AdminSettingsPage() {

@@ -3,6 +3,9 @@ import { Users, UserCheck, FileText, Target, Sparkles, AlertTriangle } from "luc
 import { requireAdmin } from "@/lib/admin/auth";
 import { getDashboardStats, getActivitySeries, getPlatformSubjectPerformance, getStudentsNeedingAttention } from "@/lib/admin/dashboard";
 import { getAdminSettings } from "@/lib/admin/settings";
+import { readMaintenanceState } from "@/lib/maintenance";
+import { createServiceClient } from "@/lib/supabase/service";
+import { MaintenanceToggle } from "@/components/admin/MaintenanceToggle";
 import { resolveDateRange } from "@/lib/admin/date-range";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { DateRangeFilter } from "@/components/admin/DateRangeFilter";
@@ -28,7 +31,10 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   const admin = await requireAdmin();
   const sp = await searchParams;
   const { from, to, label } = resolveDateRange(sp);
-  const settings = await getAdminSettings();
+  const [settings, maintenance] = await Promise.all([
+    getAdminSettings(),
+    readMaintenanceState(createServiceClient()),
+  ]);
 
   const [stats, series, subjectPerf, attention] = await Promise.all([
     getDashboardStats(from, to),
@@ -40,6 +46,8 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   return (
     <AdminShell adminName={admin.fullName} title="Dashboard" subtitle={`OlympiadIQ platform overview — ${label}`}>
       <div className="flex flex-col gap-5">
+        <MaintenanceToggle state={maintenance} />
+
         <DateRangeFilter />
 
         <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">

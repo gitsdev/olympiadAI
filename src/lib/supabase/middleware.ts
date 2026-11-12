@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { safeNextPath } from "@/lib/safe-redirect";
+import { getMaintenanceStateCached, isMaintenanceExempt } from "@/lib/maintenance";
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -29,10 +30,35 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
+  // Maintenance mode — everyone except platform admins is sent to
+  // /maintenance (pages) or gets a 503 (API). Toggled from /admin/dashboard.
+  if (!isMaintenanceExempt(pathname)) {
+    const maintenance = await getMaintenanceStateCached(supabase);
+    if (maintenance.enabled) {
+      let admin = false;
+      if (user) {
+        const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
+        admin = (profile as { role?: string } | null)?.role === "platform_admin";
+      }
+      if (!admin) {
+        if (pathname.startsWith("/api/")) {
+          return NextResponse.json(
+            { error: "OlympiadIQ is under maintenance. Please try again shortly." },
+            { status: 503, headers: { "Retry-After": "600" } },
+          );
+        }
+        const url = request.nextUrl.clone();
+        url.pathname = "/maintenance";
+        url.search = "";
+        return NextResponse.redirect(url);
+      }
+    }
+  }
+
   // Public routes that don't need auth
   const PUBLIC = [
     "/", "/start", "/login", "/signup", "/signup/confirm", "/onboarding", "/auth/callback", "/auth/confirm",
-    "/forgot-password", "/reset-password", "/privacy", "/unsubscribe",
+    "/forgot-password", "/reset-password", "/privacy", "/unsubscribe", "/maintenance",
   ];
   const isPublic = PUBLIC.some((p) => pathname === p)
     || pathname.startsWith("/api/")
