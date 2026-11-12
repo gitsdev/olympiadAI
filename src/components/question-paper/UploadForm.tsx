@@ -56,7 +56,7 @@ export function UploadForm() {
   const [subject, setSubject] = useState(AUTO);
   const [otherSubject, setOtherSubject] = useState("");
   const [examType, setExamType] = useState(AUTO);
-  const [detailLevel, setDetailLevel] = useState<string>("detailed");
+  const [detailLevel, setDetailLevel] = useState<string>("short");
 
   const busy = phase !== "idle";
 
