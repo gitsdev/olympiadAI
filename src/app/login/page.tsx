@@ -1,15 +1,18 @@
 "use client";
 
-import { useActionState } from "react";
+import { use, useActionState } from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Logo } from "@/components/brand";
 import { OAButton } from "@/components/ui";
 import { login } from "@/actions/auth";
+import { safeNextPath } from "@/lib/safe-redirect";
 
 const initialState = { error: "" };
 
-export default function LoginPage() {
+export default function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
+  // Where to go after signing in (validated again on the server).
+  const next = safeNextPath(use(searchParams).next);
   const [state, formAction, pending] = useActionState(
     async (_: typeof initialState, formData: FormData) => {
       const result = await login(formData);
@@ -33,6 +36,7 @@ export default function LoginPage() {
         className="oa-fade relative w-[380px] rounded-[var(--r-2xl)] border border-[var(--line-200)] shadow-[var(--shadow-lg)] p-8"
         style={{ background: "var(--surface)" }}
       >
+        {next && <input type="hidden" name="next" value={next} />}
         <Link href="/" className="inline-block w-fit">
           <Logo size={32} />
         </Link>

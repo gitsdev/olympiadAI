@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { safeNextPath } from "@/lib/safe-redirect";
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -46,6 +47,9 @@ export async function updateSession(request: NextRequest) {
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
+    // Remember where they were going, so login can send them back there.
+    const next = safeNextPath(`${pathname}${request.nextUrl.search}`);
+    url.search = next ? `?next=${encodeURIComponent(next)}` : "";
     return NextResponse.redirect(url);
   }
 
@@ -74,8 +78,10 @@ export async function updateSession(request: NextRequest) {
   // Redirect logged-in users away from login/onboarding
   if (user && (pathname === "/login")) {
     const url = request.nextUrl.clone();
+    const next = safeNextPath(request.nextUrl.searchParams.get("next"));
     url.pathname = "/dashboard";
-    return NextResponse.redirect(url);
+    url.search = "";
+    return NextResponse.redirect(next ? new URL(next, request.nextUrl.origin) : url);
   }
 
   return supabaseResponse;

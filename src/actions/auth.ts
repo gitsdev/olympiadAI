@@ -6,6 +6,7 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { ATTRIBUTION_COOKIE, classifySource, parseAttribution } from "@/lib/attribution";
 import { issueVerificationCode } from "@/lib/email-verification";
+import { safeNextPath } from "@/lib/safe-redirect";
 
 export async function login(formData: FormData) {
   const supabase = await createClient();
@@ -18,7 +19,8 @@ export async function login(formData: FormData) {
   if (error) return { error: error.message };
 
   revalidatePath("/", "layout");
-  redirect("/dashboard");
+  // Back to the page that sent them to login (same-site paths only).
+  redirect(safeNextPath(formData.get("next")) ?? "/dashboard");
 }
 
 export async function signup(formData: FormData) {
