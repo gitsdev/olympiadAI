@@ -401,7 +401,9 @@ function SolverPromo() {
         </div>
 
         <div className="flex justify-center">
-          <Link href="/onboarding" className="w-full sm:w-auto">
+          {/* Signed-in users go straight to the solver; the auth proxy sends
+              everyone else to /login. */}
+          <Link href="/question-paper-solver" className="w-full sm:w-auto">
             <OAButton variant="gold" size="lg" className="w-full sm:w-auto">
               Solve your first paper <ArrowRight size={18} />
             </OAButton>
