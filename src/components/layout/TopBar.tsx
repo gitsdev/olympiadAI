@@ -1,7 +1,9 @@
 "use client";
 
-import { Bell, Menu, Search } from "lucide-react";
+import Link from "next/link";
+import { Bell, Coins, Menu, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useStudent } from "@/contexts/StudentContext";
 
 interface TopBarProps {
   title: string;
@@ -12,6 +14,7 @@ interface TopBarProps {
 }
 
 export function TopBar({ title, subtitle, onSearchOpen, onMenuOpen, className }: TopBarProps) {
+  const { creditBalance } = useStudent();
   return (
     <header
       className={cn(
@@ -77,6 +80,28 @@ export function TopBar({ title, subtitle, onSearchOpen, onMenuOpen, className }:
       >
         <Search size={18} style={{ color: "var(--ink-700)" }} />
       </button>
+
+      {/* Credit balance → My Credits */}
+      {creditBalance !== null && (
+        <Link
+          href="/credits"
+          className={cn(
+            "h-9 flex items-center gap-1.5 px-2.5 rounded-[var(--r-md)] shrink-0",
+            "border border-[var(--gold-300)] bg-[var(--gold-50)]",
+            "transition-colors duration-[120ms] hover:bg-[var(--gold-100)]"
+          )}
+          aria-label={`${creditBalance} credits — open My Credits`}
+          title="My Credits"
+        >
+          <Coins size={16} style={{ color: "var(--gold-700)" }} />
+          <span
+            className="text-[13px] font-bold tabular-nums"
+            style={{ fontFamily: "var(--font-mono)", color: "var(--ink-900)" }}
+          >
+            {creditBalance.toLocaleString("en-IN")}
+          </span>
+        </Link>
+      )}
 
       {/* Bell */}
       <button

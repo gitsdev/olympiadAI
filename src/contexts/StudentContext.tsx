@@ -10,6 +10,8 @@ export interface StudentUser {
   streakDays: number;
   totalPoints: number;
   subjects: string[];
+  /** Credit wallet balance; null when unavailable (e.g. wallet tables not deployed yet). */
+  creditBalance: number | null;
 }
 
 const DEFAULT: StudentUser = {
@@ -20,6 +22,7 @@ const DEFAULT: StudentUser = {
   streakDays: 0,
   totalPoints: 0,
   subjects: [],
+  creditBalance: null,
 };
 
 const StudentContext = createContext<StudentUser>(DEFAULT);

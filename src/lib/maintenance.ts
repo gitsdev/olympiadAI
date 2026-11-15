@@ -53,5 +53,8 @@ export function isMaintenanceExempt(pathname: string): boolean {
     // Secret-authenticated background jobs.
     || pathname.startsWith("/api/cron/")
     || pathname === "/api/question-paper/worker"
+    // Razorpay webhook (signature-authenticated) — payments made just before
+    // maintenance started must still be credited.
+    || pathname === "/api/credits/webhook"
   );
 }
