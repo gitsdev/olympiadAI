@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertCircle, FileText, FileType2, Loader2, RefreshCw, Sparkles, UploadCloud, X } from "lucide-react";
+import { AlertCircle, Coins, FileText, FileType2, Loader2, RefreshCw, Sparkles, UploadCloud, X } from "lucide-react";
 import { OAButton, OACard } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import {
@@ -48,6 +49,19 @@ export function UploadForm() {
   const [file, setFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Credits: the current price (null = free right now) and whether the last
+  // start failed for lack of credits (shows a "Buy credits" link).
+  const [creditCost, setCreditCost] = useState<number | null>(null);
+  const [needsCredits, setNeedsCredits] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/credits/pricing")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { features?: { featureKey: string; creditCost: number }[] } | null) => {
+        setCreditCost(d?.features?.find((f) => f.featureKey === "question_paper_solver")?.creditCost ?? null);
+      })
+      .catch(() => {});
+  }, []);
   const [phase, setPhase] = useState<Phase>("idle");
   const [progress, setProgress] = useState(0);
 
@@ -81,6 +95,7 @@ export function UploadForm() {
   async function generate() {
     if (!file || busy) return;
     setError(null);
+    setNeedsCredits(false);
     setProgress(0);
     setPhase("uploading");
     const controller = new AbortController();
@@ -101,9 +116,11 @@ export function UploadForm() {
       setPhase("verifying");
       await qpsApi.startJob(jobId);
       router.push(`/question-paper-solver/${jobId}`);
+      if (creditCost !== null) router.refresh(); // update the top-bar credit balance
     } catch (err) {
       setPhase("idle");
       setError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.");
+      setNeedsCredits(err instanceof ApiError && err.status === 402);
     } finally {
       abortRef.current = null;
     }
@@ -201,7 +218,10 @@ export function UploadForm() {
       {error && (
         <div role="alert" className="mt-3 flex items-start gap-2 rounded-[var(--r-md)] px-3 py-2.5 text-[13px]" style={{ background: "var(--danger-bg)", color: "var(--danger-tx)" }}>
           <AlertCircle size={16} className="shrink-0 mt-0.5" />
-          <span>{error}</span>
+          <span className="flex-1">{error}</span>
+          {needsCredits && (
+            <Link href="/credits" className="shrink-0 font-semibold underline underline-offset-2">Buy credits</Link>
+          )}
         </div>
       )}
 
@@ -285,6 +305,11 @@ export function UploadForm() {
           {phase === "uploading" ? `Uploading… ${progress}%` : phase === "verifying" ? "Checking file…" : "Generate Answer Sheet"}
         </OAButton>
         <p className="text-[12px]" style={{ color: "var(--fg-muted)" }}>
+          {creditCost !== null && (
+            <span className="inline-flex items-center gap-1 font-semibold mr-1.5" style={{ color: "var(--ink-700)" }}>
+              <Coins size={13} style={{ color: "var(--gold-700)" }} /> {creditCost} credits per paper ·
+            </span>
+          )}
           Usually takes 2–6 minutes. Your paper stays private and is deleted after 30 days.
         </p>
       </div>

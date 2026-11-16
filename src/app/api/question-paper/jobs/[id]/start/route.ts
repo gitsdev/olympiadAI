@@ -11,6 +11,8 @@ import { EXTRACT_PAGES_PER_CHUNK, inspectPdf } from "@/lib/question-paper/pdf";
 import { HttpError, assertJobQuota, getOwnedJob, handle, json, originOf, requireUser } from "@/lib/question-paper/server";
 import { downloadBytes, objectSize, removeJobFiles } from "@/lib/question-paper/storage";
 import { kickWorker, log } from "@/lib/question-paper/worker";
+import { chargeFeatureStart, refundFeatureByReference } from "@/lib/credits/feature";
+import { deductErrorResponse } from "@/lib/credits/deduct";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -58,6 +60,21 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       throw err;
     }
 
+    // Credits: charged only now that the file passed every check and the job
+    // is about to start. Free while the feature isn't priced/enabled in
+    // /admin/credits/pricing. Admins are exempt (as with the daily quota).
+    // Idempotent per job, so a retried start never charges twice.
+    if (!isAdmin) {
+      const charge = await chargeFeatureStart({
+        userId: user.id, featureKey: "question_paper_solver", sessionKey: `qps-${id}`, referenceId: id,
+        metadata: { file_ext: job.file_ext, pages: pageCount },
+      });
+      if (!charge.ok) {
+        const { status, body } = deductErrorResponse(charge);
+        return json(body, status);
+      }
+    }
+
     const { error } = await db.from("qps_jobs").update({
       status: "queued",
       stage: "reading",
@@ -68,7 +85,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       started_at: new Date().toISOString(),
       last_error: null,
     }).eq("id", id).eq("status", "awaiting_upload");
-    if (error) throw new Error(error.message);
+    if (error) {
+      await refundFeatureByReference({ userId: user.id, featureKey: "question_paper_solver", referenceId: id, reason: "job could not be queued" });
+      throw new Error(error.message);
+    }
     await log(db, id, "info", "job.queued", { ext: job.file_ext, pages: pageCount, scanned: isScanned, size });
 
     const origin = originOf(request);

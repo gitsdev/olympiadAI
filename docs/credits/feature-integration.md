@@ -1,6 +1,6 @@
 # Connecting a feature to credits
 
-None of the existing features (AI Tutor, Mock Tests, Battle, Brain Booster, Question Paper Solver) has been changed yet. All five are registered in `feature_credit_costs` with no price and charging off, so they stay free until you do the steps below **and** enable charging in **/admin/credits/pricing**.
+**Question Paper Solver is connected** (see below). AI Tutor, Mock Tests, Battle and Brain Booster are not changed yet. All five are registered in `feature_credit_costs` with no price and charging off, so they stay free until you do the steps below **and** enable charging in **/admin/credits/pricing**.
 
 ## The rule
 
@@ -49,7 +49,7 @@ The key must identify one start of the feature, so a network retry or a double-c
 | `ai_tutor` | the conversation id (charge per new conversation), or `conversationId:messageIndex` (charge per message) | `src/app/api/tutor/route.ts`, before calling the model |
 | `friend_battle` | the battle id, charged per participant when the battle starts | `src/actions/battle.ts`, when the battle moves to in-progress |
 | `brain_booster` | a `crypto.randomUUID()` generated when the game starts | the game component calls `POST /api/credits/deduct` (the games run client-side) |
-| `question_paper_solver` | the `qps_jobs.id` (one charge per paper) | `src/app/api/question-paper/jobs/[id]/start/route.ts`, after the upload is checked and before the worker is kicked. Refund with `refundFailedStart()` if extraction fails before any answers are produced |
+| `question_paper_solver` | **done**: `qps-<job id>` | charged in `src/app/api/question-paper/jobs/[id]/start/route.ts` after the file checks and daily quota pass; admins are exempt. Refunded automatically in `failJob()` (`src/lib/question-paper/worker.ts`) within 3 days, via `refundFeatureByReference()`. Deleting a job does not refund. |
 
 Charge granularity (per conversation vs per message, per battle vs per round) is a product decision; the service supports either.
 

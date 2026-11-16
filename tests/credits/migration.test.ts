@@ -231,6 +231,35 @@ describe("feature deduction", () => {
   });
 });
 
+describe("question paper solver charging", () => {
+  const JOB = "7d1f0c2e-4b5a-4c3d-9e8f-0123456789ab";
+  it("charges once per job and refunds a failed job (late failures included)", async () => {
+    const CAROL = "00000000-0000-0000-0000-0000000000b3";
+    await signUp(db, CAROL);
+    await jsonOf("credit_admin_adjust($1, 100, 'qps test credit', $2, 'qps-topup')", [CAROL, ADMIN]);
+    const before = await balanceOf(db, CAROL);
+    await setPrice(db, "question_paper_solver", 30, true);
+    const key = `${CAROL}:question_paper_solver:qps-${JOB}`; // as deductCredits() scopes it
+    const charge = await jsonOf("credit_deduct($1, 'question_paper_solver', $2, $3)", [CAROL, key, JOB]);
+    expect(charge).toMatchObject({ ok: true, status: "charged", balance: before - 30 });
+    // Start retried (double-click): no second charge.
+    expect(await jsonOf("credit_deduct($1, 'question_paper_solver', $2, $3)", [CAROL, key, JOB]))
+      .toMatchObject({ status: "duplicate", balance: before - 30 });
+    // Worker fails the job hours later: the 3-day window still refunds it, once.
+    await db.exec("set session_replication_role = replica");
+    try {
+      await db.query("update credit_transactions set created_at = now() - interval '5 hours' where id = $1", [charge.transaction_id]);
+    } finally {
+      await db.exec("set session_replication_role = origin");
+    }
+    const [{ id }] = await q<{ id: string }>(
+      "select id from credit_transactions where reference_id = $1 and feature_key = 'question_paper_solver' and transaction_type = 'usage'", [JOB]);
+    expect(await jsonOf("credit_reverse_usage($1, $2, 'failed', 4320)", [CAROL, id])).toMatchObject({ ok: true, status: "reversed", balance: before });
+    expect(await jsonOf("credit_reverse_usage($1, $2, 'failed', 4320)", [CAROL, id])).toMatchObject({ status: "duplicate" });
+    await setPrice(db, "question_paper_solver", null, false);
+  });
+});
+
 describe("admin adjustments", () => {
   it("17. create ledger entries with the reason and admin", async () => {
     const r = await adjust(BOB, 50, "k-adj-1", "Compensation for outage");

@@ -22,12 +22,15 @@ import type { SolveContext } from "./prompts";
 import { batchSize, type SolvableQuestion, type SolvedAnswer } from "./solve";
 import { downloadBytes, paths, uploadBytes } from "./storage";
 import type { JobRow, QuestionRowDb } from "./types";
+import { refundFeatureByReference } from "@/lib/credits/feature";
 
 const LEASE_SECONDS = 290;
 /** Don't start another step after this much time in one invocation. */
 const STEP_BUDGET_MS = 40_000;
 const MAX_STEP_ATTEMPTS = 3;
 const MAX_SOLVE_ATTEMPTS_PER_QUESTION = 2;
+/** A failed job is refunded even if the daily cron only notices it a day or two later. */
+const CREDIT_REFUND_WINDOW_MINUTES = 3 * 24 * 60;
 
 type Db = SupabaseClient;
 
@@ -141,6 +144,13 @@ async function runStep(db: Db, job: JobRow, token: string): Promise<boolean> {
 async function failJob(db: Db, job: JobRow, token: string, userMessage: string, detail: Record<string, unknown>) {
   await patch(db, job.id, token, { status: "failed", last_error: userMessage, attempts: 0 });
   await log(db, job.id, "error", "job.failed", { userMessage, ...detail });
+  // The student got no answer sheet, so give back any credits charged at
+  // start. No-op when nothing was charged; idempotent per job.
+  const refund = await refundFeatureByReference({
+    userId: job.user_id, featureKey: "question_paper_solver", referenceId: job.id,
+    reason: "question paper could not be solved", maxAgeMinutes: CREDIT_REFUND_WINDOW_MINUTES,
+  });
+  if (refund?.ok) await log(db, job.id, "info", "credits.refunded", { status: refund.status, balance: refund.balance });
 }
 
 async function handleStepError(db: Db, job: JobRow, token: string, err: unknown): Promise<boolean> {
