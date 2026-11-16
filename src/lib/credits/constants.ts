@@ -17,8 +17,8 @@ export const WELCOME_CREDITS = 25;
 export const SUGGESTED_PURCHASES = [100, 250, 500, 1000] as const;
 export const CURRENCY = "INR";
 
-/** Feature identifiers registered in migration 021. */
-export const FEATURE_KEYS = ["ai_tutor", "mock_test", "friend_battle", "brain_booster"] as const;
+/** Feature identifiers registered in migrations 021 and 023. */
+export const FEATURE_KEYS = ["ai_tutor", "mock_test", "friend_battle", "brain_booster", "question_paper_solver"] as const;
 export type KnownFeatureKey = (typeof FEATURE_KEYS)[number];
 
 export const TRANSACTION_TYPES = ["welcome", "purchase", "usage", "refund", "admin_adjustment"] as const;

@@ -11,4 +11,5 @@ export const FEATURE_LABELS: Record<string, string> = {
   mock_test: "Mock Tests",
   friend_battle: "Battle with Friends",
   brain_booster: "Brain Booster",
+  question_paper_solver: "Question Paper Solver",
 };

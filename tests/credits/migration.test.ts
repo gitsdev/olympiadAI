@@ -1,6 +1,8 @@
 // Credit wallet database layer (migrations 021 + 022) on a real in-memory
 // Postgres (PGlite). Numbers in test names map to the spec's test list.
 
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { PGlite } from "@electric-sql/pglite";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
@@ -49,6 +51,16 @@ describe("migration", () => {
       "select feature_key, credit_cost, is_enabled from feature_credit_costs order by feature_key");
     expect(rows.map((r) => r.feature_key)).toEqual(["ai_tutor", "brain_booster", "friend_battle", "mock_test"]);
     expect(rows.every((r) => r.credit_cost === null && r.is_enabled === false)).toBe(true);
+  });
+
+  it("023 registers the Question Paper Solver unpriced and free (re-runnable)", async () => {
+    const sql = readFileSync(join(process.cwd(), "supabase/migrations/023_credit_feature_paper_solver.sql"), "utf8");
+    await db.exec(sql);
+    await db.exec(sql);
+    const rows = await q<{ feature_name: string; credit_cost: number | null; is_enabled: boolean }>(
+      "select feature_name, credit_cost, is_enabled from feature_credit_costs where feature_key = 'question_paper_solver'");
+    expect(rows).toEqual([{ feature_name: "Question Paper Solver", credit_cost: null, is_enabled: false }]);
+    expect(await deduct(ALICE, "question_paper_solver", "qps-free-1")).toMatchObject({ ok: true, status: "free" });
   });
 
   it("enables RLS on every credit table", async () => {

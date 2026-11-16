@@ -17,6 +17,7 @@ Prepaid credits for OlympiadIQ. Students buy credits through Razorpay (1 credit 
 **Database**
 - `supabase/migrations/021_credit_wallet.sql`: tables, guards, functions and RLS
 - `supabase/migrations/022_credit_wallet_backfill.sql`: one-time, idempotent welcome grant for existing students
+- `supabase/migrations/023_credit_feature_paper_solver.sql`: registers the Question Paper Solver feature (free until priced)
 
 **Service layer (`src/lib/credits/`)**
 
@@ -63,7 +64,7 @@ All six requested tables exist with the requested columns, plus a few extras not
 | `credit_wallets` | One row per user. `balance bigint CHECK (balance >= 0)`. A trigger rejects any balance change made outside `credit_apply()`, even by the service role. |
 | `credit_transactions` | **Append-only ledger.** A trigger rejects UPDATE and DELETE. `idempotency_key` is UNIQUE. A partial unique index allows only one `welcome` row per user. A sign check enforces welcome/purchase > 0 and usage < 0; refund and admin_adjustment can be either sign. `user_id` uses ON DELETE SET NULL, so history survives account deletion. |
 | `credit_purchases` | `razorpay_order_id` UNIQUE and `razorpay_payment_id` UNIQUE. Statuses: pending, paid, failed, refunded, partially_refunded. **Extra columns:** `currency`, `refunded_credits`, `refunded_paise`, `updated_at`. |
-| `feature_credit_costs` | Seeded with `ai_tutor`, `mock_test`, `friend_battle` and `brain_booster`, all with **cost NULL and charging off**. A feature charges only when `is_enabled` is true and `credit_cost > 0`. |
+| `feature_credit_costs` | Seeded with `ai_tutor`, `mock_test`, `friend_battle`, `brain_booster` (021) and `question_paper_solver` (023), all with **cost NULL and charging off**. A feature charges only when `is_enabled` is true and `credit_cost > 0`. |
 | `credit_admins` | `super_admin` or `admin`. Existing platform admins are seeded as `super_admin`. See "Admin authorization" below. |
 | `credit_webhook_events` | Dedupe and replay protection by Razorpay event id. **Extra columns:** `attempts`, `last_error`. |
 
