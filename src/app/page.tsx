@@ -3,11 +3,16 @@ import {
   Sparkles, PencilLine, Target, BarChart2, Route, Trophy,
   ArrowRight, Play, Check, CircleCheck, Star, Users,
   BookOpen, Sigma, FlaskConical, Globe2, ShieldCheck,
-  Brain, Gauge, Eye, Bot, Flame, Upload, ScanText, FileCheck2, ArrowDown,
+  Brain, Gauge, Eye, Bot, Flame, Upload, ScanText, FileCheck2, ArrowDown, Coins,
 } from "lucide-react";
 import { OAButton, OACard, OARing, OASubjectDot, OAAvatar, SUBJECT_COLORS, type Subject } from "@/components/ui";
+import { MIN_PURCHASE_CREDITS, WELCOME_CREDITS } from "@/lib/credits/constants";
+import { getPublicFeaturePricing } from "@/lib/credits/public-pricing";
 import { MktNav } from "./MktNav";
 import { Footer } from "./Footer";
+
+// Pricing reads live credit settings; refresh at most every 5 minutes.
+export const revalidate = 300;
 
 /* ── Hero ────────────────────────────────────────────────────────────── */
 function Hero() {
@@ -718,12 +723,28 @@ const PAID_PLANS = [
 ];
 void PAID_PLANS; // kept as backup reference for the future paid rollout — see comment above
 
-const FREE_FEATS = [
-  "10-min diagnostic", "Unlimited AI tutor & practice", "Unlimited adaptive mock tests",
-  "Daily personalized study plans", "Rank prediction & analytics", "Parent progress reports",
+/** What one use of each feature is, for "N credits per …" on the pricing card. */
+const FEATURE_UNITS: Record<string, string> = {
+  mock_test: "per mock test",
+  practice: "per practice session",
+  question_paper_solver: "per question paper",
+  ai_tutor: "per session",
+  friend_battle: "per battle",
+  brain_booster: "per game",
+};
+
+/** Always free — not credit-based features. */
+const ALWAYS_FREE = [
+  "10-min diagnostic & readiness score",
+  "Daily personalized study plans",
+  "Progress analytics & parent reports",
 ];
 
-function Pricing() {
+async function Pricing() {
+  const pricing = await getPublicFeaturePricing();
+  const charged = (pricing ?? []).filter((f) => f.cost !== null);
+  const free = [...(pricing ?? []).filter((f) => f.cost === null).map((f) => f.name), ...ALWAYS_FREE];
+
   return (
     <section
       id="pricing"
@@ -733,62 +754,83 @@ function Pricing() {
       <div className="max-w-[1160px] mx-auto">
         <SectionHead
           eyebrow="Pricing"
-          title="Free for everyone. No catch."
-          sub="We're opening every feature to every student while we build out the full experience together."
+          title="Start free. Pay only for what you use."
+          sub={`Every new student gets ${WELCOME_CREDITS} free credits. No subscription, no monthly fee — credits never expire.`}
         />
 
-        <div
-          className="max-w-[620px] mx-auto relative overflow-hidden rounded-[var(--r-2xl)] px-6 py-10 sm:px-10 sm:py-12 text-center"
-          style={{ background: "var(--cobalt-700)", boxShadow: "var(--shadow-lg)" }}
-        >
-          <div className="absolute inset-0 graph-bg opacity-40" style={{ backgroundSize: "24px 24px" }} />
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] gap-5 max-w-[980px] mx-auto">
+          {/* Credits card */}
           <div
-            className="absolute inset-0"
-            style={{ background: "radial-gradient(80% 70% at 50% -10%, oklch(0.81 0.13 80 / 0.25), transparent 60%)" }}
-          />
-
-          <div className="relative">
+            className="relative overflow-hidden rounded-[var(--r-2xl)] px-6 py-8 sm:px-9 sm:py-10"
+            style={{ background: "var(--cobalt-700)", boxShadow: "var(--shadow-lg)" }}
+          >
+            <div className="absolute inset-0 graph-bg opacity-40" style={{ backgroundSize: "24px 24px" }} />
             <div
-              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full mb-6"
-              style={{ background: "var(--gold-400)" }}
-            >
-              <Sparkles size={14} style={{ color: "var(--ink-900)" }} />
-              <span className="text-[12px] font-bold" style={{ color: "var(--ink-900)", letterSpacing: "0.03em" }}>
-                FREE FOR EVERYONE
-              </span>
+              className="absolute inset-0"
+              style={{ background: "radial-gradient(80% 70% at 50% -10%, oklch(0.81 0.13 80 / 0.25), transparent 60%)" }}
+            />
+            <div className="relative">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full mb-5" style={{ background: "var(--gold-400)" }}>
+                <Coins size={14} style={{ color: "var(--ink-900)" }} />
+                <span className="text-[12px] font-bold" style={{ color: "var(--ink-900)", letterSpacing: "0.03em" }}>
+                  {WELCOME_CREDITS} FREE CREDITS TO START
+                </span>
+              </div>
+
+              <div className="flex items-baseline gap-2 mb-1">
+                <span className="font-black text-[44px] sm:text-[52px] tracking-tight text-white"
+                  style={{ fontFamily: "var(--font-mono)", letterSpacing: "-0.03em" }}>
+                  ₹1
+                </span>
+                <span className="text-[15px]" style={{ color: "oklch(0.9 0.04 258)" }}>= 1 credit</span>
+              </div>
+              <p className="text-[14px] mb-6" style={{ color: "oklch(0.88 0.04 258)" }}>
+                Top up from {MIN_PURCHASE_CREDITS} credits (₹{MIN_PURCHASE_CREDITS}) · UPI, cards & netbanking · credits never expire
+              </p>
+
+              {charged.length > 0 ? (
+                <ul className="flex flex-col gap-2.5 mb-7">
+                  {charged.map((f) => (
+                    <li key={f.key} className="flex items-center justify-between gap-3 rounded-[var(--r-md)] px-4 py-3"
+                      style={{ background: "oklch(1 0 0 / 0.08)", border: "1px solid oklch(1 0 0 / 0.12)" }}>
+                      <span className="text-[14.5px] font-semibold text-white">{f.name}</span>
+                      <span className="text-right text-[13px] whitespace-nowrap" style={{ color: "oklch(0.9 0.04 258)" }}>
+                        <span className="font-bold text-[15px]" style={{ color: "var(--gold-300)", fontFamily: "var(--font-mono)" }}>{f.cost}</span>
+                        {" "}credits {FEATURE_UNITS[f.key] ?? "per use"}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-[14.5px] mb-7" style={{ color: "oklch(0.92 0.03 258)" }}>
+                  Credits power premium features like mock tests and practice sessions.
+                </p>
+              )}
+
+              <Link href="/onboarding">
+                <OAButton variant="gold" size="lg">
+                  Start free with {WELCOME_CREDITS} credits <ArrowRight size={18} />
+                </OAButton>
+              </Link>
             </div>
+          </div>
 
-            <div className="flex items-baseline justify-center gap-2 mb-2">
-              <span
-                className="font-black text-[52px] sm:text-[60px] tracking-tight text-white"
-                style={{ fontFamily: "var(--font-mono)", letterSpacing: "-0.03em" }}
-              >
-                ₹0
-              </span>
-              <span className="text-[15px]" style={{ color: "oklch(0.9 0.04 258)" }}>/ every feature, on us</span>
-            </div>
-
-            <p
-              className="text-[15px] sm:text-[16.5px] leading-[1.6] max-w-[440px] mx-auto mb-7"
-              style={{ color: "oklch(0.92 0.03 258)" }}
-            >
-              AI tutor, unlimited mock tests, rank prediction, parent reports — everything, unlocked, for every student. No trial, no card required.
-            </p>
-
-            <Link href="/onboarding">
-              <OAButton variant="gold" size="lg">
-                Start learning free <ArrowRight size={18} />
-              </OAButton>
-            </Link>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5 mt-9 text-left max-w-[440px] mx-auto">
-              {FREE_FEATS.map((f) => (
-                <div key={f} className="flex items-start gap-2">
-                  <Check size={16} style={{ color: "var(--gold-400)", flexShrink: 0, marginTop: 2 }} />
-                  <span className="text-[13.5px] leading-snug" style={{ color: "oklch(0.92 0.03 258)" }}>{f}</span>
-                </div>
+          {/* Free card */}
+          <div className="rounded-[var(--r-2xl)] border border-[var(--line-200)] px-6 py-8 sm:px-8 sm:py-10"
+            style={{ background: "var(--surface)", boxShadow: "var(--shadow-sm)" }}>
+            <p className="t-overline mb-2" style={{ color: "var(--success-tx)" }}>Always free</p>
+            <h3 className="font-bold text-[22px] tracking-tight mb-1.5" style={{ fontFamily: "var(--font-display)", color: "var(--ink-900)" }}>
+              No credits needed
+            </h3>
+            <p className="text-[14px] mb-5" style={{ color: "var(--fg-muted)" }}>Use these as much as you like.</p>
+            <ul className="flex flex-col gap-2.5">
+              {free.map((f) => (
+                <li key={f} className="flex items-start gap-2.5">
+                  <Check size={17} style={{ color: "var(--success)", flexShrink: 0, marginTop: 2 }} />
+                  <span className="text-[14.5px] leading-snug" style={{ color: "var(--ink-700)" }}>{f}</span>
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
         </div>
       </div>
