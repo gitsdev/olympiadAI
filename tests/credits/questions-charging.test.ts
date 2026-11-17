@@ -10,6 +10,7 @@ const state = vi.hoisted(() => ({
   refunds: [] as string[],
   chargeResult: { ok: true, status: "charged", cost: 5, balance: 20, transactionId: "tx-1" } as Record<string, unknown>,
   generateFails: false as false | "error" | "busy",
+  generateCalls: 0,
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -40,6 +41,7 @@ vi.mock("@/lib/questions/generate", () => ({
   MAX_QUESTION_COUNT: 40,
   QuestionGenerationError: class extends Error {},
   generateQuestions: async () => {
+    state.generateCalls++;
     if (state.generateFails === "busy") {
       const { QuestionGenerationError } = await import("@/lib/questions/generate");
       throw new (QuestionGenerationError as unknown as new (m: string) => Error)("Our question generator is very busy right now.");
@@ -67,6 +69,46 @@ beforeEach(() => {
   state.refunds = [];
   state.chargeResult = { ok: true, status: "charged", cost: 5, balance: 20, transactionId: "tx-1" };
   state.generateFails = false;
+  state.generateCalls = 0;
+});
+
+describe("/api/questions two-step start (charge, then generate)", () => {
+  it("the charge step takes the credits and returns without generating", async () => {
+    const res = await POST(req({ purpose: "practice", sessionId: SESSION, stage: "charge" }));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ charged: true });
+    expect(state.charges).toEqual([{ featureKey: "practice", sessionKey: SESSION }]);
+    expect(state.generateCalls).toBe(0);
+  });
+
+  it("the charge step reports 402 when credits are short", async () => {
+    state.chargeResult = { ok: false, error: "INSUFFICIENT_CREDITS", cost: 5, balance: 2, shortfall: 3 };
+    const res = await POST(req({ purpose: "practice", sessionId: SESSION, stage: "charge" }));
+    expect(res.status).toBe(402);
+    expect(state.generateCalls).toBe(0);
+  });
+
+  it("the charge step needs a valid session id, so the two steps can't charge twice", async () => {
+    const res = await POST(req({ purpose: "practice", sessionId: "nope", stage: "charge" }));
+    expect(res.status).toBe(400);
+    expect(state.charges).toEqual([]);
+  });
+
+  it("the generate step refunds the earlier charge (seen as a duplicate) when generation fails", async () => {
+    state.chargeResult = { ok: true, status: "duplicate", cost: 5, balance: 20, transactionId: "tx-1" };
+    state.generateFails = "busy";
+    const res = await POST(req({ purpose: "practice", sessionId: SESSION }));
+    expect(res.status).toBe(503);
+    expect(state.refunds).toEqual(["tx-1"]);
+  });
+
+  it("admins and AI Battle get a no-charge answer from the charge step", async () => {
+    state.role = "platform_admin";
+    expect(await (await POST(req({ purpose: "practice", sessionId: SESSION, stage: "charge" }))).json()).toEqual({ charged: false });
+    expect(await (await POST(req({ purpose: "battle", sessionId: SESSION, stage: "charge" }))).json()).toEqual({ charged: false });
+    expect(state.charges).toEqual([]);
+    expect(state.generateCalls).toBe(0);
+  });
 });
 
 describe("/api/questions credit charging", () => {

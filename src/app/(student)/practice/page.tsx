@@ -125,38 +125,52 @@ function PracticeInner() {
     setSessionStart(Date.now());
     setQStart(Date.now());
 
+    let charged = false;
     try {
       const topic = selTopic.trim() || selSubject;
-      const res = await fetch("/api/questions", {
+      const payload = {
+        subject:    selSubject,
+        topicName:  topic,
+        difficulty: selDiff,
+        count:      selCount,
+        classLevel: selClassLevel,
+        board:      user.board,
+        purpose,
+        // New id per click, shared by both steps below: the second step
+        // finds the first step's charge instead of charging again.
+        sessionId:  crypto.randomUUID(),
+      };
+      const post = (body: object, timeoutMs: number) => fetch("/api/questions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          subject:    selSubject,
-          topicName:  topic,
-          difficulty: selDiff,
-          count:      selCount,
-          classLevel: selClassLevel,
-          board:      user.board,
-          purpose,
-          // New id per click: a retried request is never charged twice.
-          sessionId:  crypto.randomUUID(),
-        }),
-        // The server answers within ~2 minutes at worst; never spin forever.
-        signal: AbortSignal.timeout(150_000),
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(timeoutMs),
       });
-      if (!res.ok) {
-        const body = await res.json().catch(() => null);
-        if (res.status === 402 || res.status === 403) {
+
+      // Step 1 — take the credits now, so the balance drops the moment the
+      // session starts rather than after the questions arrive.
+      const chargeRes = await post({ ...payload, stage: "charge" }, 30_000);
+      if (!chargeRes.ok) {
+        const body = await chargeRes.json().catch(() => null);
+        if (chargeRes.status === 402 || chargeRes.status === 403) {
           // Credit problems: show the server's message as-is.
           setFetchError(body?.error || "You don't have enough credits for this.");
-          setNeedsCredits(res.status === 402);
+          setNeedsCredits(chargeRes.status === 402);
           setPhase("setup");
           return;
         }
+        throw new ServerError(body?.error || "Could not start the session. Please try again.");
+      }
+      charged = Boolean((await chargeRes.json().catch(() => null))?.charged);
+      if (charged) router.refresh(); // show the new balance in the top bar
+
+      // Step 2 — generate. The server answers within ~2 minutes at worst.
+      const res = await post(payload, 150_000);
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
         throw new ServerError(
-          body?.error
-            ? `${body.error}${creditCost ? " You have not been charged for this attempt." : ""}`
-            : "Could not generate questions. Please try again.",
+          `${body?.error || "Could not generate questions. Please try again."}${
+            charged ? " Your credits have been refunded." : ""}`,
         );
       }
       const { questions: q } = await res.json();
@@ -170,7 +184,6 @@ function PracticeInner() {
         }))
       );
       setPhase("quiz");
-      if (creditCost !== null) router.refresh(); // update the top-bar credit balance
     } catch (err) {
       // Server errors are already written for students; anything else
       // (offline, timeout, bad JSON) gets a generic message.
@@ -179,6 +192,7 @@ function PracticeInner() {
         : "Could not generate questions. Check your connection and try again.";
       setFetchError(message);
       setPhase("setup");
+      if (charged) router.refresh(); // reflect the refund
     }
   }
 

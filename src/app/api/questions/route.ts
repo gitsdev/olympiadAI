@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
   const startedAt = Date.now();
   try {
     const {
-      subject, topicName, difficulty, count: rawCount = 10, classLevel, board, purpose, sessionId,
+      subject, topicName, difficulty, count: rawCount = 10, classLevel, board, purpose, sessionId, stage,
     } = await req.json() as {
       subject: Subject; topicName: string; difficulty: Difficulty;
       count: number; classLevel: number; board: Board;
@@ -26,6 +26,13 @@ export async function POST(req: NextRequest) {
       purpose?: "practice" | "mock_test" | "battle";
       /** Client-generated id for this start; retries with it are never charged twice. */
       sessionId?: string;
+      /**
+       * "charge": take the credits and return straight away, so the page can
+       * show the new balance the moment the session starts. The page then
+       * calls again with the same sessionId to generate — that call finds the
+       * existing charge (no second deduction) and refunds it if generation fails.
+       */
+      stage?: "charge";
     };
 
     if (!subject || !difficulty || !board || !Number.isFinite(Number(classLevel))) {
@@ -33,6 +40,12 @@ export async function POST(req: NextRequest) {
     }
     // Bounded: the price is per session, so an unbounded count would be free extra work.
     const count = Math.min(MAX_QUESTION_COUNT, Math.max(1, Math.floor(Number(rawCount) || 10)));
+
+    // The two-stage start relies on the same id for both calls; without a
+    // valid one each call would be charged separately.
+    if (stage === "charge" && !isValidIdempotencyKey(sessionId)) {
+      return NextResponse.json({ error: "Missing session id." }, { status: 400 });
+    }
 
     const supabase = await createClient();
 
@@ -59,11 +72,14 @@ export async function POST(req: NextRequest) {
           const { status, body } = deductErrorResponse(charge);
           return NextResponse.json(body, { status });
         }
-        if (charge.status === "charged" && charge.transactionId) {
+        // "duplicate" = already charged by the "charge" stage of this session.
+        if ((charge.status === "charged" || charge.status === "duplicate") && charge.transactionId) {
           charged = { userId: user.id, transactionId: charge.transactionId };
         }
       }
     }
+    // Admins, AI Battle and free (unpriced) sessions have nothing to take.
+    if (stage === "charge") return NextResponse.json({ charged: charged !== null });
 
     let questions: GeneratedQuestion[];
     try {
