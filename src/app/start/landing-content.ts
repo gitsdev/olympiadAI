@@ -117,7 +117,7 @@ export const FEATURES = {
   sub: "One platform to learn a concept, practise it, and prove you've mastered it.",
   cards: [
     { emoji: "🧠", title: "Think Smarter",        body: "Build logical reasoning and problem-solving through Olympiad-style questions." },
-    { emoji: "🎯", title: "Practice with Purpose", body: "Unlimited practice questions designed to strengthen concepts, not just fill time." },
+    { emoji: "🎯", title: "Practice with Purpose", body: "Fresh practice questions designed to strengthen concepts, not just fill time." },
     { emoji: "🏆", title: "Challenge Yourself",    body: "Adaptive mock tests that adjust to your child's level and turn learning into a challenge." },
     { emoji: "📊", title: "Track Progress",        body: "A readiness score and weak-area insights so parents and students always know where they stand." },
     { emoji: "⚡", title: "Brain-Booster Games",   body: "Short, playful games — Number Ninja, Memory Match & more — that sharpen focus and speed. Free, no login." },
@@ -235,7 +235,7 @@ export const TRUST = {
   points: [
     { icon: "book",   title: "Syllabus-aligned",   body: "Content and questions mapped to the CBSE & ICSE curriculum for Classes 1–10." },
     { icon: "gauge",  title: "Honest progress",    body: "A readiness score and weak-area insights — real signal, not vanity badges." },
-    { icon: "shield", title: "No pressure to pay", body: "Every core feature is open to every student, free, with no card required." },
+    { icon: "shield", title: "Pay only for what you use", body: "Every student starts with 25 free credits — no card, no subscription. Many features stay free; premium ones like mock tests use a few credits, and credits never expire." },
     { icon: "puzzle", title: "Original questions", body: "Practice and mock-test questions generated per concept — not recycled worksheets." },
     { icon: "layers", title: "One place to prepare", body: "Learn a concept, practise it, and test it — without switching between apps." },
     { icon: "play",   title: "Try before you sign up", body: "Play the Brain-Booster games first — no account, no login needed." },
@@ -256,7 +256,7 @@ export const FAQ = {
   items: [
     {
       q: "What is Olympiad IQ?",
-      a: "An online learning platform for school students that combines concept learning, unlimited practice, adaptive mock tests and brain-boosting games — built to strengthen Maths, Science and reasoning skills.",
+      a: "An online learning platform for school students that combines concept learning, on-demand practice, adaptive mock tests and brain-boosting games — built to strengthen Maths, Science and reasoning skills.",
     },
     {
       q: "Which classes are supported?",

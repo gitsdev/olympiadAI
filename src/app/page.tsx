@@ -159,7 +159,7 @@ function Hero() {
 /* ── Features ────────────────────────────────────────────────────────── */
 const FEATURES = [
   { id: "ai-tutor", Icon: Sparkles,   title: "AI Tutor (RAG)",      desc: "Ask anything. The tutor retrieves your syllabus knowledge first, then explains — never guesses from memory." },
-  { Icon: PencilLine, title: "Unlimited practice",  desc: "Original questions generated per concept: MCQ, HOTS, reasoning, and true Olympiad-style problems." },
+  { Icon: PencilLine, title: "Fresh practice, every time",  desc: "Original questions generated per concept: MCQ, HOTS, reasoning, and true Olympiad-style problems." },
   { Icon: Target,     title: "Adaptive mock tests", desc: "Difficulty adjusts to your answers in real time to pinpoint your true mastery level." },
   { Icon: BarChart2,  title: "Weakness detection",  desc: "Every wrong answer, slow response, and skip becomes a precise, fixable focus area." },
   { Icon: Route,      title: "Personalized plans",  desc: "Daily, weekly, and monthly plans built from your knowledge graph — and re-built as you improve." },
@@ -700,9 +700,8 @@ function Testimonial() {
 
 /* ── Pricing ─────────────────────────────────────────────────────────── */
 /**
- * Paid tiers — parked, not deleted. We're running fully free for now (see
- * FREE_FEATS + Pricing() below); re-enable this structure when paid plans
- * come back by swapping the render in Pricing() back to PAID_PLANS.map(...).
+ * Old subscription tiers — parked, not used. Pricing is now credit-based
+ * (see Pricing() below, which reads the live credit settings).
  */
 const PAID_PLANS = [
   {
