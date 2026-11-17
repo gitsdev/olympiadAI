@@ -19,14 +19,24 @@ export interface FeatureStartInput {
   metadata?: Record<string, unknown>;
 }
 
-export function chargeFeatureStart(input: FeatureStartInput): Promise<DeductResult> {
-  return deductCredits(creditDb(), {
+export async function chargeFeatureStart(input: FeatureStartInput): Promise<DeductResult> {
+  const db = creditDb();
+  const base = {
     userId: input.userId,
     featureKey: input.featureKey,
-    idempotencyKey: input.sessionKey,
     referenceId: input.referenceId ?? null,
     metadata: input.metadata,
-  });
+  };
+  const result = await deductCredits(db, { ...base, idempotencyKey: input.sessionKey });
+
+  // A "duplicate" whose original charge was refunded (the start failed) must
+  // not become a free retry: charge again under a fresh key.
+  if (result.ok && result.status === "duplicate" && result.transactionId) {
+    const { data } = await createServiceClient().from("credit_transactions").select("id")
+      .eq("idempotency_key", `reversal:${result.transactionId}`).maybeSingle();
+    if (data) return deductCredits(db, { ...base, idempotencyKey: `${input.sessionKey}.r${Date.now().toString(36)}` });
+  }
+  return result;
 }
 
 /**

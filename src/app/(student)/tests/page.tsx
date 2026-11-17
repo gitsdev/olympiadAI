@@ -132,6 +132,7 @@ export default function TestsPage() {
       count:      String(selCount),
       classLevel: String(selClass),
       autostart:  "1",
+      mode:       "mock_test", // priced as a Mock Test, not Practice
     });
     router.push(`/practice?${p.toString()}`);
   }

@@ -113,6 +113,7 @@ export default function BattleClient({
         body: JSON.stringify({
           subject: selSubject, topicName: selSubject, difficulty: selDifficulty,
           count: selCount, classLevel: user.cls, board: user.board,
+          purpose: "battle", // not charged as practice
         }),
       });
       if (!res.ok) {

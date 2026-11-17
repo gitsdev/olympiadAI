@@ -18,6 +18,7 @@ Prepaid credits for OlympiadIQ. Students buy credits through Razorpay (1 credit 
 - `supabase/migrations/021_credit_wallet.sql`: tables, guards, functions and RLS
 - `supabase/migrations/022_credit_wallet_backfill.sql`: one-time, idempotent welcome grant for existing students
 - `supabase/migrations/023_credit_feature_paper_solver.sql`: registers the Question Paper Solver feature (free until priced)
+- `supabase/migrations/024_credit_practice_pricing.sql`: adds the `practice` feature and prices Mock Tests and Practice at 5 credits each
 
 **Service layer (`src/lib/credits/`)**
 

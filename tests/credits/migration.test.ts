@@ -63,6 +63,21 @@ describe("migration", () => {
     expect(await deduct(ALICE, "question_paper_solver", "qps-free-1")).toMatchObject({ ok: true, status: "free" });
   });
 
+  it("024 adds Practice and prices Mock Tests + Practice at 5 credits (re-runnable)", async () => {
+    const sql = readFileSync(join(process.cwd(), "supabase/migrations/024_credit_practice_pricing.sql"), "utf8");
+    await db.exec(sql);
+    await db.exec(sql);
+    const rows = await q<{ feature_key: string; credit_cost: number; is_enabled: boolean }>(
+      "select feature_key, credit_cost, is_enabled from feature_credit_costs where feature_key in ('mock_test', 'practice') order by feature_key");
+    expect(rows).toEqual([
+      { feature_key: "mock_test", credit_cost: 5, is_enabled: true },
+      { feature_key: "practice", credit_cost: 5, is_enabled: true },
+    ]);
+    // Leave the rest of this suite's pricing assumptions untouched.
+    await setPrice(db, "mock_test", null, false);
+    await setPrice(db, "practice", null, false);
+  });
+
   it("enables RLS on every credit table", async () => {
     const rows = await q("select relname from pg_class where relkind = 'r' and (relname like 'credit_%' or relname = 'feature_credit_costs') and not relrowsecurity");
     expect(rows).toEqual([]);

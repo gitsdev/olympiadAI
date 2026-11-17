@@ -1,6 +1,6 @@
 # Connecting a feature to credits
 
-**Question Paper Solver is connected** (see below). AI Tutor, Mock Tests, Battle and Brain Booster are not changed yet. All five are registered in `feature_credit_costs` with no price and charging off, so they stay free until you do the steps below **and** enable charging in **/admin/credits/pricing**.
+**Connected:** Question Paper Solver, Mock Tests and Practice (see below). AI Tutor, Battle and Brain Booster are not changed yet. All features are registered in `feature_credit_costs` with no price and charging off, so they stay free until you do the steps below **and** enable charging in **/admin/credits/pricing**.
 
 ## The rule
 
@@ -45,7 +45,8 @@ The key must identify one start of the feature, so a network retry or a double-c
 
 | Feature | Suggested key | Where to charge |
 |---|---|---|
-| `mock_test` | the new `test_attempts.id` (create the attempt row first, then charge) | `src/actions/assessment.ts`, after questions are generated and before they're returned |
+| `mock_test` | **done**: client `sessionId` (new UUID per Start click) | `POST /api/questions` with `purpose: "mock_test"` (sent when `/practice` is opened from `/tests` with `mode=mock_test`). Charged before questions are generated, refunded if generation fails. Admins exempt. |
+| `practice` | **done**: same as above | `POST /api/questions` with `purpose: "practice"`, or no purpose at all. `purpose: "battle"` (AI Battle) is not charged. |
 | `ai_tutor` | the conversation id (charge per new conversation), or `conversationId:messageIndex` (charge per message) | `src/app/api/tutor/route.ts`, before calling the model |
 | `friend_battle` | the battle id, charged per participant when the battle starts | `src/actions/battle.ts`, when the battle moves to in-progress |
 | `brain_booster` | a `crypto.randomUUID()` generated when the game starts | the game component calls `POST /api/credits/deduct` (the games run client-side) |

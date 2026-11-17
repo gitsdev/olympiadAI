@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Clock, Check, X, CircleCheck, Trophy,
   Zap, Loader2, BookOpen, ChevronRight, RotateCcw,
@@ -68,7 +68,10 @@ function parseSteps(text: string): string[] {
 /* ── Main component ────────────────────────────────────────────────── */
 function PracticeInner() {
   const params = useSearchParams();
+  const router = useRouter();
   const user = useStudent();
+  // Mock tests arrive from /tests with mode=mock_test; everything else is practice.
+  const purpose = params.get("mode") === "mock_test" ? "mock_test" : "practice";
 
   const ALL_SUBJECTS = (user.subjects.length > 0 ? user.subjects : ["Mathematics"]) as Subject[];
 
@@ -83,6 +86,9 @@ function PracticeInner() {
   /* ── quiz state ── */
   const [questions, setQuestions]       = useState<Question[]>([]);
   const [fetchError, setFetchError]     = useState("");
+  const [needsCredits, setNeedsCredits] = useState(false);
+  /** Credits this session costs (null = free right now). */
+  const [creditCost, setCreditCost]     = useState<number | null>(null);
   const [idx, setIdx]                   = useState(0);
   const [picked, setPicked]             = useState<number | null>(null);
   const [answers, setAnswers]           = useState<AnswerRecord[]>([]);
@@ -97,9 +103,19 @@ function PracticeInner() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    fetch("/api/credits/pricing")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { features?: { featureKey: string; creditCost: number }[] } | null) => {
+        setCreditCost(d?.features?.find((f) => f.featureKey === purpose)?.creditCost ?? null);
+      })
+      .catch(() => {});
+  }, [purpose]);
+
   async function startPractice() {
     setPhase("loading");
     setFetchError("");
+    setNeedsCredits(false);
     setIdx(0);
     setPicked(null);
     setAnswers([]);
@@ -118,10 +134,20 @@ function PracticeInner() {
           count:      selCount,
           classLevel: selClassLevel,
           board:      user.board,
+          purpose,
+          // New id per click: a retried request is never charged twice.
+          sessionId:  crypto.randomUUID(),
         }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => null);
+        if (res.status === 402 || res.status === 403) {
+          // Credit problems: show the server's message as-is.
+          setFetchError(body?.error || "You don't have enough credits for this.");
+          setNeedsCredits(res.status === 402);
+          setPhase("setup");
+          return;
+        }
         throw new Error(body?.error || "Request failed");
       }
       const { questions: q } = await res.json();
@@ -135,6 +161,7 @@ function PracticeInner() {
         }))
       );
       setPhase("quiz");
+      if (creditCost !== null) router.refresh(); // update the top-bar credit balance
     } catch (err) {
       const message = err instanceof Error && err.message.includes("isn't allowed")
         ? err.message
@@ -268,6 +295,9 @@ function PracticeInner() {
           {fetchError && (
             <p className="text-[13px] px-3 py-2 rounded-[var(--r-md)]" style={{ background: "var(--danger-bg)", color: "var(--danger-tx)" }}>
               {fetchError}
+              {needsCredits && (
+                <> <Link href="/credits" className="font-semibold underline underline-offset-2">Buy credits</Link></>
+              )}
             </p>
           )}
 
@@ -276,6 +306,7 @@ function PracticeInner() {
             style={{ background: "var(--cobalt-500)", boxShadow: "var(--shadow-brand)" }}>
             <BookOpen size={17} />
             Start {selCount} questions · {selSubject}
+            {creditCost !== null && <span className="opacity-85 font-medium">· {creditCost} credits</span>}
             <ChevronRight size={17} />
           </button>
         </div>
