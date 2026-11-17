@@ -9,7 +9,7 @@ const state = vi.hoisted(() => ({
   charges: [] as Array<{ featureKey: string; sessionKey: string }>,
   refunds: [] as string[],
   chargeResult: { ok: true, status: "charged", cost: 5, balance: 20, transactionId: "tx-1" } as Record<string, unknown>,
-  generateFails: false,
+  generateFails: false as false | "error" | "busy",
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -37,7 +37,13 @@ vi.mock("@/lib/credits/feature", () => ({
 }));
 
 vi.mock("@/lib/questions/generate", () => ({
+  MAX_QUESTION_COUNT: 40,
+  QuestionGenerationError: class extends Error {},
   generateQuestions: async () => {
+    if (state.generateFails === "busy") {
+      const { QuestionGenerationError } = await import("@/lib/questions/generate");
+      throw new (QuestionGenerationError as unknown as new (m: string) => Error)("Our question generator is very busy right now.");
+    }
     if (state.generateFails) throw new Error("AI unavailable");
     return [{ question_text: "2+2?", options: ["3", "4"], correct_answer_index: 1, explanation: "", topic_name: "x", difficulty: "Easy", estimated_time_seconds: 30 }];
   },
@@ -89,9 +95,19 @@ describe("/api/questions credit charging", () => {
   });
 
   it("refunds the charge when question generation fails", async () => {
-    state.generateFails = true;
+    state.generateFails = "error";
     const res = await POST(req({ purpose: "mock_test", sessionId: SESSION }));
     expect(res.status).toBe(500);
+    // Raw internal errors are never shown to students.
+    expect((await res.json()).error).not.toContain("AI unavailable");
+    expect(state.refunds).toEqual(["tx-1"]);
+  });
+
+  it("returns a friendly 503 and refunds when every AI provider is busy", async () => {
+    state.generateFails = "busy";
+    const res = await POST(req({ purpose: "practice", sessionId: SESSION }));
+    expect(res.status).toBe(503);
+    expect((await res.json()).error).toContain("very busy");
     expect(state.refunds).toEqual(["tx-1"]);
   });
 

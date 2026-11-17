@@ -1,9 +1,11 @@
 import Groq from "groq-sdk";
-import { withRetry } from "@/lib/ai-retry";
 
 // Created per-call, not at module load, so `next build` doesn't need the key.
+// Bounded: this check runs in front of user-facing generation, so a hung
+// call must not eat the caller's time budget (the SDK default is 10 minutes
+// with 2 retries). On timeout it fails open like any other error.
 function getGroq() {
-  return new Groq({ apiKey: process.env.GROQ_API_KEY });
+  return new Groq({ apiKey: process.env.GROQ_API_KEY, timeout: 8_000, maxRetries: 1 });
 }
 
 // Small, fast model — this runs before the real request is generated, so it
@@ -47,7 +49,7 @@ export interface ModerationResult {
 
 export async function moderateText(text: string): Promise<ModerationResult> {
   try {
-    const completion = await withRetry(() => getGroq().chat.completions.create({
+    const completion = await getGroq().chat.completions.create({
       model: MODERATION_MODEL,
       max_completion_tokens: 128,
       response_format: MODERATION_SCHEMA,
@@ -55,7 +57,7 @@ export async function moderateText(text: string): Promise<ModerationResult> {
         { role: "system", content: MODERATION_SYSTEM_PROMPT },
         { role: "user", content: text },
       ],
-    }));
+    });
     const raw = completion.choices[0]?.message?.content ?? '{"blocked":false,"reason":""}';
     const parsed = JSON.parse(raw);
     return { blocked: parsed.blocked === true, reason: typeof parsed.reason === "string" ? parsed.reason : "" };

@@ -65,6 +65,9 @@ function parseSteps(text: string): string[] {
   return filtered.length >= 2 ? filtered : [text];
 }
 
+/** An error whose message came from our API and is safe to show as-is. */
+class ServerError extends Error {}
+
 /* ── Main component ────────────────────────────────────────────────── */
 function PracticeInner() {
   const params = useSearchParams();
@@ -138,6 +141,8 @@ function PracticeInner() {
           // New id per click: a retried request is never charged twice.
           sessionId:  crypto.randomUUID(),
         }),
+        // The server answers within ~2 minutes at worst; never spin forever.
+        signal: AbortSignal.timeout(150_000),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => null);
@@ -148,7 +153,11 @@ function PracticeInner() {
           setPhase("setup");
           return;
         }
-        throw new Error(body?.error || "Request failed");
+        throw new ServerError(
+          body?.error
+            ? `${body.error}${creditCost ? " You have not been charged for this attempt." : ""}`
+            : "Could not generate questions. Please try again.",
+        );
       }
       const { questions: q } = await res.json();
       if (!q?.length) throw new Error("No questions returned");
@@ -163,7 +172,9 @@ function PracticeInner() {
       setPhase("quiz");
       if (creditCost !== null) router.refresh(); // update the top-bar credit balance
     } catch (err) {
-      const message = err instanceof Error && err.message.includes("isn't allowed")
+      // Server errors are already written for students; anything else
+      // (offline, timeout, bad JSON) gets a generic message.
+      const message = err instanceof ServerError
         ? err.message
         : "Could not generate questions. Check your connection and try again.";
       setFetchError(message);

@@ -1,17 +1,24 @@
-import { NextRequest, NextResponse } from "next/server";
-
-export const maxDuration = 60; // seconds — needed for sequential batch generation
+import { NextRequest, NextResponse, after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { generateQuestions, type GeneratedQuestion } from "@/lib/questions/generate";
+import {
+  generateQuestions, MAX_QUESTION_COUNT, QuestionGenerationError, type GeneratedQuestion,
+} from "@/lib/questions/generate";
 import { chargeFeatureStart, refundFailedStart } from "@/lib/credits/feature";
 import { deductErrorResponse, isValidIdempotencyKey } from "@/lib/credits/deduct";
 import type { Board, Subject, Difficulty } from "@/types/database";
 
+// Generation works against its own deadline (GENERATION_BUDGET_MS), kept
+// well under this limit so the handler always gets to respond — and to
+// refund the credits — instead of being killed by the platform mid-request.
+export const maxDuration = 120;
+const GENERATION_BUDGET_MS = 90_000;
+
 /* ── POST handler ──────────────────────────────────────────────────── */
 export async function POST(req: NextRequest) {
+  const startedAt = Date.now();
   try {
     const {
-      subject, topicName, difficulty, count = 10, classLevel, board, purpose, sessionId,
+      subject, topicName, difficulty, count: rawCount = 10, classLevel, board, purpose, sessionId,
     } = await req.json() as {
       subject: Subject; topicName: string; difficulty: Difficulty;
       count: number; classLevel: number; board: Board;
@@ -20,6 +27,12 @@ export async function POST(req: NextRequest) {
       /** Client-generated id for this start; retries with it are never charged twice. */
       sessionId?: string;
     };
+
+    if (!subject || !difficulty || !board || !Number.isFinite(Number(classLevel))) {
+      return NextResponse.json({ error: "Missing subject, difficulty, class or board." }, { status: 400 });
+    }
+    // Bounded: the price is per session, so an unbounded count would be free extra work.
+    const count = Math.min(MAX_QUESTION_COUNT, Math.max(1, Math.floor(Number(rawCount) || 10)));
 
     const supabase = await createClient();
 
@@ -54,7 +67,10 @@ export async function POST(req: NextRequest) {
 
     let questions: GeneratedQuestion[];
     try {
-      questions = await generateQuestions({ subject, topicName, difficulty, count, classLevel, board });
+      questions = await generateQuestions({
+        subject, topicName, difficulty, count, classLevel: Number(classLevel), board,
+        deadlineMs: startedAt + GENERATION_BUDGET_MS,
+      });
       if (!questions.length) throw new Error("No questions were generated.");
     } catch (err) {
       // The session never started — give the credits back.
@@ -66,14 +82,28 @@ export async function POST(req: NextRequest) {
     // route does this; questions generated server-side for a battle (e.g.
     // the friend-invite accept flow) are already snapshotted into
     // battle_questions and don't need a separate copy in the general bank.
-    persistQuestions(supabase, questions, subject, classLevel, board).catch(() => {});
+    // after(): on serverless, un-awaited work can be frozen once the
+    // response is sent; after() keeps the function alive until it finishes.
+    // Saving is optional — it must never fail a request the student has
+    // already been charged for, so scheduling errors fall back to a plain
+    // fire-and-forget save.
+    const persist = () => persistQuestions(supabase, questions, subject, Number(classLevel), board).catch((err) => {
+      console.error("[/api/questions] persist failed:", err);
+    });
+    try { after(persist); } catch { void persist(); }
 
     return NextResponse.json({ questions });
   } catch (err) {
     console.error("[/api/questions]", err);
-    const message = err instanceof Error ? err.message : "Question generation failed.";
-    const status = message.includes("isn't allowed") ? 400 : 500;
-    return NextResponse.json({ error: message }, { status });
+    // Only pass through messages written for students; never raw SDK errors.
+    if (err instanceof QuestionGenerationError) {
+      return NextResponse.json({ error: err.message }, { status: 503 });
+    }
+    const message = err instanceof Error ? err.message : "";
+    if (message.includes("isn't allowed")) {
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+    return NextResponse.json({ error: "Could not generate questions. Please try again." }, { status: 500 });
   }
 }
 
