@@ -107,7 +107,7 @@ export function StudentTable({ rows }: { rows: AdminStudentListRow[] }) {
               )}
             </TableCell>
             <TableCell className="text-right">
-              <StudentRowActions studentId={r.student_id} status={r.account_status} />
+              <StudentRowActions studentId={r.student_id} profileId={r.profile_id} studentName={r.full_name || r.email} status={r.account_status} />
             </TableCell>
           </TableRow>
         ))}

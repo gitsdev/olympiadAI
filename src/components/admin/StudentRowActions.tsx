@@ -3,21 +3,25 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { MoreHorizontal, Eye, Ban, CheckCircle2, Mail } from "lucide-react";
+import { MoreHorizontal, Eye, Ban, CheckCircle2, Mail, Coins } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { SendStudentEmailDialog } from "./SendStudentEmailDialog";
+import { AddCreditsDialog } from "./credits/AddCreditsDialog";
 import { setStudentAccountStatus } from "@/actions/admin/students";
 import type { StudentAccountStatus } from "@/types/database";
 
-export function StudentRowActions({ studentId, status }: { studentId: string; status: StudentAccountStatus }) {
+export function StudentRowActions({ studentId, profileId, studentName, status }: {
+  studentId: string; profileId: string; studentName: string; status: StudentAccountStatus;
+}) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
+  const [creditsOpen, setCreditsOpen] = useState(false);
   const nextStatus: StudentAccountStatus = status === "suspended" ? "active" : "suspended";
 
   return (
@@ -35,6 +39,9 @@ export function StudentRowActions({ studentId, status }: { studentId: string; st
           <DropdownMenuItem onClick={() => setEmailOpen(true)}>
             <Mail size={14} /> Send email
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setCreditsOpen(true)}>
+            <Coins size={14} /> Add credits
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setConfirmOpen(true)} variant={nextStatus === "suspended" ? "destructive" : undefined}>
             {nextStatus === "suspended" ? <Ban size={14} /> : <CheckCircle2 size={14} />}
             {nextStatus === "suspended" ? "Suspend student" : "Activate student"}
@@ -43,6 +50,7 @@ export function StudentRowActions({ studentId, status }: { studentId: string; st
       </DropdownMenu>
 
       <SendStudentEmailDialog studentId={studentId} open={emailOpen} onOpenChange={setEmailOpen} />
+      <AddCreditsDialog userId={profileId} studentName={studentName} open={creditsOpen} onOpenChange={setCreditsOpen} />
 
       <ConfirmDialog
         open={confirmOpen}

@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Ban, CheckCircle2, KeyRound, Mail } from "lucide-react";
+import { Ban, CheckCircle2, Coins, KeyRound, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { EditStudentDialog } from "./EditStudentDialog";
 import { SendStudentEmailDialog } from "./SendStudentEmailDialog";
+import { AddCreditsDialog } from "./credits/AddCreditsDialog";
 import { setStudentAccountStatus, adminSendPasswordReset } from "@/actions/admin/students";
 import type { StudentAccountStatus, StudentRow } from "@/types/database";
 
@@ -20,6 +21,7 @@ export function StudentHeaderActions({
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
+  const [creditsOpen, setCreditsOpen] = useState(false);
   const nextStatus: StudentAccountStatus = status === "suspended" ? "active" : "suspended";
 
   return (
@@ -28,6 +30,10 @@ export function StudentHeaderActions({
 
       <Button variant="outline" size="sm" onClick={() => setEmailOpen(true)}>
         <Mail size={14} /> Send Email
+      </Button>
+
+      <Button variant="outline" size="sm" onClick={() => setCreditsOpen(true)}>
+        <Coins size={14} /> Add Credits
       </Button>
 
       <Button variant="outline" size="sm" onClick={() => setResetConfirmOpen(true)}>
@@ -44,6 +50,7 @@ export function StudentHeaderActions({
       </Button>
 
       <SendStudentEmailDialog studentId={studentId} open={emailOpen} onOpenChange={setEmailOpen} />
+      <AddCreditsDialog userId={student.profile_id} studentName={fullName || email} open={creditsOpen} onOpenChange={setCreditsOpen} />
 
       <ConfirmDialog
         open={statusConfirmOpen}
