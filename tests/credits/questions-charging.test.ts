@@ -11,6 +11,9 @@ const state = vi.hoisted(() => ({
   chargeResult: { ok: true, status: "charged", cost: 5, balance: 20, transactionId: "tx-1" } as Record<string, unknown>,
   generateFails: false as false | "error" | "busy",
   generateCalls: 0,
+  delivered: [] as string[],
+  sweeps: [] as Array<string | undefined>,
+  chargeMetadata: [] as Array<Record<string, unknown> | undefined>,
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -27,8 +30,18 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 vi.mock("@/lib/credits/feature", () => ({
-  chargeFeatureStart: async (input: { featureKey: string; sessionKey: string }) => {
+  DELIVERY_TRACKED: { delivery_tracked: true },
+  markSessionDelivered: async (input: { transactionId: string }) => {
+    state.delivered.push(input.transactionId);
+    return true;
+  },
+  refundUndeliveredSessions: async (input: { userId?: string }) => {
+    state.sweeps.push(input.userId);
+    return { found: 0, refunded: 0, failed: 0 };
+  },
+  chargeFeatureStart: async (input: { featureKey: string; sessionKey: string; metadata?: Record<string, unknown> }) => {
     state.charges.push({ featureKey: input.featureKey, sessionKey: input.sessionKey });
+    state.chargeMetadata.push(input.metadata);
     return state.chargeResult;
   },
   refundFailedStart: async (input: { transactionId: string }) => {
@@ -70,6 +83,9 @@ beforeEach(() => {
   state.chargeResult = { ok: true, status: "charged", cost: 5, balance: 20, transactionId: "tx-1" };
   state.generateFails = false;
   state.generateCalls = 0;
+  state.delivered = [];
+  state.sweeps = [];
+  state.chargeMetadata = [];
 });
 
 describe("/api/questions two-step start (charge, then generate)", () => {
@@ -108,6 +124,36 @@ describe("/api/questions two-step start (charge, then generate)", () => {
     expect(await (await POST(req({ purpose: "battle", sessionId: SESSION, stage: "charge" }))).json()).toEqual({ charged: false });
     expect(state.charges).toEqual([]);
     expect(state.generateCalls).toBe(0);
+  });
+});
+
+describe("/api/questions delivery tracking", () => {
+  it("tags charges as delivery-tracked and marks a successful session delivered", async () => {
+    const res = await POST(req({ purpose: "practice", sessionId: SESSION }));
+    expect(res.status).toBe(200);
+    expect(state.chargeMetadata[0]).toMatchObject({ delivery_tracked: true });
+    expect(state.delivered).toEqual(["tx-1"]);
+  });
+
+  it("does not mark a failed session delivered (it is refunded instead)", async () => {
+    state.generateFails = "busy";
+    await POST(req({ purpose: "practice", sessionId: SESSION }));
+    expect(state.delivered).toEqual([]);
+    expect(state.refunds).toEqual(["tx-1"]);
+  });
+
+  it("the charge step first refunds the student's own undelivered sessions", async () => {
+    await POST(req({ purpose: "practice", sessionId: SESSION, stage: "charge" }));
+    expect(state.sweeps).toEqual(["00000000-0000-0000-0000-0000000000b1"]);
+    expect(state.delivered).toEqual([]); // nothing delivered yet at this step
+  });
+
+  it("admins are never swept or marked", async () => {
+    state.role = "platform_admin";
+    await POST(req({ purpose: "practice", sessionId: SESSION, stage: "charge" }));
+    await POST(req({ purpose: "practice", sessionId: SESSION }));
+    expect(state.sweeps).toEqual([]);
+    expect(state.delivered).toEqual([]);
   });
 });
 

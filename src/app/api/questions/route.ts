@@ -3,7 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import {
   generateQuestions, MAX_QUESTION_COUNT, QuestionGenerationError, type GeneratedQuestion,
 } from "@/lib/questions/generate";
-import { chargeFeatureStart, refundFailedStart } from "@/lib/credits/feature";
+import {
+  chargeFeatureStart, refundFailedStart, refundUndeliveredSessions, markSessionDelivered, DELIVERY_TRACKED,
+} from "@/lib/credits/feature";
 import { deductErrorResponse, isValidIdempotencyKey } from "@/lib/credits/deduct";
 import type { Board, Subject, Difficulty } from "@/types/database";
 
@@ -61,12 +63,17 @@ export async function POST(req: NextRequest) {
       const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
       const isAdmin = (profile as { role?: string } | null)?.role === "platform_admin";
       if (!isAdmin) {
+        // Give back any earlier session of theirs that was charged but never
+        // got its questions (e.g. their connection dropped) before taking a
+        // new charge — so the balance they're charged against is right.
+        if (stage === "charge") await refundUndeliveredSessions({ userId: user.id });
+
         const charge = await chargeFeatureStart({
           userId: user.id,
           featureKey,
           sessionKey: isValidIdempotencyKey(sessionId) ? sessionId : crypto.randomUUID(),
           referenceId: sessionId ?? null,
-          metadata: { subject, topic: topicName, count, difficulty },
+          metadata: { subject, topic: topicName, count, difficulty, ...DELIVERY_TRACKED },
         });
         if (!charge.ok) {
           const { status, body } = deductErrorResponse(charge);
@@ -93,6 +100,10 @@ export async function POST(req: NextRequest) {
       if (charged) await refundFailedStart({ ...charged, reason: "question generation failed" }).catch(() => undefined);
       throw err;
     }
+
+    // Delivered: this charge must not be refunded as "never delivered".
+    // Awaited so it's recorded before the response; it never throws.
+    if (charged) await markSessionDelivered(charged);
 
     // Persist best-effort (don't block response) — only the client-facing
     // route does this; questions generated server-side for a battle (e.g.
