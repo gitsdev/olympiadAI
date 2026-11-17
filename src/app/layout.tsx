@@ -1,28 +1,31 @@
 import type { Metadata } from "next";
-import { Bricolage_Grotesque, Hanken_Grotesk, JetBrains_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import "./globals.css";
 import { AttributionCapture } from "@/components/attribution/AttributionCapture";
 import { GlobalSpinner } from "@/components/layout/GlobalSpinner";
 
-const bricolage = Bricolage_Grotesque({
+// Self-hosted (Latin, variable weight) rather than next/font/google, so the
+// build never depends on fetching from Google Fonts — Turbopack's Google
+// font loader failed on Vercel for Bricolage Grotesque.
+const bricolage = localFont({
+  src: "./fonts/bricolage-grotesque-latin.woff2",
   variable: "--font-bricolage",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+  weight: "200 800",
   display: "swap",
 });
 
-const hanken = Hanken_Grotesk({
+const hanken = localFont({
+  src: "./fonts/hanken-grotesk-latin.woff2",
   variable: "--font-hanken",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+  weight: "100 900",
   display: "swap",
 });
 
-const jetbrains = JetBrains_Mono({
+const jetbrains = localFont({
+  src: "./fonts/jetbrains-mono-latin.woff2",
   variable: "--font-jetbrains",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: "100 800",
   display: "swap",
 });
 
