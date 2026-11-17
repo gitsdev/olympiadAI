@@ -722,16 +722,6 @@ const PAID_PLANS = [
 ];
 void PAID_PLANS; // kept as backup reference for the future paid rollout — see comment above
 
-/** What one use of each feature is, for "N credits per …" on the pricing card. */
-const FEATURE_UNITS: Record<string, string> = {
-  mock_test: "per mock test",
-  practice: "per practice session",
-  question_paper_solver: "per question paper",
-  ai_tutor: "per session",
-  friend_battle: "per battle",
-  brain_booster: "per game",
-};
-
 /** Always free — not credit-based features. */
 const ALWAYS_FREE = [
   "10-min diagnostic & readiness score",
@@ -741,7 +731,6 @@ const ALWAYS_FREE = [
 
 async function Pricing() {
   const pricing = await getPublicFeaturePricing();
-  const charged = (pricing ?? []).filter((f) => f.cost !== null);
   const free = [...(pricing ?? []).filter((f) => f.cost === null).map((f) => f.name), ...ALWAYS_FREE];
 
   return (
@@ -753,8 +742,8 @@ async function Pricing() {
       <div className="max-w-[1160px] mx-auto">
         <SectionHead
           eyebrow="Pricing"
-          title="Start free. Pay only for what you use."
-          sub={`Every new student gets ${WELCOME_CREDITS} free credits. No subscription, no monthly fee — credits never expire.`}
+          title={`Start with ${WELCOME_CREDITS} free credits.`}
+          sub="Sign up and your credits are waiting — explore our premium features on us. No subscription, no monthly fee."
         />
 
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] gap-5 max-w-[980px] mx-auto">
@@ -770,47 +759,51 @@ async function Pricing() {
             />
             <div className="relative">
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full mb-5" style={{ background: "var(--gold-400)" }}>
-                <Coins size={14} style={{ color: "var(--ink-900)" }} />
+                <Sparkles size={14} style={{ color: "var(--ink-900)" }} />
                 <span className="text-[12px] font-bold" style={{ color: "var(--ink-900)", letterSpacing: "0.03em" }}>
-                  {WELCOME_CREDITS} FREE CREDITS TO START
+                  WELCOME GIFT FOR EVERY STUDENT
                 </span>
               </div>
 
-              <div className="flex items-baseline gap-2 mb-1">
-                <span className="font-black text-[44px] sm:text-[52px] tracking-tight text-white"
-                  style={{ fontFamily: "var(--font-mono)", letterSpacing: "-0.03em" }}>
-                  ₹1
+              <div className="flex items-center gap-4 mb-3">
+                <span
+                  className="w-16 h-16 sm:w-[72px] sm:h-[72px] rounded-[var(--r-xl)] flex items-center justify-center shrink-0"
+                  style={{ background: "oklch(1 0 0 / 0.12)", border: "1px solid oklch(1 0 0 / 0.18)" }}
+                >
+                  <Coins size={34} style={{ color: "var(--gold-300)" }} />
                 </span>
-                <span className="text-[15px]" style={{ color: "oklch(0.9 0.04 258)" }}>= 1 credit</span>
+                <div>
+                  <span
+                    className="block font-black leading-none tracking-tight"
+                    style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.03em", fontSize: "clamp(56px, 9vw, 76px)", color: "var(--gold-300)" }}
+                  >
+                    {WELCOME_CREDITS}
+                  </span>
+                  <span className="block text-[16px] sm:text-[18px] font-bold text-white mt-1">FREE credits</span>
+                </div>
               </div>
-              <p className="text-[14px] mb-6" style={{ color: "oklch(0.88 0.04 258)" }}>
-                Top up from {MIN_PURCHASE_CREDITS} credits (₹{MIN_PURCHASE_CREDITS}) · UPI, cards & netbanking · credits never expire
+
+              <p className="text-[15px] sm:text-[16px] leading-[1.6] mb-6" style={{ color: "oklch(0.92 0.03 258)" }}>
+                Added to your wallet the moment you sign up. Use them to enjoy our premium features — and discover how exam-ready you really are.
               </p>
 
-              {charged.length > 0 ? (
-                <ul className="flex flex-col gap-2.5 mb-7">
-                  {charged.map((f) => (
-                    <li key={f.key} className="flex items-center justify-between gap-3 rounded-[var(--r-md)] px-4 py-3"
-                      style={{ background: "oklch(1 0 0 / 0.08)", border: "1px solid oklch(1 0 0 / 0.12)" }}>
-                      <span className="text-[14.5px] font-semibold text-white">{f.name}</span>
-                      <span className="text-right text-[13px] whitespace-nowrap" style={{ color: "oklch(0.9 0.04 258)" }}>
-                        <span className="font-bold text-[15px]" style={{ color: "var(--gold-300)", fontFamily: "var(--font-mono)" }}>{f.cost}</span>
-                        {" "}credits {FEATURE_UNITS[f.key] ?? "per use"}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-[14.5px] mb-7" style={{ color: "oklch(0.92 0.03 258)" }}>
-                  Credits power premium features like mock tests and practice sessions.
-                </p>
-              )}
+              <ul className="flex flex-col gap-2.5 mb-7">
+                {["Credited instantly when you sign up", "No card or subscription needed", "Your credits never expire"].map((t) => (
+                  <li key={t} className="flex items-start gap-2.5">
+                    <CircleCheck size={18} style={{ color: "var(--gold-300)", flexShrink: 0, marginTop: 1 }} />
+                    <span className="text-[14.5px]" style={{ color: "oklch(0.95 0.02 258)" }}>{t}</span>
+                  </li>
+                ))}
+              </ul>
 
               <Link href="/onboarding">
                 <OAButton variant="gold" size="lg">
-                  Start free with {WELCOME_CREDITS} credits <ArrowRight size={18} />
+                  Claim your {WELCOME_CREDITS} free credits <ArrowRight size={18} />
                 </OAButton>
               </Link>
+              <p className="text-[12.5px] mt-4" style={{ color: "oklch(0.85 0.04 258)" }}>
+                Need more later? Top up anytime from ₹{MIN_PURCHASE_CREDITS} (1 credit = ₹1).
+              </p>
             </div>
           </div>
 
