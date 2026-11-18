@@ -59,6 +59,7 @@ export async function updateSession(request: NextRequest) {
   const PUBLIC = [
     "/", "/start", "/login", "/signup", "/signup/confirm", "/onboarding", "/auth/callback", "/auth/confirm",
     "/forgot-password", "/reset-password", "/privacy", "/unsubscribe", "/maintenance",
+    "/ai-question-paper-solver",
   ];
   const isPublic = PUBLIC.some((p) => pathname === p)
     || pathname.startsWith("/api/")
