@@ -4,7 +4,7 @@ import { slugify } from "@/lib/slug";
 const FOOTER_COLS = [
   { h: "Platform", links: ["AI Tutor", "Practice", "Mock tests", "Readiness score", "Knowledge graph"] },
   { h: "Subjects",  links: ["Mathematics", "Science", "English", "General Knowledge", "Cyber"] },
-  { h: "Resources", links: ["Blog", "Olympiad Prep", "Study Guides", "Book Reviews"] },
+  { h: "Resources", links: ["Blog", "AI Paper Solver", "Olympiad Prep", "Study Guides", "Book Reviews"] },
   { h: "Company",   links: ["About", "For schools", "Careers", "Contact"] },
   { h: "Legal",     links: ["Privacy", "Terms", "Affiliate disclosure"] },
 ];
@@ -14,6 +14,7 @@ function footerHref(section: string, link: string): string {
   if (link === "Privacy") return "/privacy";
   if (link === "Blog") return "/blog";
   if (link === "Affiliate disclosure") return "/blog/affiliate-disclosure";
+  if (link === "AI Paper Solver") return "/ai-question-paper-solver";
   if (section === "Resources") return `/blog/category/${slugify(link)}`;
   return "#";
 }
