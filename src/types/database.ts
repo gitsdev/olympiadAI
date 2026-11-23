@@ -33,6 +33,15 @@ export interface TutorReference {
   url?: string;
   videoId?: string;   // YouTube video ID for in-app embed
   searchUrl?: string; // YouTube search fallback
+  /** Inline content shown in the reference detail panel when clicked. */
+  content?: TutorReferenceContent;
+}
+
+export interface TutorReferenceContent {
+  text?: string;                                // concept summary / problem statement
+  steps?: string[];                             // worked-example solution steps
+  answer?: string;                              // worked-example final answer
+  questions?: { q: string; answer: string }[];  // practice set
 }
 
 /* ── Row types (used as Table<"name">) ──────────────────────────────── */

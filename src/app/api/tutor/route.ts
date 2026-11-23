@@ -44,20 +44,57 @@ async function generateTutorReply(
   conversationHistory: ChatTurn[],
   question: string,
 ): Promise<{ text: string; usage: unknown }> {
-  if (outputMode === "fast") {
-    const completion = await withRetry(() => getGroq().chat.completions.create({
-      model: GROQ_MODEL,
-      max_completion_tokens: 1024,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: systemPrompt },
-        ...conversationHistory,
-        { role: "user", content: question },
-      ],
-    }));
-    return { text: completion.choices[0]?.message?.content ?? "{}", usage: completion.usage };
+  // Each mode falls back to the other provider, so a rate-limited or
+  // overloaded free tier doesn't surface as an error to the student.
+  const primary   = outputMode === "fast" ? callGroq : callGemini;
+  const secondary = outputMode === "fast" ? callGemini : callGroq;
+  try {
+    return await primary(systemPrompt, conversationHistory, question);
+  } catch (err) {
+    console.warn("[/api/tutor] primary provider failed, falling back", err);
+    return await secondary(systemPrompt, conversationHistory, question);
   }
+}
 
+async function callGroq(
+  systemPrompt: string,
+  conversationHistory: ChatTurn[],
+  question: string,
+): Promise<{ text: string; usage: unknown }> {
+  const create = () => withRetry(() => getGroq().chat.completions.create({
+    model: GROQ_MODEL,
+    // gpt-oss is a reasoning model: its hidden reasoning tokens share this
+    // budget. At 1024 (with default effort) reasoning consumed ~75% and the
+    // JSON was truncated, dropping steps/practice/videos.
+    reasoning_effort: "low",
+    max_completion_tokens: 4096,
+    response_format: { type: "json_object" },
+    messages: [
+      { role: "system", content: systemPrompt },
+      ...conversationHistory,
+      { role: "user", content: question },
+    ],
+  }));
+
+  // Groq validates json_object output server-side and returns a 400
+  // "json_validate_failed" when the model emits malformed JSON. withRetry
+  // skips 4xx, but a fresh sample usually succeeds, so retry that case.
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const completion = await create();
+      return { text: completion.choices[0]?.message?.content ?? "{}", usage: completion.usage };
+    } catch (err) {
+      const code = (err as { error?: { error?: { code?: string } } })?.error?.error?.code;
+      if (code !== "json_validate_failed" || attempt >= 2) throw err;
+    }
+  }
+}
+
+async function callGemini(
+  systemPrompt: string,
+  conversationHistory: ChatTurn[],
+  question: string,
+): Promise<{ text: string; usage: unknown }> {
   // Gemini uses role "model" (not "assistant") for prior turns.
   const contents = [
     ...conversationHistory.map((m) => ({
@@ -76,12 +113,46 @@ async function generateTutorReply(
       // Gemini's "thinking" tokens count against this budget too (not just
       // the visible JSON answer), so this needs real headroom — 2048 was
       // truncating responses mid-JSON.
-      maxOutputTokens: 4096,
+      maxOutputTokens: 8192,
       safetySettings: TUTOR_SAFETY_SETTINGS,
     },
   }));
   return { text: response.text ?? "{}", usage: response.usageMetadata };
 }
+
+const STOPWORDS = new Set([
+  "teach", "me", "about", "what", "is", "are", "how", "do", "does", "i", "the", "a", "an",
+  "to", "of", "in", "on", "for", "and", "or", "can", "you", "please", "explain", "show",
+  "tell", "my", "with", "why", "which", "when", "give", "help", "learn", "some", "tricks",
+  "trick", "calculation", "questions", "question",
+]);
+
+// Postgres websearch syntax: bare words are ANDed, so "Teach me percentage"
+// matched nothing. Keep only meaningful words and OR them together.
+function searchTerms(question: string): string | null {
+  const words = question.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/)
+    .filter((w) => w.length > 2 && !STOPWORDS.has(w));
+  const uniq = [...new Set(words)].slice(0, 4);
+  return uniq.length ? uniq.join(" or ") : null;
+}
+
+// The model sometimes invents YouTube IDs. oEmbed returns 200 only for real,
+// embeddable videos, so anything else falls back to a YouTube search link.
+async function isEmbeddableVideo(videoId: string): Promise<boolean> {
+  if (!/^[A-Za-z0-9_-]{11}$/.test(videoId)) return false;
+  try {
+    const res = await fetch(
+      `https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(`https://www.youtube.com/watch?v=${videoId}`)}`,
+      { signal: AbortSignal.timeout(2500) },
+    );
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+type WorkedExample = { title?: string; problem?: string; steps?: unknown; answer?: string };
+type PracticeItem  = { q?: string; answer?: string };
 
 // Finds the first balanced {...} object in text, tolerating any leading/trailing
 // prose or stray markdown the model adds around the JSON payload.
@@ -140,7 +211,8 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = await createClient();
-    const terms = question.split(" ").slice(0, 3).join(" | ");
+    const terms = searchTerms(question);
+    const empty = Promise.resolve({ data: [] as unknown[] });
 
     // Parallel: auth check + knowledge retrieval
     const [
@@ -149,20 +221,20 @@ export async function POST(req: NextRequest) {
       { data: rawResources },
     ] = await Promise.all([
       supabase.auth.getUser(),
-      supabase
+      terms ? supabase
         .from("concepts")
         .select("id, title, definition, subject, chapter_name, topic_name")
         .eq("class_level", studentClass)
         .eq("board", studentBoard)
         .textSearch("title", terms, { type: "websearch" })
-        .limit(3),
-      supabase
+        .limit(3) : empty,
+      terms ? supabase
         .from("resources")
         .select("id, title, url, source_name, resource_type, ai_summary, duration_seconds")
         .eq("class_level", studentClass)
         .eq("board", studentBoard)
         .textSearch("title", terms, { type: "websearch" })
-        .limit(4),
+        .limit(4) : empty,
     ]);
 
     const concepts  = asConcepts(rawConcepts);
@@ -181,7 +253,9 @@ KNOWLEDGE CONTEXT:
 ${ragContext || "Answer from general curriculum knowledge."}
 
 Reply with a single valid JSON object (no markdown fences):
-{"answer":"2–3 paragraph explanation with a worked example","keyInsight":"One key sentence starting with Key idea: or Remember:","visual":{"type":"fraction|number_line|percentage|geometry|bar_chart|none","data":{}},"steps":["step 1","step 2","step 3"],"tryIt":{"q":"short practice question","options":["A","B","C","D"],"correct":0,"why":"why A is correct"},"followUps":["follow-up 1","follow-up 2","follow-up 3"],"videos":[{"title":"title","channel":"channel","videoId":"11charId","query":"search query"}]}
+{"answer":"2–3 paragraph explanation with a worked example","keyInsight":"One key sentence starting with Key idea: or Remember:","visual":{"type":"fraction|number_line|percentage|geometry|bar_chart|none","data":{}},"steps":["step 1","step 2","step 3"],"tryIt":{"q":"short practice question","options":["A","B","C","D"],"correct":0,"why":"why A is correct"},"followUps":["follow-up 1","follow-up 2","follow-up 3"],"topic":"short topic name, e.g. Percentages","conceptNote":"4–6 sentence revision note: definition, key formulas/rules, common mistakes","workedExample":{"title":"short title","problem":"a different problem from the one in answer","steps":["step 1","step 2"],"answer":"final answer"},"practice":[{"q":"question","answer":"answer with one-line reason"}],"videos":[{"title":"title","channel":"channel","videoId":"11charId","query":"search query"}]}
+
+practice: exactly 4 questions of increasing difficulty, matched to Class ${studentClass}. Keep every field concise.
 
 Visual types: fraction:{n,d} | number_line:{min,max,points:[{value,label,highlight}]} | percentage:{value,label} | geometry:{shape,dims} | bar_chart:{bars:[{label,value}]} | none:{}
 Use none only for pure language topics. For maths/science always include a visual.
@@ -198,6 +272,10 @@ Videos: 1–2 real YouTube videos (Khan Academy, Math Antics, Physics Wallah). O
     let tryIt: { q: string; options: string[]; correct: number; why: string } | undefined;
     let followUps: string[] = [];
     let videoSuggestions: { title: string; channel: string; videoId?: string; query: string }[] = [];
+    let topic = "";
+    let conceptNote = "";
+    let workedExample: WorkedExample | undefined;
+    let practice: { q: string; answer: string }[] = [];
     let parsedOk = false;
     try {
       const cleaned = raw.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
@@ -219,7 +297,17 @@ Videos: 1–2 real YouTube videos (Khan Academy, Math Antics, Physics Wallah). O
         steps      = Array.isArray(parsed.steps)     ? parsed.steps     : [];
         tryIt      = parsed.tryIt?.q                  ? parsed.tryIt     : undefined;
         followUps  = Array.isArray(parsed.followUps)  ? parsed.followUps : [];
-        videoSuggestions = Array.isArray(parsed.videos) ? parsed.videos : [];
+        videoSuggestions = Array.isArray(parsed.videos)
+          ? parsed.videos.filter((v: { title?: unknown }) => typeof v?.title === "string")
+          : [];
+        topic       = typeof parsed.topic === "string" ? parsed.topic.trim() : "";
+        conceptNote = typeof parsed.conceptNote === "string" ? parsed.conceptNote.trim() : "";
+        if (parsed.workedExample?.problem) workedExample = parsed.workedExample as WorkedExample;
+        practice = Array.isArray(parsed.practice)
+          ? (parsed.practice as PracticeItem[])
+              .filter((p) => typeof p?.q === "string" && p.q.trim())
+              .map((p) => ({ q: p.q!, answer: typeof p.answer === "string" ? p.answer : "" }))
+          : [];
         parsedOk = true;
       }
     } catch {
@@ -231,28 +319,71 @@ Videos: 1–2 real YouTube videos (Khan Academy, Math Antics, Physics Wallah). O
       answer = "Sorry, I had trouble putting that answer together — could you try rephrasing your question?";
     }
 
-    const tutorRefs: TutorReference[] = [
-      // YouTube video suggestions from the model
+    const stamp = Date.now();
+    const videoValid = await Promise.all(
+      videoSuggestions.map((v) => (v.videoId ? isEmbeddableVideo(v.videoId) : Promise.resolve(false))),
+    );
+    const topicLabel = topic || question.slice(0, 60);
+    const exampleSteps = Array.isArray(workedExample?.steps)
+      ? (workedExample!.steps as unknown[]).filter((s): s is string => typeof s === "string")
+      : [];
+
+    const tutorRefs: TutorReference[] = !parsedOk ? [] : [
+      // YouTube video suggestions from the model — embedded only if the ID is real
       ...videoSuggestions.map((v, i) => ({
-        id:        `yt-${Date.now()}-${i}`,
+        id:        `yt-${stamp}-${i}`,
         type:      "video" as const,
         title:     v.title,
-        src:       v.channel,
-        meta:      "YouTube",
-        videoId:   v.videoId,
-        searchUrl: `https://www.youtube.com/results?search_query=${encodeURIComponent(v.query)}`,
-        url:       v.videoId
+        src:       v.channel || "YouTube",
+        meta:      videoValid[i] ? "YouTube" : "Search YouTube",
+        videoId:   videoValid[i] ? v.videoId : undefined,
+        searchUrl: `https://www.youtube.com/results?search_query=${encodeURIComponent(v.query || v.title)}`,
+        url:       videoValid[i]
           ? `https://www.youtube-nocookie.com/embed/${v.videoId}?autoplay=1&rel=0`
           : undefined,
       })),
       // Concepts from knowledge graph
       ...concepts.map((c) => ({
-        id:    c.id,
-        type:  "concept" as const,
-        title: c.title,
-        src:   "Knowledge graph",
-        meta:  `${studentBoard} · Cl ${studentClass}${c.chapter_name ? ` · ${c.chapter_name}` : ""}`,
+        id:      c.id,
+        type:    "concept" as const,
+        title:   c.title,
+        src:     "Knowledge graph",
+        meta:    `${studentBoard} · Cl ${studentClass}${c.chapter_name ? ` · ${c.chapter_name}` : ""}`,
+        content: { text: c.definition },
       })),
+      // Model-generated revision note (only when the knowledge graph had nothing)
+      ...(concepts.length === 0 && conceptNote ? [{
+        id:      `note-${stamp}`,
+        type:    "concept" as const,
+        title:   `${topicLabel} — concept note`,
+        src:     "AI tutor",
+        meta:    `${studentBoard} · Cl ${studentClass}`,
+        content: { text: conceptNote },
+      }] : []),
+      ...(workedExample ? [{
+        id:      `ex-${stamp}`,
+        type:    "example" as const,
+        title:   workedExample.title ? `Worked example: ${workedExample.title}` : "Worked example",
+        src:     "Step-by-step",
+        meta:    `${exampleSteps.length} steps`,
+        content: { text: workedExample.problem, steps: exampleSteps, answer: workedExample.answer },
+      }] : []),
+      ...(practice.length ? [{
+        id:      `pr-${stamp}`,
+        type:    "practice" as const,
+        title:   `${topicLabel} — practice set`,
+        src:     "Generated",
+        meta:    `${practice.length} questions`,
+        content: { questions: practice },
+      }] : []),
+      {
+        id:    `src-${stamp}`,
+        type:  "source" as const,
+        title: `${topicLabel} on Khan Academy`,
+        src:   "khanacademy.org",
+        meta:  "Linked source",
+        url:   `https://www.khanacademy.org/search?page_search_query=${encodeURIComponent(topicLabel)}`,
+      },
       // Resources from DB
       ...resources.map((r) => ({
         id:    r.id,

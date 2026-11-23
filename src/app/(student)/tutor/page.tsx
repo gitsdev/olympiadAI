@@ -17,7 +17,7 @@ import { AppShell } from "@/components/layout";
 import { OABadge, OAAvatar } from "@/components/ui";
 import { useStudent } from "@/contexts/StudentContext";
 import { VisualAid, type VisualSpec } from "@/components/tutor/VisualAid";
-import type { TutorReference } from "@/types/database";
+import type { TutorReference, TutorReferenceContent } from "@/types/database";
 import { cn } from "@/lib/utils";
 
 /* ── Reference data ──────────────────────────────────────────────────── */
@@ -28,9 +28,10 @@ interface Ref {
   title: string;
   src: string;
   meta: string;
-  url?: string;       // YouTube embed URL (for modal)
+  url?: string;       // YouTube embed URL (for modal) or external link
   searchUrl?: string; // YouTube search fallback
   videoId?: string;
+  content?: TutorReferenceContent;
   fresh: boolean;
 }
 
@@ -42,26 +43,9 @@ const REF_META: Record<RefType, { Icon: React.ElementType; label: string; color:
   source:   { Icon: Globe,     label: "Linked sources",  color: "var(--ink-500)" },
 };
 
-const FRACTIONS_REFS: Omit<Ref, "id" | "fresh">[] = [
-  { type: "video",    title: "Converting fractions to decimals",      src: "Math Antics · video",  meta: "5:12" },
-  { type: "video",    title: "Why the denominator matters",           src: "Khan-style · video",   meta: "3:40" },
-  { type: "concept",  title: "Fractions & Decimals — concept summary",src: "Knowledge graph",       meta: "CBSE · Cl 7 · Ch 2" },
-  { type: "concept",  title: "Place value & decimal conversion",      src: "Prerequisite node",    meta: "CBSE · Cl 6" },
-  { type: "example",  title: "Worked example: 5⁄8 → 0.625",          src: "Step-by-step",          meta: "3 steps" },
-  { type: "example",  title: "Mixed numbers → decimals",             src: "Step-by-step",          meta: "4 steps" },
-  { type: "practice", title: "Fractions → Decimals — practice set",  src: "Generated",             meta: "10 questions" },
-  { type: "practice", title: "HOTS: recurring decimals",             src: "Generated",             meta: "6 questions" },
-  { type: "source",   title: "NCERT Maths Class 7 — Chapter 2",      src: "ncert.nic.in",          meta: "Linked source" },
-];
-const FOLLOWUP_REFS: Omit<Ref, "id" | "fresh">[] = [
-  { type: "video",   title: "Fractions on a number line",            src: "Visual · video",       meta: "4:08" },
-  { type: "example", title: "Worked example: 7⁄20 → 0.35",          src: "Step-by-step",          meta: "3 steps" },
-  { type: "concept", title: "Terminating vs recurring decimals",     src: "Knowledge graph",       meta: "CBSE · Cl 7" },
-];
-
 /* ── Message types ───────────────────────────────────────────────────── */
 interface StudentMsg  { role: "student"; text: string }
-interface TutorIntro  { role: "tutor"; kind: "intro"; text: string }
+interface TutorIntro  { role: "tutor"; kind: "intro" | "error"; text: string }
 interface TutorAnswer {
   role: "tutor"; kind: "answer"; text: string;
   keyInsight?: string;
@@ -146,6 +130,7 @@ function TutorInner() {
   const [filter, setFilter] = useState<RefType | "All">("All");
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [videoModal, setVideoModal] = useState<Ref | null>(null);
+  const [detailRef, setDetailRef] = useState<Ref | null>(null);
   const [outputMode, setOutputMode] = useState<"fast" | "normal">("fast");
   const voice = useVoiceInput((text) => setInput(text));
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -163,7 +148,7 @@ function TutorInner() {
 
     try {
       const history = msgs
-        .filter((m) => m.role !== "tutor" || m.kind !== "intro")
+        .filter((m) => m.role === "student" || m.kind === "answer")
         .map((m) => ({
           role:    m.role === "student" ? "user" as const : "assistant" as const,
           content: m.text,
@@ -206,17 +191,16 @@ function TutorInner() {
         return;
       }
     } catch {
-      // Fall through to mock
+      // Network failure — handled below.
     }
 
-    // Fallback to mock when API unavailable
-    const isFollow = msgs.length > 1;
+    // Never substitute canned demo content: it was unrelated to the question
+    // (always fractions) and its references had nothing behind them.
     setThinking(false);
-    setMsgs((m) => [...m, buildAnswer(isFollow)]);
-    const incoming = (isFollow ? FOLLOWUP_REFS : FRACTIONS_REFS).map((r, i) => ({
-      ...r, id: Date.now() + i, fresh: true,
-    }));
-    setRefs((prev) => [...prev.map((r) => ({ ...r, fresh: false })), ...incoming]);
+    setMsgs((m) => [...m, {
+      role: "tutor", kind: "error",
+      text: "Sorry — I couldn't reach the tutor just now. Please send your question again.",
+    }]);
   }
 
   // Deep-linked from elsewhere (e.g. a "Today's plan" item) with a question to ask immediately.
@@ -442,7 +426,15 @@ function TutorInner() {
                     {REF_META[type].label}
                   </div>
                   <div className="flex flex-col gap-2">
-                    {grouped[type].map((r) => <RefCard key={r.id} r={r} onVideoClick={setVideoModal} />)}
+                    {grouped[type].map((r) => (
+                      <RefCard
+                        key={r.id}
+                        r={r}
+                        onVideoClick={setVideoModal}
+                        onDetailClick={setDetailRef}
+                        onAsk={(q) => { setMobileView("chat"); send(q); }}
+                      />
+                    ))}
                   </div>
                 </div>
               ))}
@@ -451,6 +443,13 @@ function TutorInner() {
         </div>
       </div>
       {videoModal && <VideoModal r={videoModal} onClose={() => setVideoModal(null)} />}
+      {detailRef && (
+        <RefDetailModal
+          r={detailRef}
+          onClose={() => setDetailRef(null)}
+          onAsk={(q) => { setDetailRef(null); setMobileView("chat"); send(q); }}
+        />
+      )}
     </AppShell>
   );
 }
@@ -698,9 +697,33 @@ function VideoModal({ r, onClose }: { r: Ref; onClose: () => void }) {
   );
 }
 
-function RefCard({ r, onVideoClick }: { r: Ref; onVideoClick: (r: Ref) => void }) {
+function hasContent(c?: TutorReferenceContent): boolean {
+  return !!c && !!(c.text || c.steps?.length || c.answer || c.questions?.length);
+}
+
+function askPromptFor(r: Ref): string {
+  switch (r.type) {
+    case "example":  return `Show me a worked example: ${r.title}`;
+    case "practice": return `Give me practice questions on: ${r.title}`;
+    default:         return `Explain: ${r.title}`;
+  }
+}
+
+function RefCard({ r, onVideoClick, onDetailClick, onAsk }: {
+  r: Ref;
+  onVideoClick: (r: Ref) => void;
+  onDetailClick: (r: Ref) => void;
+  onAsk: (q: string) => void;
+}) {
   const m = REF_META[r.type];
   const isVideo = r.type === "video";
+  // Videos with a verified ID play in-app; others open a YouTube search.
+  const videoHref = isVideo && !r.url ? r.searchUrl : undefined;
+  const actionLabel = isVideo
+    ? (r.url ? "▶ Play in app" : "↗ Search YouTube")
+    : hasContent(r.content) ? `${r.meta} · Open`
+    : r.url ? `${r.meta} ↗`
+    : "Ask tutor";
 
   const cardClass = "flex gap-2.5 p-[10px_11px] rounded-[var(--r-md)] border border-[var(--line-200)] bg-[var(--surface)] transition-all duration-[180ms] hover:shadow-[var(--shadow-md)] hover:border-[var(--cobalt-200)] hover:-translate-y-0.5 cursor-pointer";
   const cardStyle = { boxShadow: r.fresh ? "var(--shadow-sm)" : "none" };
@@ -723,7 +746,7 @@ function RefCard({ r, onVideoClick }: { r: Ref; onVideoClick: (r: Ref) => void }
           <span className="text-[10.5px]" style={{ fontFamily: "var(--font-mono)", color: "var(--fg-muted)" }}>{r.src}</span>
           <span className="w-[3px] h-[3px] rounded-full shrink-0" style={{ background: "var(--line-300)" }} />
           <span className="text-[10.5px]" style={{ fontFamily: "var(--font-mono)", color: isVideo ? "oklch(0.56 0.17 18)" : "var(--fg-subtle)" }}>
-            {isVideo ? "▶ Play in app" : r.meta}
+            {actionLabel}
           </span>
         </div>
       </div>
@@ -731,23 +754,142 @@ function RefCard({ r, onVideoClick }: { r: Ref; onVideoClick: (r: Ref) => void }
     </>
   );
 
-  if (isVideo) {
+  const href = videoHref ?? (!isVideo && !hasContent(r.content) ? r.url : undefined);
+  if (href) {
     return (
-      <div className={cardClass} style={cardStyle} onClick={() => onVideoClick(r)}>
-        {inner}
-      </div>
-    );
-  }
-
-  if (r.url) {
-    return (
-      <a href={r.url} target="_blank" rel="noopener noreferrer" className={cardClass} style={cardStyle}>
+      <a href={href} target="_blank" rel="noopener noreferrer" className={cardClass} style={cardStyle}>
         {inner}
       </a>
     );
   }
 
-  return <div className={cardClass} style={cardStyle}>{inner}</div>;
+  const onClick = isVideo ? () => onVideoClick(r)
+    : hasContent(r.content) ? () => onDetailClick(r)
+    : () => onAsk(askPromptFor(r));
+
+  return (
+    <button type="button" className={cn(cardClass, "w-full text-left")} style={cardStyle} onClick={onClick}>
+      {inner}
+    </button>
+  );
+}
+
+function RefDetailModal({ r, onClose, onAsk }: { r: Ref; onClose: () => void; onAsk: (q: string) => void }) {
+  const m = REF_META[r.type];
+  const c = r.content ?? {};
+  const [revealed, setRevealed] = useState<Set<number>>(new Set());
+  const [showAnswer, setShowAnswer] = useState(false);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "oklch(0.08 0.02 264 / 0.55)", backdropFilter: "blur(3px)" }}
+      onClick={onClose}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={r.title}
+        className="w-full max-w-[600px] max-h-[85vh] flex flex-col rounded-[var(--r-xl)] overflow-hidden shadow-[var(--shadow-xl)] border border-[var(--line-200)]"
+        style={{ background: "var(--surface)" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-[var(--line-200)]">
+          <div className="w-8 h-8 rounded-[8px] flex items-center justify-center shrink-0" style={{ background: r.type === "practice" ? "var(--gold-50)" : "var(--cobalt-50)" }}>
+            <m.Icon size={16} style={{ color: m.color }} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[15px] font-bold leading-snug" style={{ color: "var(--ink-900)", fontFamily: "var(--font-display)" }}>{r.title}</p>
+            <p className="text-[11px]" style={{ color: "var(--fg-muted)", fontFamily: "var(--font-mono)" }}>{r.src} · {r.meta}</p>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="w-8 h-8 rounded-full border-none cursor-pointer flex items-center justify-center hover:bg-[var(--fill-100)]"
+            style={{ background: "transparent", color: "var(--fg-muted)" }}
+          >
+            <X size={17} />
+          </button>
+        </div>
+
+        <div className="oa-scroll flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4">
+          {c.text && (
+            <p className="text-[14px] leading-[1.65] whitespace-pre-wrap" style={{ color: "var(--ink-800, var(--ink-900))" }}>
+              {r.type === "example" && <span className="font-bold">Problem: </span>}
+              {c.text}
+            </p>
+          )}
+
+          {c.steps && c.steps.length > 0 && (
+            <div className="flex flex-col gap-2">
+              {c.steps.map((s, i) => (
+                <div key={i} className="flex gap-2.5">
+                  <span className="w-5 h-5 rounded-full shrink-0 flex items-center justify-center text-[11px] font-bold text-white" style={{ background: "var(--cobalt-500)", fontFamily: "var(--font-mono)" }}>
+                    {i + 1}
+                  </span>
+                  <span className="text-[13.5px] leading-[1.5]" style={{ color: "var(--ink-700)" }}>{s}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {c.answer && (
+            showAnswer ? (
+              <div className="flex gap-2 px-3.5 py-2.5 rounded-[var(--r-md)] text-[13.5px] font-semibold" style={{ background: "var(--success-bg)", color: "var(--success-tx)" }}>
+                <CheckCircle2 size={16} className="shrink-0 mt-0.5" /> Answer: {c.answer}
+              </div>
+            ) : (
+              <button onClick={() => setShowAnswer(true)} className="self-start text-[12.5px] font-semibold px-3 py-1.5 rounded-full border border-[var(--line-300)] bg-[var(--surface)] cursor-pointer hover:bg-[var(--fill-100)]" style={{ color: "var(--ink-700)" }}>
+                Show final answer
+              </button>
+            )
+          )}
+
+          {c.questions && c.questions.length > 0 && (
+            <ol className="flex flex-col gap-3 list-none p-0 m-0">
+              {c.questions.map((q, i) => {
+                const open = revealed.has(i);
+                return (
+                  <li key={i} className="border border-[var(--line-200)] rounded-[var(--r-md)] px-3.5 py-3" style={{ background: "var(--paper-2)" }}>
+                    <p className="text-[13.5px] font-semibold leading-[1.5]" style={{ color: "var(--ink-900)" }}>
+                      <span style={{ fontFamily: "var(--font-mono)", color: "var(--gold-700)" }}>Q{i + 1}. </span>{q.q}
+                    </p>
+                    {q.answer && (open ? (
+                      <p className="mt-2 text-[13px] leading-[1.5]" style={{ color: "var(--success-tx)" }}>{q.answer}</p>
+                    ) : (
+                      <button
+                        onClick={() => setRevealed((s) => new Set(s).add(i))}
+                        className="mt-2 text-[12px] font-semibold border-none bg-transparent p-0 cursor-pointer"
+                        style={{ color: "var(--brand)" }}
+                      >
+                        Reveal answer
+                      </button>
+                    ))}
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+        </div>
+
+        <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-[var(--line-200)]">
+          <button
+            onClick={() => onAsk(askPromptFor(r))}
+            className="inline-flex items-center gap-1.5 text-[13px] font-semibold px-3.5 py-2 rounded-[var(--r-md)] border-none cursor-pointer"
+            style={{ background: "var(--cobalt-500)", color: "#fff" }}
+          >
+            <Sparkles size={14} /> {r.type === "practice" ? "Give me more" : "Ask tutor about this"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function RefsEmpty() {
@@ -792,63 +934,6 @@ function Thinking() {
       </div>
     </div>
   );
-}
-
-/* ── Helper ──────────────────────────────────────────────────────────── */
-function buildAnswer(isFollow: boolean): TutorAnswer {
-  if (isFollow) {
-    return {
-      role: "tutor", kind: "answer",
-      text: "Great question! On a number line, we mark equal divisions between 0 and 1. For fractions like ¼, ½, and ¾, each division is one-quarter of the space between 0 and 1. Plotting them helps you see at a glance which fraction is larger.",
-      keyInsight: "Key idea: fractions closer to 1 on the number line are larger — the further right, the bigger the value.",
-      visual: {
-        type: "number_line",
-        data: {
-          min: 0, max: 1,
-          points: [
-            { value: 0.25, label: "¼",   highlight: false },
-            { value: 0.5,  label: "½",   highlight: true  },
-            { value: 0.75, label: "¾",   highlight: false },
-          ],
-        },
-      },
-      steps: [
-        "Draw a line from 0 to 1 and mark it into equal parts.",
-        "Count denominator divisions: for quarters, mark 4 equal sections.",
-        "Plot the fraction: ½ lands exactly in the middle.",
-      ],
-      tryIt: {
-        q: "Which fraction is closest to 1 on the number line?",
-        options: ["⅓", "¾", "½", "¼"],
-        correct: 1,
-        why: "¾ = 0.75, which is closest to 1 compared to ⅓ ≈ 0.33, ½ = 0.5, and ¼ = 0.25.",
-      },
-      follows: ["What are recurring decimals?", "Practice 5 questions", "Explain ratio next"],
-      newRefs: FOLLOWUP_REFS.length,
-    };
-  }
-  return {
-    role: "tutor", kind: "answer",
-    text: "A fraction shows part of a whole — the denominator says how many equal parts the whole is cut into, and the numerator says how many of those parts you have. To convert to a decimal, just divide: 5 ÷ 8 = 0.625. Think of it like slicing a pizza into 8 equal slices and taking 5.",
-    keyInsight: "Key idea: to convert any fraction to a decimal, divide the top number by the bottom number.",
-    visual: {
-      type: "fraction",
-      data: { n: 5, d: 8 },
-    },
-    steps: [
-      "Write the division: 5⁄8 means 5 ÷ 8.",
-      "Long divide: 8 goes into 5.000 → 0.625.",
-      "Verify: 0.625 × 8 = 5. ✓",
-    ],
-    tryIt: {
-      q: "Convert 7⁄20 to a decimal:",
-      options: ["0.35", "0.27", "0.72", "0.035"],
-      correct: 0,
-      why: "7 ÷ 20 = 0.35. Or multiply top & bottom by 5 to get 35⁄100 = 0.35.",
-    },
-    follows: ["Show me on a number line", "Practice 5 questions", "What about recurring decimals?"],
-    newRefs: FRACTIONS_REFS.length,
-  };
 }
 
 export default function TutorPage() {
