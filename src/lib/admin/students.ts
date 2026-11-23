@@ -26,6 +26,27 @@ export async function attachSignupSources(rows: AdminStudentListRow[]): Promise<
   });
 }
 
+/**
+ * Adds each row's credit balance. Never throws — if the wallet table can't be
+ * read, balances are null and the Students page still loads.
+ */
+export async function attachCreditBalances(rows: AdminStudentListRow[]): Promise<AdminStudentListRow[]> {
+  if (rows.length === 0) return rows;
+  try {
+    const service = createServiceClient();
+    const balances = new Map<string, number>();
+    const ids = rows.map((r) => r.profile_id);
+    for (let i = 0; i < ids.length; i += 200) {
+      const { data, error } = await service.from("credit_wallets").select("user_id, balance").in("user_id", ids.slice(i, i + 200));
+      if (error) throw new Error(error.message);
+      for (const w of (data ?? []) as { user_id: string; balance: number | string }[]) balances.set(w.user_id, Number(w.balance));
+    }
+    return rows.map((r) => ({ ...r, credit_balance: balances.get(r.profile_id) ?? 0 }));
+  } catch {
+    return rows.map((r) => ({ ...r, credit_balance: null }));
+  }
+}
+
 export async function listStudents(filters: AdminStudentFilters, page: number) {
   await requireAdmin();
   const service = createServiceClient();
@@ -47,7 +68,7 @@ export async function listStudents(filters: AdminStudentFilters, page: number) {
   });
 
   if (error) throw new Error(error.message);
-  const rows = await attachSignupSources((data ?? []) as AdminStudentListRow[]);
+  const rows = await attachCreditBalances(await attachSignupSources((data ?? []) as AdminStudentListRow[]));
   return { rows, totalCount: rows[0]?.total_count ?? 0 };
 }
 

@@ -57,6 +57,7 @@ export function StudentTable({ rows }: { rows: AdminStudentListRow[] }) {
           <TableHead>Mock Tests</TableHead>
           <TableHead>Avg Score</TableHead>
           <TableHead>AI Sessions</TableHead>
+          <TableHead>Credits</TableHead>
           <TableHead>Progress</TableHead>
           <TableHead>Status</TableHead>
           <TableHead className="text-right">Actions</TableHead>
@@ -91,6 +92,17 @@ export function StudentTable({ rows }: { rows: AdminStudentListRow[] }) {
             <TableCell>{r.mock_tests_taken}</TableCell>
             <TableCell>{r.mock_tests_taken > 0 ? `${r.avg_score.toFixed(0)}%` : "—"}</TableCell>
             <TableCell>{r.ai_sessions}</TableCell>
+            <TableCell>
+              {r.credit_balance === null || r.credit_balance === undefined ? (
+                <span style={{ color: "var(--fg-subtle)" }}>—</span>
+              ) : (
+                <Link href={`/admin/credits/students/${r.profile_id}`} title="Open credit wallet"
+                  className="font-semibold tabular-nums hover:underline"
+                  style={{ color: r.credit_balance > 0 ? "var(--ink-900)" : "var(--fg-muted)" }}>
+                  {r.credit_balance.toLocaleString("en-IN")}
+                </Link>
+              )}
+            </TableCell>
             <TableCell className="w-[110px]">
               <div className="flex items-center gap-2">
                 <OAProgressBar value={r.overall_progress} height={6} className="w-16" />

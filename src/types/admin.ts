@@ -18,6 +18,8 @@ export interface AdminStudentListRow {
   total_count: number;
   signup_source: string | null;
   signup_attribution: SignupAttribution | null;
+  /** Credit wallet balance (0 if no wallet yet); null if it couldn't be loaded. */
+  credit_balance?: number | null;
 }
 
 export interface AdminStudentFilters {
