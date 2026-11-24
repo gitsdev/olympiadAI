@@ -10,7 +10,7 @@
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
-export const CAMPAIGN_IDS = ["reengagement", "mock_test", "brain_booster", "battle", "ai_tutor"] as const;
+export const CAMPAIGN_IDS = ["reengagement", "mock_test", "brain_booster", "battle", "ai_tutor", "paper_solver"] as const;
 export type CampaignId = (typeof CAMPAIGN_IDS)[number];
 
 /** Who a bulk send targets. 'inactive' uses admin_settings.inactive_days_warning. */
@@ -204,6 +204,52 @@ export const CAMPAIGNS: Record<CampaignId, CampaignDefinition> = {
       cta: "Ask my AI tutor",
     }),
   },
+
+  paper_solver: {
+    id: "paper_solver",
+    label: "AI Question Paper Solver",
+    description: "Promote the Paper Solver: upload any question paper, get a full step-by-step answer sheet.",
+    emoji: "📄",
+    headerTitle: "AI Question Paper Solver",
+    // Public landing page; its CTA routes through login to /question-paper-solver.
+    path: "/ai-question-paper-solver",
+    segments: ["all", "inactive"],
+    supportsParents: true,
+    content: (r, firstName) => {
+      if (r.audience === "parent") {
+        return {
+          subject: `Get step-by-step solutions to any of ${firstName}'s question papers 📄`,
+          greeting: "Hello,",
+          intro: `Helping with homework and revision isn't always easy, especially in subjects you haven't studied in years. OlympiadIQ's new AI Question Paper Solver turns any of ${firstName}'s question papers into a complete answer sheet in minutes.`,
+          headline: "Upload a paper. Get every answer, explained.",
+          features: [
+            ["📤", "Any paper", "PDF, Word, or even a phone photo or scan"],
+            ["🪜", "Step-by-step solutions", `explained at a Class ${r.classLevel} level`],
+            ["📚", "CBSE, ICSE & Olympiad", "Maths, Science, English, GK and Social Studies"],
+            ["🚩", "Never guesses", "unclear questions are flagged for review, not made up"],
+            ["⬇️", "Download as PDF or Word", "with a quick answer key"],
+          ],
+          push: `The best way to use it: let ${firstName} attempt a sample or previous-year paper first, then check the work against the solutions to see exactly where marks were lost.`,
+          cta: "Try the Paper Solver",
+        };
+      }
+      return {
+        subject: `${firstName}, get a full answer sheet for any question paper 📄`,
+        greeting: `Hi ${firstName},`,
+        intro: "Finished a sample paper and not sure which answers are right? Stuck on a question the night before a test? The new OlympiadIQ AI Question Paper Solver has you covered.",
+        headline: "Upload any question paper, get every answer explained!",
+        features: [
+          ["📤", "Upload in seconds", "PDF, Word, or a photo of a printed paper"],
+          ["🪜", "Step-by-step solutions", `written for Class ${r.classLevel}, so you learn the method`],
+          ["🧮", "Every question type", "MCQs, maths, diagrams, fill in the blanks and more"],
+          ["🏆", "Olympiad-ready", "shortcuts, plus why the wrong options are wrong"],
+          ["⬇️", "Download your answer sheet", "as PDF or Word"],
+        ],
+        push: "Try this: attempt a practice paper yourself first, then upload it and check your work. You'll see exactly where you went wrong, and how to get it right next time.",
+        cta: "Solve a question paper",
+      };
+    },
+  },
 };
 
 export function isCampaignId(value: unknown): value is CampaignId {
@@ -222,10 +268,13 @@ export function unsubscribePageUrl(token: string): string {
 export function sampleRecipients(id: CampaignId, studentName = "Aarav Sharma"): { label: string; recipient: CampaignRecipient }[] {
   const base = { studentName, classLevel: 6 };
   const lapsedAt = new Date().toISOString();
-  // Only the re-engagement copy varies by activity/audience; the feature
-  // promos read the same for everyone, so one sample is enough.
+  // Only the re-engagement copy varies by activity; the feature promos read
+  // the same for every student, plus a parent version where supported.
   if (id !== "reengagement") {
-    return [{ label: "Student", recipient: { ...base, audience: "student", lastActiveAt: null, streakDays: 0 } }];
+    const student: CampaignRecipient = { ...base, audience: "student", lastActiveAt: null, streakDays: 0 };
+    const samples = [{ label: "Student", recipient: student }];
+    if (CAMPAIGNS[id].supportsParents) samples.push({ label: "Parent", recipient: { ...student, audience: "parent" } });
+    return samples;
   }
   return [
     { label: "Never started", recipient: { ...base, audience: "student", lastActiveAt: null, streakDays: 0 } },
