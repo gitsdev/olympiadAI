@@ -33,7 +33,7 @@ export default function ForgotPasswordPage() {
           className="oa-fade relative w-[380px] rounded-[var(--r-2xl)] border border-[var(--line-200)] shadow-[var(--shadow-lg)] p-8 text-center"
           style={{ background: "var(--surface)" }}
         >
-          <Logo size={32} />
+          <Logo size={40} showTagline />
 
           <div
             className="w-16 h-16 mx-auto mt-7 mb-5 rounded-full flex items-center justify-center"
@@ -68,7 +68,7 @@ export default function ForgotPasswordPage() {
             <ArrowLeft size={14} /> Back to sign in
           </Link>
 
-          <Logo size={32} />
+          <Logo size={40} showTagline />
 
           <h1
             className="font-bold text-[26px] tracking-tight mt-6 mb-1.5"

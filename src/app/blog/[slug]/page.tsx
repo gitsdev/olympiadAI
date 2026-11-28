@@ -86,7 +86,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         "@type": "Organization",
         name: "OlympiadIQ",
         url: SITE_URL,
-        logo: { "@type": "ImageObject", url: `${SITE_URL}/assets/logo-mark.svg` },
+        logo: { "@type": "ImageObject", url: `${SITE_URL}/assets/logo-full.png` },
       },
       mainEntityOfPage: { "@type": "WebPage", "@id": url },
       articleSection: post.category,

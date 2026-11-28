@@ -46,7 +46,7 @@ export default async function UnsubscribePage({ searchParams }: PageProps) {
         className="relative w-full max-w-[380px] rounded-[var(--r-2xl)] border border-[var(--line-200)] shadow-[var(--shadow-lg)] p-8 text-center"
         style={{ background: "var(--surface)" }}
       >
-        <Logo size={32} />
+        <Logo size={40} showTagline />
         <div
           className="w-16 h-16 mx-auto mt-7 mb-5 rounded-full flex items-center justify-center"
           style={{ background: "var(--cobalt-50)" }}

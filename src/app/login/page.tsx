@@ -38,7 +38,7 @@ export default function LoginPage({ searchParams }: { searchParams: Promise<{ ne
       >
         {next && <input type="hidden" name="next" value={next} />}
         <Link href="/" className="inline-block w-fit">
-          <Logo size={32} />
+          <Logo size={40} showTagline />
         </Link>
 
         <h1

@@ -11,10 +11,15 @@ export const COVER_HEIGHT = 630;
 
 // public/assets/logo-mark.svg, inlined so the renderer doesn't depend on
 // reading files from the deployment.
-const LOGO_SVG = `<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="64" height="64" rx="15" fill="#2B4DD6"/><rect x="0.5" y="0.5" width="63" height="63" rx="14.5" stroke="#ffffff" stroke-opacity="0.10"/><g stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" stroke-opacity="0.55"><line x1="19" y1="45" x2="31.5" y2="33.5"/><line x1="31.5" y1="33.5" x2="45" y2="20"/><line x1="31.5" y1="33.5" x2="43.5" y2="44"/></g><circle cx="19" cy="45" r="5" fill="#ffffff"/><circle cx="31.5" cy="33.5" r="5" fill="#ffffff"/><circle cx="43.5" cy="44" r="4.2" fill="#ffffff" fill-opacity="0.78"/><circle cx="45" cy="20" r="6" fill="#EFB141"/></svg>`;
+const LOGO_SVG = `<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="oiq-diamond" x1="14" y1="11" x2="50" y2="53" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3B82F6"/><stop offset="1" stop-color="#1D4ED8"/></linearGradient></defs><rect x="0.5" y="0.5" width="63" height="63" rx="15.5" fill="#EFF5FF" stroke="#E4ECFB"/><path d="M32 11 L50 32 L32 53 L14 32 Z" fill="url(#oiq-diamond)"/><path d="M32 19.6 L41 32 L32 44.4 L23 32 Z" fill="#DCE8FD"/><circle cx="32" cy="32" r="4.5" fill="#2563EB"/><circle cx="50" cy="16" r="3.6" fill="#F59E0B"/></svg>`;
 const LOGO_URI = `data:image/svg+xml;base64,${Buffer.from(LOGO_SVG).toString("base64")}`;
 
-const BRAND = { deep: "#16245E", blue: "#2B4DD6", bright: "#4A6CF2", gold: "#EFB141", ink: "#1E2433" };
+// Colours taken from the logo mark.
+const BRAND = { deep: "#172554", blue: "#1D4ED8", bright: "#3B82F6", accent: "#F59E0B", ink: "#1E2433" };
+
+// Large outline of the logo's diamond, drawn behind the title.
+const MOTIF_SVG = `<svg width="640" height="640" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M32 11 L50 32 L32 53 L14 32 Z" fill="#ffffff" fill-opacity="0.06" stroke="#ffffff" stroke-opacity="0.16" stroke-width="0.35" stroke-linejoin="round"/><path d="M32 19.6 L41 32 L32 44.4 L23 32 Z" stroke="#ffffff" stroke-opacity="0.2" stroke-width="0.35" stroke-linejoin="round"/><circle cx="32" cy="32" r="3" fill="#ffffff" fill-opacity="0.16"/><circle cx="50" cy="17" r="2" fill="${BRAND.accent}"/></svg>`;
+const MOTIF_URI = `data:image/svg+xml;base64,${Buffer.from(MOTIF_SVG).toString("base64")}`;
 
 export interface CoverInput {
   title: string;
@@ -56,10 +61,9 @@ export async function renderCoverImage(input: CoverInput): Promise<Uint8Array> {
         padding: "56px 64px", color: "white", position: "relative",
         backgroundImage: `linear-gradient(135deg, ${BRAND.deep} 0%, ${BRAND.blue} 58%, ${BRAND.bright} 100%)`,
       }}>
-        {/* Decorative network, echoing the logo mark */}
-        <div style={{ position: "absolute", right: -120, top: -120, width: 460, height: 460, borderRadius: 9999, border: "2px solid rgba(255,255,255,0.10)", display: "flex" }} />
-        <div style={{ position: "absolute", right: 40, bottom: -160, width: 380, height: 380, borderRadius: 9999, background: "rgba(255,255,255,0.05)", display: "flex" }} />
-        <div style={{ position: "absolute", right: 150, top: 110, width: 30, height: 30, borderRadius: 9999, background: BRAND.gold, display: "flex" }} />
+        {/* Decorative diamond, echoing the logo mark */}
+        {/* eslint-disable-next-line @next/next/no-img-element -- rendered by next/og, not the browser */}
+        <img src={MOTIF_URI} width={640} height={640} alt="" style={{ position: "absolute", right: -110, top: 0 }} />
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
@@ -68,7 +72,7 @@ export async function renderCoverImage(input: CoverInput): Promise<Uint8Array> {
             <span style={{ fontSize: 34, letterSpacing: -0.5 }}>OlympiadIQ</span>
           </div>
           {input.category && (
-            <span style={{ display: "flex", fontSize: 24, padding: "8px 20px", borderRadius: 9999, background: BRAND.gold, color: BRAND.ink }}>
+            <span style={{ display: "flex", fontSize: 24, padding: "8px 20px", borderRadius: 9999, background: BRAND.accent, color: BRAND.ink }}>
               {input.category}
             </span>
           )}

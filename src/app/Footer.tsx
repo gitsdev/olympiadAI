@@ -28,7 +28,7 @@ export function Footer() {
           style={{ borderColor: "oklch(1 0 0 / 0.10)" }}>
           {/* Brand — full width on mobile, spans first row */}
           <div className="col-span-2 sm:col-span-3 lg:col-span-1">
-            <Logo size={26} mono />
+            <Logo size={40} mono showTagline />
             <p
               className="text-[13.5px] leading-[1.6] mt-3.5 max-w-[240px]"
               style={{ color: "oklch(0.72 0.02 264)" }}

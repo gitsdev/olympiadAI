@@ -1,16 +1,13 @@
 <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="OlympiadIQ">
-  <rect width="64" height="64" rx="15" fill="#2B4DD6"></rect>
-  <rect x="0.5" y="0.5" width="63" height="63" rx="14.5" stroke="#ffffff" stroke-opacity="0.10"></rect>
-
-  <g stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" stroke-opacity="0.55">
-    <line x1="19" y1="45" x2="31.5" y2="33.5"></line>
-    <line x1="31.5" y1="33.5" x2="45" y2="20"></line>
-    <line x1="31.5" y1="33.5" x2="43.5" y2="44"></line>
-  </g>
-
-  <circle cx="19" cy="45" r="5" fill="#ffffff"></circle>
-  <circle cx="31.5" cy="33.5" r="5" fill="#ffffff"></circle>
-  <circle cx="43.5" cy="44" r="4.2" fill="#ffffff" fill-opacity="0.78"></circle>
-
-  <circle cx="45" cy="20" r="6" fill="#EFB141"></circle>
+  <defs>
+    <linearGradient id="oiq-diamond" x1="14" y1="11" x2="50" y2="53" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3B82F6"/>
+      <stop offset="1" stop-color="#1D4ED8"/>
+    </linearGradient>
+  </defs>
+  <rect x="0.5" y="0.5" width="63" height="63" rx="15.5" fill="#EFF5FF" stroke="#E4ECFB"/>
+  <path d="M32 11 L50 32 L32 53 L14 32 Z" fill="url(#oiq-diamond)"/>
+  <path d="M32 19.6 L41 32 L32 44.4 L23 32 Z" fill="#DCE8FD"/>
+  <circle cx="32" cy="32" r="4.5" fill="#2563EB"/>
+  <circle cx="50" cy="16" r="3.6" fill="#F59E0B"/>
 </svg>

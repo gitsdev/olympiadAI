@@ -24,7 +24,7 @@ export default function ResetPasswordForm() {
       className="oa-fade relative w-[380px] rounded-[var(--r-2xl)] border border-[var(--line-200)] shadow-[var(--shadow-lg)] p-8"
       style={{ background: "var(--surface)" }}
     >
-      <Logo size={32} />
+      <Logo size={40} showTagline />
 
       <h1
         className="font-bold text-[26px] tracking-tight mt-6 mb-1.5"

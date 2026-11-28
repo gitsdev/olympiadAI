@@ -33,7 +33,7 @@ export default async function MaintenancePage() {
         style={{ background: "var(--surface)" }}
       >
         <div className="inline-block w-fit">
-          <Logo size={32} />
+          <Logo size={40} showTagline />
         </div>
 
         <div

@@ -26,7 +26,7 @@ export default function ConfirmPage() {
         style={{ background: "var(--surface)" }}
       >
         <Link href="/" className="inline-block w-fit">
-          <Logo size={32} />
+          <Logo size={40} showTagline />
         </Link>
 
         <div

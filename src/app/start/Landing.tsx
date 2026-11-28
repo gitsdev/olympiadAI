@@ -15,7 +15,7 @@ import {
   Brain, Sparkles, Target, Trophy, ChevronDown, Check, Rocket, Play,
   BookOpen, Gauge, ShieldCheck, Puzzle, Layers,
 } from "lucide-react";
-import { Logo } from "@/components/brand";
+import { DiamondMotif, Logo } from "@/components/brand";
 import { OAButton, OARing } from "@/components/ui";
 import { CTAButton } from "./CTAButton";
 import { StickyMobileCTA } from "./StickyMobileCTA";
@@ -153,6 +153,8 @@ function Hero() {
 function HeroArt() {
   return (
     <div className="relative mx-auto w-full max-w-[380px] lg:max-w-none" aria-hidden>
+      {/* Logo-mark outline behind the panel */}
+      <DiamondMotif className="absolute hidden sm:block w-[150%] max-w-[620px] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" />
       <div
         className="relative rounded-[var(--r-2xl)] border border-[var(--line-200)] shadow-[var(--shadow-lg)] p-5 sm:p-6"
         style={{ background: "var(--surface)" }}
@@ -354,6 +356,7 @@ function How() {
   return (
     <section className="px-4 sm:px-8 py-14 sm:py-20 relative overflow-hidden" style={{ background: "var(--cobalt-700)" }}>
       <div className="absolute inset-0 graph-bg opacity-30" style={{ backgroundSize: "26px 26px" }} />
+      <DiamondMotif tone="dark" className="absolute -right-24 -top-16 w-[420px] hidden md:block" />
       <div className="relative max-w-[1100px] mx-auto">
         <Reveal><Head eyebrow={HOW.eyebrow} title={HOW.title} light /></Reveal>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -554,6 +557,7 @@ function FinalCTA() {
         style={{ background: "radial-gradient(80% 80% at 50% 0%, oklch(0.52 0.195 259 / 0.35), transparent 60%)" }}
       />
       <div className="absolute inset-0 graph-bg opacity-20" style={{ backgroundSize: "26px 26px" }} />
+      <DiamondMotif tone="dark" className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[560px] max-w-[130%]" />
       <div className="relative max-w-[680px] mx-auto text-center">
         <Reveal>
           <h2
