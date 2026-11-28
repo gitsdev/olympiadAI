@@ -12,6 +12,7 @@ import {
 } from "@/lib/seo-agent/keywords";
 import { getSeoSettings } from "@/lib/seo-agent/settings-data";
 import { analyzeKeywordsCore, PipelineError, type AnalysisSummary } from "@/lib/seo-agent/pipeline";
+import { syncAdminSeoKeywords, type KeywordSyncResult } from "@/lib/seo-agent/keyword-sync";
 
 type Result<T = object> = ({ ok: true } & T) | { ok: false; error: string };
 
@@ -29,6 +30,11 @@ function firstIssue(err: z.ZodError): string {
 
 function isUniqueViolation(err: { code?: string } | null): boolean {
   return err?.code === "23505";
+}
+
+/** The column doesn't exist yet (migration 026 not applied). */
+function isMissingColumn(err: { code?: string } | null): boolean {
+  return err?.code === "42703" || err?.code === "PGRST204";
 }
 
 export async function createKeyword(input: unknown): Promise<Result<{ id: string }>> {
@@ -71,10 +77,32 @@ export async function deleteKeywords(ids: string[]): Promise<Result<{ deleted: n
   if (!parsed.success) return { ok: false, error: "Select at least one keyword." };
 
   const db = await seoDb();
-  const { data, error } = await db.from("seo_keywords").delete().in("id", parsed.data).select("id");
-  if (error) return { ok: false, error: `Could not delete: ${error.message}` };
+  // Keywords synced from /admin/seo are archived instead, or the next sync would add them back.
+  const archived = await db.from("seo_keywords").update({ status: "ARCHIVED" }).in("id", parsed.data).eq("source", "ADMIN_SEO").select("id");
+  if (archived.error && !isMissingColumn(archived.error)) return { ok: false, error: `Could not delete: ${archived.error.message}` };
+  const archivedIds = new Set(((archived.data ?? []) as { id: string }[]).map((r) => r.id));
+  const rest = parsed.data.filter((id) => !archivedIds.has(id));
+  let deleted = 0;
+  if (rest.length) {
+    const { data, error } = await db.from("seo_keywords").delete().in("id", rest).select("id");
+    if (error) return { ok: false, error: `Could not delete: ${error.message}` };
+    deleted = data?.length ?? 0;
+  }
   revalidate();
-  return { ok: true, deleted: data?.length ?? 0 };
+  return { ok: true, deleted: deleted + archivedIds.size };
+}
+
+/** Adds the target keywords from /admin/seo that aren't in the SEO Agent yet. */
+export async function syncKeywordsFromAdminSeo(): Promise<Result<KeywordSyncResult>> {
+  const admin = await requireAdmin();
+  try {
+    const r = await syncAdminSeoKeywords(await seoDb(), admin.id);
+    revalidate();
+    return { ok: true, ...r };
+  } catch (err) {
+    seoLog.error("keywords.sync_failed", { error: errorMessage(err) });
+    return { ok: false, error: `Could not sync keywords: ${errorMessage(err)}. Has migration 026 been run?` };
+  }
 }
 
 export async function setKeywordStatus(ids: string[], status: string): Promise<Result<{ updated: number }>> {

@@ -3,6 +3,7 @@
 import { seoDb, throwIfDbError } from "./db";
 import { zonedDayRange, zonedMonthRange } from "./datetime";
 import { summarizeUsage, type UsageRow, type UsageSummary } from "./usage";
+import { autopilotSpentToday } from "./autopilot";
 
 type Db = Awaited<ReturnType<typeof seoDb>>;
 
@@ -55,6 +56,8 @@ export interface AutomationStatus {
   unanalysedKeywords: number;
   /** Approved but not scheduled: these never publish by themselves. */
   approvedUnscheduled: { id: string; title: string }[];
+  /** Autopilot AI spend today, USD; null if it couldn't be read (e.g. migration 026 not run). */
+  autopilotSpentToday: number | null;
 }
 
 export interface SeoDashboardData {
@@ -150,13 +153,14 @@ async function lastRun(db: Db, agentType: string): Promise<AutomationRun | null>
   return r ? { at: r.created_at, status: r.status, triggeredBy: r.triggered_by, summary: r.output_summary, error: r.error } : null;
 }
 
-async function automationStatus(db: Db): Promise<AutomationStatus> {
-  const [lastDaily, lastPublish, opps, kws, approved] = await Promise.all([
+async function automationStatus(db: Db, tz: string, now: Date): Promise<AutomationStatus> {
+  const [lastDaily, lastPublish, opps, kws, approved, spent] = await Promise.all([
     lastRun(db, "DailyArticle"),
     lastRun(db, "Scheduler"),
     db.from("seo_content_opportunities").select("id", { count: "exact", head: true }).eq("status", "OPEN").eq("type", "NEW_ARTICLE"),
     db.from("seo_keywords_overview").select("id", { count: "exact", head: true }).eq("status", "ACTIVE").eq("is_clustered", false),
     db.from("seo_articles").select("id, title").eq("status", "APPROVED").order("updated_at", { ascending: false }).limit(10),
+    autopilotSpentToday(db, tz, now).catch(() => null),
   ]);
   throwIfDbError(opps.error, "Counting recommendations");
   throwIfDbError(kws.error, "Counting keywords");
@@ -166,6 +170,7 @@ async function automationStatus(db: Db): Promise<AutomationStatus> {
     openRecommendations: opps.count ?? 0,
     unanalysedKeywords: kws.count ?? 0,
     approvedUnscheduled: (approved.data ?? []) as { id: string; title: string }[],
+    autopilotSpentToday: spent,
   };
 }
 
@@ -196,7 +201,7 @@ export async function getSeoDashboardData(tz: string, now = new Date()): Promise
       .order("created_at", { ascending: false })
       .limit(10),
     findTomorrow(db, tomorrow.start, tomorrow.end),
-    automationStatus(db),
+    automationStatus(db, tz, now),
   ]);
 
   throwIfDbError(scoreRes.error, "Loading content scores");

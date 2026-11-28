@@ -10,7 +10,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { throwIfDbError } from "./db";
 import type { SeoSettings } from "./settings-schema";
 import { createAIProvider } from "./ai";
-import { runAgentTask } from "./agents/run-task";
+import { runAgentTask, type AiBudget } from "./agents/run-task";
 import { supabaseTaskStore } from "./agents/task-store";
 import { analyzeKeywords } from "./agents/keyword-analysis";
 import { planContent } from "./agents/content-planner";
@@ -34,6 +34,8 @@ import { zonedDateString } from "./datetime";
 export interface Actor {
   createdBy: string | null;
   triggeredBy: "USER" | "CRON" | "SYSTEM";
+  /** When set (autopilot runs), every AI call is checked against this daily cap first. */
+  budget?: AiBudget;
 }
 
 /** An expected, user-facing failure (e.g. "already has an article"); not a crash. */
@@ -67,7 +69,7 @@ export async function analyzeKeywordsCore(db: SupabaseClient, settings: SeoSetti
       inputSummary: `${keywords.length} keyword(s): ${keywords.map((k) => k.keyword).join(", ")}`,
       createdBy: actor.createdBy, triggeredBy: actor.triggeredBy,
     },
-    { store: supabaseTaskStore(db), provider, pricing: settings.aiPricing },
+    { store: supabaseTaskStore(db), provider, pricing: settings.aiPricing, budget: actor.budget },
     async ({ ai, taskId }) => {
       const analysis = await analyzeKeywords(ai, { brand: settings.brand, keywords, ...context });
       const clusters = await persistKeywordAnalysis(db, analysis, taskId);
@@ -99,7 +101,7 @@ export async function planOpportunityCore(
       inputSummary: `Cluster "${ctx.cluster.name}" (${ctx.cluster.primaryKeyword}); ${ctx.linkCandidates.length} link candidates`,
       createdBy: actor.createdBy, triggeredBy: actor.triggeredBy,
     },
-    { store: supabaseTaskStore(db), provider, pricing: settings.aiPricing },
+    { store: supabaseTaskStore(db), provider, pricing: settings.aiPricing, budget: actor.budget },
     async ({ ai }) => {
       const plan = await planContent(ai, {
         brand: settings.brand, cluster: ctx.cluster, opportunityReason: ctx.opportunity.reason,
@@ -184,7 +186,7 @@ export async function runWriter(
       inputSummary: `Plan "${plan.title}" (${plan.primary_keyword}); ${(plan.outline ?? []).length} sections, ${links.length} links, CTA ${ctaType}`,
       createdBy: actor.createdBy, triggeredBy: actor.triggeredBy,
     },
-    { store: supabaseTaskStore(db), provider, pricing: settings.aiPricing },
+    { store: supabaseTaskStore(db), provider, pricing: settings.aiPricing, budget: actor.budget },
     async ({ ai, taskId }) => {
       const draft = await writeArticle(ai, {
         brand: settings.brand,
@@ -307,7 +309,7 @@ export async function seoCheckCore(db: SupabaseClient, settings: SeoSettings, ar
       agentType: "SEOAgent", taskType: "seo_check", category: "SEO", entityType: "article", entityId: a.id,
       inputSummary: `"${a.title}" v${a.current_version} (${a.primary_keyword})`, createdBy: actor.createdBy, triggeredBy: actor.triggeredBy,
     },
-    { store: supabaseTaskStore(db), provider, pricing: settings.aiPricing },
+    { store: supabaseTaskStore(db), provider, pricing: settings.aiPricing, budget: actor.budget },
     async ({ ai }) => {
       const result = await analyzeArticleSeo(ai, {
         checkInput: {
@@ -353,7 +355,7 @@ export async function linkSuggestionsCore(db: SupabaseClient, settings: SeoSetti
       inputSummary: `"${a.title}"; ${candidates.length} candidate pages, ${alreadyLinked.length} existing links`,
       createdBy: actor.createdBy, triggeredBy: actor.triggeredBy,
     },
-    { store: supabaseTaskStore(db), provider, pricing: settings.aiPricing },
+    { store: supabaseTaskStore(db), provider, pricing: settings.aiPricing, budget: actor.budget },
     async ({ ai }) => {
       const { links, dropped } = await suggestInternalLinks(ai, {
         title: a.title, primaryKeyword: a.primary_keyword ?? a.title,

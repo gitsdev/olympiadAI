@@ -293,3 +293,45 @@ describe("migration 017 (backlinks)", () => {
     await db.exec(`update seo_outreach_messages set status = 'COPIED' where id = '30000000-0000-0000-0000-000000000003'`);
   });
 });
+
+describe("migration 026 (autopilot, keyword sync, site audit)", () => {
+  const sql026 = readFileSync(join(process.cwd(), "supabase/migrations/026_seo_autopilot.sql"), "utf8");
+
+  it("applies idempotently, with the autopilot off by default and Haiku 5.5 priced", async () => {
+    await db.exec(sql026);
+    await db.exec(sql026);
+    const { rows } = await db.query<{ automation_enabled: boolean; automation_model: string; budget: string; haiku: unknown }>(
+      "select automation_enabled, automation_model, automation_daily_budget_usd::text budget, ai_pricing -> 'claude-haiku-5-5' haiku from seo_settings where id = 1",
+    );
+    expect(rows[0]).toEqual({ automation_enabled: false, automation_model: "claude-haiku-5-5", budget: "0.1000", haiku: { input: 0.1, output: 0.5 } });
+  });
+
+  it("matches the app's autopilot defaults", async () => {
+    const { DEFAULT_SEO_SETTINGS } = await import("@/lib/seo-agent/settings-schema");
+    const { rows } = await db.query<{ b: string }>("select automation_daily_budget_usd::float8::text b from seo_settings where id = 1");
+    expect(Number(rows[0].b)).toBe(DEFAULT_SEO_SETTINGS.automationDailyBudgetUsd);
+    expect(DEFAULT_SEO_SETTINGS.automationEnabled).toBe(false);
+  });
+
+  it("keeps the daily budget positive and at most $5", async () => {
+    await expect(db.exec("update seo_settings set automation_daily_budget_usd = 0 where id = 1")).rejects.toThrow(/automation_budget_range/);
+    await expect(db.exec("update seo_settings set automation_daily_budget_usd = 6 where id = 1")).rejects.toThrow(/automation_budget_range/);
+  });
+
+  it("only allows known keyword sources and budget scopes", async () => {
+    await expect(db.exec("insert into seo_keywords (keyword, source) values ('bad source kw', 'SCRAPED')")).rejects.toThrow(/source_check/);
+    await db.exec("insert into seo_keywords (keyword, source) values ('synced kw', 'ADMIN_SEO')");
+    await expect(db.exec("insert into seo_ai_usage (provider, model, budget_scope) values ('anthropic', 'm', 'OTHER')")).rejects.toThrow(/budget_scope_check/);
+    await db.exec("insert into seo_ai_usage (provider, model, budget_scope, estimated_cost) values ('anthropic', 'claude-haiku-5-5', 'AUTOPILOT', 0.01)");
+  });
+
+  it("lets only platform admins read or write site audits", async () => {
+    // Supabase grants table access to authenticated by default; the RLS policy is what restricts it.
+    await db.exec("grant select, insert, update, delete on seo_site_audits to authenticated");
+    await asUser(ADMIN, `insert into seo_site_audits (site_url, score, pages_checked) values ('https://www.olympiadiq.in', 72, 30)`);
+    expect(await asUser(ADMIN, "select score from seo_site_audits")).toEqual([{ score: 72 }]);
+    expect(await asUser(STUDENT, "select score from seo_site_audits")).toEqual([]);
+    await expect(asUser(STUDENT, `insert into seo_site_audits (site_url, score) values ('x', 1)`)).rejects.toThrow(/row-level security/);
+    await expect(db.exec(`insert into seo_site_audits (site_url, score) values ('x', 101)`)).rejects.toThrow(/check/);
+  });
+});

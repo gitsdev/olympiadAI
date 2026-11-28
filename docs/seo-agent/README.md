@@ -30,7 +30,7 @@ Sidebar items for unfinished phases are shown with a "Soon" label and are not li
 
 ## Setup
 
-1. **Apply the migrations, in order.** Open the Supabase SQL editor and run [`013_seo_agent.sql`](../../supabase/migrations/013_seo_agent.sql), then [`014_seo_keywords_overview.sql`](../../supabase/migrations/014_seo_keywords_overview.sql), then [`015_seo_agent_claude.sql`](../../supabase/migrations/015_seo_agent_claude.sql), then [`016_seo_agent_images.sql`](../../supabase/migrations/016_seo_agent_images.sql), then [`017_seo_backlinks.sql`](../../supabase/migrations/017_seo_backlinks.sql). All are additive and are safe to re-run. Until 013 has been run, the SEO Agent pages show a "database not set up" notice.
+1. **Apply the migrations, in order.** Open the Supabase SQL editor and run [`013_seo_agent.sql`](../../supabase/migrations/013_seo_agent.sql), then [`014_seo_keywords_overview.sql`](../../supabase/migrations/014_seo_keywords_overview.sql), then [`015_seo_agent_claude.sql`](../../supabase/migrations/015_seo_agent_claude.sql), then [`016_seo_agent_images.sql`](../../supabase/migrations/016_seo_agent_images.sql), then [`017_seo_backlinks.sql`](../../supabase/migrations/017_seo_backlinks.sql), then [`026_seo_autopilot.sql`](../../supabase/migrations/026_seo_autopilot.sql). All are additive and are safe to re-run. Until 013 has been run, the SEO Agent pages show a "database not set up" notice.
 2. **Make sure you are a platform admin.** This uses the same check as the rest of `/admin`:
    ```sql
    update profiles set role = 'platform_admin' where email = '<you>';
@@ -58,6 +58,7 @@ npm run lint
 - [publishing.md](publishing.md): approval workflow, scheduling, the publishing pipeline and the publish API
 
 - [backlinks.md](backlinks.md): backlink opportunities, the Backlink Agent, outreach drafting, the tracker, and safe page fetching
+- [autopilot.md](autopilot.md): the daily autopilot (keyword → cluster → article → cover → publish), its cost limit, and the /admin/seo site score
 - [cron.md](cron.md): the scheduled jobs, Vercel plan limits, security and failure handling
 
 `search-console.md` will be added in the phases that build those features.
@@ -79,5 +80,5 @@ npm run lint
    - **Internal link suggestions:** the Internal Linking Agent proposes links to real OlympiadIQ pages using phrases already in the text. **Apply** links the phrase in place; **Dismiss** hides it for good.
    - **Preview** now shows a Google-style search result and a desktop/mobile toggle, with CTA blocks rendered as the real cards.
    - **Approve, Schedule, Publish:** submit for review, approve (refused while a publishing check fails), schedule a date and time in IST, or publish now. Approved articles are read-only until you withdraw approval. The **Publishing checks** card lists everything that would block or warn before going live. **Upload image** stores the cover in Supabase Storage. Details: [publishing.md](publishing.md).
-7. **Automation:** every evening (~20:00 IST) the agent prepares tomorrow's article: it picks a topic, plans and writes it, runs the SEO check and link suggestions, and leaves it in **Review** for you (or schedules it, in auto-publish mode, only if every check passes). Scheduled articles publish at ~10:00 IST (and again around 20:00). **Agent Tasks** has buttons to run either job now. See [cron.md](cron.md).
+7. **Automation:** switch on **Autopilot** on the dashboard, and every evening (~20:00 IST) it syncs keywords from /admin/seo, picks one, clusters it, plans and writes the article with a branded cover image, runs the SEO check, and schedules it to auto-publish the next morning if every check passes (otherwise it waits in **Review required**). It runs on Claude Haiku 5.5 under a hard $0.10/day budget. See [autopilot.md](autopilot.md). Scheduled articles publish at ~10:00 IST (and again around 20:00). **Agent Tasks** has buttons to run either job now. See [cron.md](cron.md).
 8. **Agent Tasks:** shows every run, with input, output or error, tokens, cost and duration. **AI Usage:** shows cost for today and this month, broken down by area, by model and by day.

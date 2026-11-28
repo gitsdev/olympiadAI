@@ -41,15 +41,18 @@ export class AnthropicProvider extends BaseAIProvider {
         },
         // If a safety classifier declines, Anthropic re-runs the request on
         // its recommended fallback model instead of returning a refusal.
-        betas: ["server-side-fallback-2026-07-01"],
-        fallbacks: "default",
+        // Haiku has no server-side fallback, so it's left out there.
+        ...(supportsServerFallback(this.model) ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const } : {}),
       }).finalMessage();
     } catch (err) {
       throw toProviderError(err);
     }
 
     if (res.stop_reason === "refusal") {
-      throw new AIProviderError("Claude declined this request (and the fallback model did too).", "anthropic");
+      throw new AIProviderError(
+        supportsServerFallback(this.model) ? "Claude declined this request (and the fallback model did too)." : "Claude declined this request.",
+        "anthropic",
+      );
     }
     if (res.stop_reason === "max_tokens") {
       throw new AIProviderError("Claude's reply hit the output token limit and was cut off.", "anthropic");
@@ -67,6 +70,11 @@ export class AnthropicProvider extends BaseAIProvider {
       usage: { inputTokens: res.usage.input_tokens, outputTokens: res.usage.output_tokens },
     };
   }
+}
+
+/** Server-side refusal fallback exists for Opus, Sonnet and Fable; Haiku rejects a fallback list and ignores "default". */
+export function supportsServerFallback(model: string): boolean {
+  return !model.startsWith("claude-haiku");
 }
 
 /** Maps SDK errors to AIProviderError, keeping status and retryability. */

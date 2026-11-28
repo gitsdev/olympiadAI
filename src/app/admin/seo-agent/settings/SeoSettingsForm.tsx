@@ -135,9 +135,28 @@ export function SeoSettingsForm({ initial, secrets }: { initial: SeoSettings; se
         <OACardHeader><OACardTitle>Schedules</OACardTitle></OACardHeader>
         <div className="grid sm:grid-cols-2 gap-4">
           <FrequencySelect label="Content planning" value={s.contentPlanningFrequency} onChange={(v) => set("contentPlanningFrequency", v)} />
-          <FrequencySelect label="Article generation" value={s.articleGenerationFrequency} onChange={(v) => set("articleGenerationFrequency", v)} />
           <FrequencySelect label="Search Console sync" value={s.searchConsoleSyncFrequency} onChange={(v) => set("searchConsoleSyncFrequency", v)} />
           <FrequencySelect label="Backlink checking" value={s.backlinkCheckFrequency} onChange={(v) => set("backlinkCheckFrequency", v)} />
+        </div>
+      </OACard>
+
+      <OACard>
+        <OACardHeader><OACardTitle>Autopilot</OACardTitle></OACardHeader>
+        <div className="flex flex-col gap-4">
+          <p className="text-[12.5px]" style={{ color: "var(--fg-muted)" }}>
+            Turn the autopilot on or off from the SEO Agent dashboard. When it&apos;s on, one article a day is written and auto-published
+            (if every check passes) using the model below. Every AI call is checked against the daily budget first, and a call that could go over it isn&apos;t made.
+          </p>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <Field label="Autopilot model" hint="Needs a price in Model pricing below, or the autopilot won't run." error={err("automationModel")}>
+              <input className={inputCls} style={inputStyle} value={s.automationModel} onChange={(e) => set("automationModel", e.target.value)} />
+            </Field>
+            <Field label="Daily budget (USD)" hint="Hard cap on autopilot AI spend per day." error={err("automationDailyBudgetUsd")}>
+              <input type="number" min={0.01} max={5} step={0.01} className={`${inputCls} max-w-40`} style={inputStyle}
+                value={Number.isFinite(s.automationDailyBudgetUsd) ? s.automationDailyBudgetUsd : ""}
+                onChange={(e) => set("automationDailyBudgetUsd", e.target.value === "" ? Number.NaN : Number(e.target.value))} />
+            </Field>
+          </div>
         </div>
       </OACard>
 
@@ -151,7 +170,7 @@ export function SeoSettingsForm({ initial, secrets }: { initial: SeoSettings; se
                 {AI_PROVIDERS.map((p) => <option key={p} value={p}>{p === "anthropic" ? "Anthropic (Claude)" : p}</option>)}
               </select>
             </Field>
-            <Field label="Model" hint="A Claude model ID, e.g. claude-opus-5-5 or claude-sonnet-5-5." error={err("aiModel")}>
+            <Field label="Model" hint="Used when you run agents yourself. A Claude model ID, e.g. claude-opus-5-5 or claude-sonnet-5-5." error={err("aiModel")}>
               <input className={inputCls} style={inputStyle} value={s.aiModel} onChange={(e) => set("aiModel", e.target.value)} />
             </Field>
           </div>

@@ -144,7 +144,7 @@ export function validateForPublish(a: PublishCandidate, ctx: PublishContext): Pu
   // Image
   if (a.featuredImageUrl && !/^https:\/\//.test(a.featuredImageUrl)) err("IMAGE_URL", "Featured image must be an https URL.");
   if (a.featuredImageUrl && !a.featuredImageAlt?.trim()) err("IMAGE_ALT", "Featured image needs alt text.");
-  if (!a.featuredImageUrl) warn("NO_IMAGE", "No featured image. The post will publish without a cover.");
+  if (!a.featuredImageUrl) warn("NO_IMAGE", "No featured image yet. A branded cover will be created when it's published.");
 
   // CTA
   if (a.ctaCount === 0) warn("NO_CTA", "The article has no CTA block.");

@@ -49,8 +49,8 @@ export function CompetitorTable({ competitors, ours }: { competitors: SeoCompeti
           <TableRow>
             <TableHead className="w-[40px]">#</TableHead>
             <TableHead>Competitor</TableHead>
-            <TableHead>SEO score</TableHead>
-            <TableHead>Visibility</TableHead>
+            <TableHead>Authority (est.)</TableHead>
+            <TableHead>Visibility (est.)</TableHead>
             <TableHead>Where they win</TableHead>
             <TableHead>Our opening</TableHead>
           </TableRow>
@@ -61,8 +61,9 @@ export function CompetitorTable({ competitors, ours }: { competitors: SeoCompeti
         </TableBody>
       </Table>
       <p className="text-[11.5px] px-1" style={{ color: "var(--fg-subtle)" }}>
-        SEO score is the site&apos;s estimated domain authority (0–100). Visibility is the estimated share of the
-        tracked keywords below where the site ranks in Google&apos;s top 10.
+        Hand-entered estimates, not measured data. Authority is the site&apos;s estimated domain authority (0–100). Visibility is the
+        estimated share of the tracked keywords below where the site ranks in Google&apos;s top 10. Your measured on-site score
+        (above) is a different measure and isn&apos;t comparable to these.
       </p>
     </div>
   );

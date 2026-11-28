@@ -43,6 +43,8 @@ export interface UsageRecord {
   input_tokens: number;
   output_tokens: number;
   estimated_cost: number | null;
+  /** Set when the call counts toward a daily budget (the autopilot's). */
+  budget_scope?: "AUTOPILOT" | null;
 }
 
 export interface TaskStore {
@@ -62,11 +64,57 @@ export interface AgentTaskOptions {
   createdBy?: string | null;
 }
 
+/**
+ * A hard daily spending cap. Checked before every AI call (retries
+ * included) against the worst case: the prompt plus the full output
+ * allowance. A call that could push spend over the limit isn't made.
+ */
+export interface AiBudget {
+  scope: "AUTOPILOT";
+  limitUsd: number;
+  /** Spend already recorded today in this scope, USD. */
+  spentUsd(): Promise<number>;
+}
+
+/** The call was refused because it could exceed the daily budget. */
+export class BudgetExceededError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "BudgetExceededError";
+  }
+}
+
 export interface AgentTaskDeps {
   store: TaskStore;
   provider: AIProvider;
   pricing: AiPricing;
+  budget?: AiBudget;
   now?: () => Date;
+}
+
+/** Our ~4 chars/token estimate can undercount on newer tokenizers; pad it. */
+const INPUT_ESTIMATE_PADDING = 1.5;
+const DEFAULT_OUTPUT_ALLOWANCE = 16_000;
+
+/** Worst-case cost of one call (prompt + full output allowance), or null if the model has no price. */
+export function worstCaseCost(
+  pricing: AiPricing, model: string, req: Pick<GenerateTextRequest, "system" | "prompt" | "maxOutputTokens">, estimateTokens: (t: string) => number,
+): number | null {
+  const input = Math.ceil(estimateTokens(req.system + req.prompt) * INPUT_ESTIMATE_PADDING);
+  return estimateCost(pricing, model, input, req.maxOutputTokens ?? DEFAULT_OUTPUT_ALLOWANCE);
+}
+
+async function checkBudget(budget: AiBudget, pricing: AiPricing, provider: AIProvider, req: GenerateTextRequest): Promise<void> {
+  const worst = worstCaseCost(pricing, provider.model, req, (t) => provider.estimateUsage(t));
+  if (worst === null) {
+    throw new BudgetExceededError(`No price is set for ${provider.model}, so the daily budget can't be enforced. Add its price in Settings → AI pricing.`);
+  }
+  const spent = await budget.spentUsd();
+  if (spent + worst > budget.limitUsd) {
+    throw new BudgetExceededError(
+      `Daily AI budget reached: $${spent.toFixed(4)} spent of $${budget.limitUsd.toFixed(2)}, and this step could cost up to $${worst.toFixed(4)}. It will run again tomorrow.`,
+    );
+  }
 }
 
 export interface AgentContext {
@@ -90,7 +138,11 @@ class MeteredProvider extends BaseAIProvider {
   readonly model: string;
   override readonly nativeStructuredOutput: boolean;
 
-  constructor(private readonly inner: AIProvider, private readonly onUsage: (model: string, usage: AIUsage) => Promise<void>) {
+  constructor(
+    private readonly inner: AIProvider,
+    private readonly onUsage: (model: string, usage: AIUsage) => Promise<void>,
+    private readonly beforeCall?: (req: GenerateTextRequest) => Promise<void>,
+  ) {
     super();
     this.id = inner.id;
     this.model = inner.model;
@@ -98,6 +150,7 @@ class MeteredProvider extends BaseAIProvider {
   }
 
   async generateText(req: GenerateTextRequest): Promise<GenerateTextResult> {
+    await this.beforeCall?.(req);
     const res = await this.inner.generateText(req);
     await this.onUsage(res.model, res.usage);
     return res;
@@ -139,12 +192,13 @@ export async function runAgentTask<R>(
         output_tokens: usage.outputTokens,
         // Priced by the configured model name (the API may report a dated variant).
         estimated_cost: estimateCost(deps.pricing, deps.provider.model, usage.inputTokens, usage.outputTokens),
+        ...(deps.budget ? { budget_scope: deps.budget.scope } : {}),
       });
     } catch (err) {
       // Metering must not destroy finished AI work; surface it in logs.
       seoLog.error("ai_usage.record_failed", { taskId, error: errorMessage(err) });
     }
-  });
+  }, deps.budget ? (req) => checkBudget(deps.budget!, deps.pricing, deps.provider, req) : undefined);
 
   const summary = () => ({
     model: totals.model,

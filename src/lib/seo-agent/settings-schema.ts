@@ -49,6 +49,12 @@ export const seoSettingsSchema = z.object({
     .nullable(),
   blogBaseUrl: z.url(),
   brand: brandSchema,
+  /** Daily autopilot on/off. Changed only by its own switch (see settingsToRow). */
+  automationEnabled: z.boolean(),
+  /** Model the autopilot uses; manual runs keep using aiModel. */
+  automationModel: z.string().trim().min(1).max(100),
+  /** Hard cap on autopilot AI spend per day (in `timezone`), USD. */
+  automationDailyBudgetUsd: z.number().gt(0, "Must be above $0").max(5, "At most $5 a day"),
 });
 export type SeoSettings = z.infer<typeof seoSettingsSchema>;
 
@@ -67,7 +73,7 @@ export const DEFAULT_SEO_SETTINGS: SeoSettings = {
   // Anthropic's published price for the default model (USD per 1M tokens,
   // as of Sept 2026). Editable in Settings; other models stay unpriced
   // until the admin enters them.
-  aiPricing: { "claude-opus-5-5": { input: 4, output: 20 } },
+  aiPricing: { "claude-opus-5-5": { input: 4, output: 20 }, "claude-haiku-5-5": { input: 0.1, output: 0.5 } },
   publishingMode: "MANUAL_APPROVAL",
   defaultPublishTime: "10:00",
   timezone: DEFAULT_TIMEZONE,
@@ -80,6 +86,9 @@ export const DEFAULT_SEO_SETTINGS: SeoSettings = {
   searchConsoleSiteUrl: null,
   blogBaseUrl: "https://www.olympiadiq.in/blog",
   brand: DEFAULT_BRAND,
+  automationEnabled: false,
+  automationModel: "claude-haiku-5-5",
+  automationDailyBudgetUsd: 0.1,
 };
 
 /** Shape of the seo_settings row (snake_case, as returned by Supabase). */
@@ -99,6 +108,9 @@ export interface SeoSettingsRow {
   search_console_site_url: string | null;
   blog_base_url: string;
   brand: unknown;
+  automation_enabled?: boolean;
+  automation_model?: string;
+  automation_daily_budget_usd?: number | string; // numeric arrives as string from PostgREST
   updated_at?: string;
 }
 
@@ -123,10 +135,19 @@ export function settingsFromRow(row: SeoSettingsRow): SeoSettings {
     searchConsoleSiteUrl: row.search_console_site_url ?? "",
     blogBaseUrl: row.blog_base_url,
     brand: row.brand,
+    // Defaults cover a database that hasn't had migration 026 yet.
+    automationEnabled: row.automation_enabled ?? false,
+    automationModel: row.automation_model ?? DEFAULT_SEO_SETTINGS.automationModel,
+    automationDailyBudgetUsd: Number(row.automation_daily_budget_usd ?? DEFAULT_SEO_SETTINGS.automationDailyBudgetUsd),
   });
 }
 
-export function settingsToRow(s: SeoSettings): Omit<SeoSettingsRow, "updated_at"> {
+/**
+ * Settings → row for the Settings form. Leaves out automation_enabled, which
+ * only the autopilot switch changes, so saving an older copy of the form
+ * can't silently turn the autopilot back on or off.
+ */
+export function settingsToRow(s: SeoSettings): Omit<SeoSettingsRow, "updated_at" | "automation_enabled"> {
   return {
     ai_provider: s.aiProvider,
     ai_model: s.aiModel,
@@ -143,6 +164,8 @@ export function settingsToRow(s: SeoSettings): Omit<SeoSettingsRow, "updated_at"
     search_console_site_url: s.searchConsoleSiteUrl,
     blog_base_url: s.blogBaseUrl,
     brand: s.brand,
+    automation_model: s.automationModel,
+    automation_daily_budget_usd: s.automationDailyBudgetUsd,
   };
 }
 

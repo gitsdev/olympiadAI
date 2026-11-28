@@ -12,6 +12,7 @@ import { KEYWORD_STATUSES } from "@/lib/seo-agent/constants";
 import { KeywordFilters } from "./KeywordFilters";
 import { KeywordTable } from "./KeywordTable";
 import { ImportKeywordsDialog } from "./ImportKeywordsDialog";
+import { SyncKeywordsButton } from "./SyncKeywordsButton";
 
 export const metadata: Metadata = {
   title: "Keywords | SEO Agent",
@@ -57,7 +58,7 @@ export default async function KeywordsPage({ searchParams }: PageProps) {
     <SeoAgentShell
       title="Keywords"
       subtitle={result ? `${result.count} keyword${result.count === 1 ? "" : "s"}. Select some and click Analyze to build clusters.` : undefined}
-      actions={result ? <ImportKeywordsDialog /> : undefined}
+      actions={result ? <div className="flex items-center gap-2 flex-wrap"><SyncKeywordsButton /><ImportKeywordsDialog /></div> : undefined}
     >
       {!result ? (
         <SchemaMissingNotice />

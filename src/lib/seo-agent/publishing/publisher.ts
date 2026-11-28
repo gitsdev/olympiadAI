@@ -24,6 +24,7 @@ import { supabaseTaskStore } from "../agents/task-store";
 import type { SeoAnalysis } from "../agents/seo-analyst";
 import type { PublishingMode } from "../constants";
 import { articleHtmlToBlogMarkdown } from "./markdown";
+import { coverAltText, renderCoverImage } from "../cover-image";
 import {
   canTransition, textSimilarity, validateForPublish,
   type PublishCandidate, type PublishValidation, type ValidationIssue,
@@ -126,13 +127,46 @@ export function looksLikeImage(b: Uint8Array, mime: string): boolean {
 }
 
 /**
- * "Upload/process image if needed": external cover images are copied into
- * our bucket so the post doesn't depend on someone else's server.
+ * Gives the article a generated branded cover if it has no image yet, so
+ * every published post has at least one picture. Returns the image in use.
  */
-async function processFeaturedImage(db: SupabaseClient, a: ArticleForPublish): Promise<{ ok: true; url: string | null } | { ok: false; error: string }> {
+export async function ensureCoverImage(
+  db: SupabaseClient,
+  a: Pick<ArticleForPublish, "id" | "title" | "category" | "primary_keyword" | "featured_image_url" | "featured_image_alt">,
+): Promise<{ url: string; alt: string; generated: boolean }> {
+  if (a.featured_image_url) return { url: a.featured_image_url, alt: a.featured_image_alt?.trim() || coverAltText(a), generated: false };
+  const { targetClass, subject } = inferClassAndSubject(`${a.primary_keyword ?? ""} ${a.title}`);
+  const bytes = await renderCoverImage({ title: a.title, category: a.category, targetClass, subject });
+  const url = await storeImage(db, a.id, bytes, "image/png");
+  const alt = coverAltText(a);
+  const { error } = await db.from("seo_articles").update({ featured_image_url: url, featured_image_alt: alt }).eq("id", a.id);
+  throwIfDbError(error, "Saving cover image");
+  seoLog.info("cover.generated", { articleId: a.id, bytes: bytes.byteLength });
+  return { url, alt, generated: true };
+}
+
+/** Strict checks for autopilot articles, whatever the global publishing mode is. */
+export function publishModeFor(a: Pick<ArticleForPublish, "publish_authorization" | "approved_at">, globalMode: PublishingMode): PublishingMode {
+  return a.publish_authorization === "AUTO_PUBLISH" && !a.approved_at ? "AUTO_PUBLISH" : globalMode;
+}
+
+/**
+ * "Upload/process image if needed": external cover images are copied into
+ * our bucket so the post doesn't depend on someone else's server. An
+ * article with no image gets a generated cover.
+ */
+async function processFeaturedImage(db: SupabaseClient, a: ArticleForPublish): Promise<{ ok: true; url: string; alt: string } | { ok: false; error: string }> {
   const url = a.featured_image_url;
-  if (!url) return { ok: true, url: null };
-  if (url.startsWith(bucketPrefix(db))) return { ok: true, url };
+  if (!url) {
+    try {
+      const cover = await ensureCoverImage(db, a);
+      return { ok: true, url: cover.url, alt: cover.alt };
+    } catch (err) {
+      return { ok: false, error: `Couldn't create a cover image: ${errorMessage(err)}` };
+    }
+  }
+  const alt = a.featured_image_alt?.trim() || coverAltText(a);
+  if (url.startsWith(bucketPrefix(db))) return { ok: true, url, alt };
   try {
     const res = await fetch(url, { signal: AbortSignal.timeout(10_000), redirect: "follow" });
     if (!res.ok) return { ok: false, error: `Featured image couldn't be downloaded (HTTP ${res.status}).` };
@@ -141,7 +175,7 @@ async function processFeaturedImage(db: SupabaseClient, a: ArticleForPublish): P
     const declared = Number(res.headers.get("content-length") ?? 0);
     if (declared > MAX_IMAGE_BYTES) return { ok: false, error: "Featured image is larger than 5 MB." };
     const bytes = new Uint8Array(await res.arrayBuffer());
-    return { ok: true, url: await storeImage(db, a.id, bytes, mime) };
+    return { ok: true, url: await storeImage(db, a.id, bytes, mime), alt };
   } catch (err) {
     return { ok: false, error: `Featured image check failed: ${errorMessage(err)}` };
   }
@@ -174,20 +208,22 @@ export async function publishArticle(
       return { ok: false, error: `Only approved or scheduled articles can be published (this one is ${a.status.toLowerCase()}).`, issues: [], reviewRequired: false };
     }
 
+    const mode = publishModeFor(a, settings.publishingMode);
     return await runPlainTask<PublishOutcome>(
       {
         agentType: "Publisher", taskType: "publish", entityType: "article", entityId: a.id,
-        inputSummary: `"${a.title}" → /blog/${a.slug} (${settings.publishingMode})`,
+        inputSummary: `"${a.title}" → /blog/${a.slug} (${mode})`,
         triggeredBy: opts.triggeredBy, createdBy: opts.actorId,
       },
       { store: supabaseTaskStore(db) },
       async () => {
-        const validation = await buildPublishCheck(db, a, settings.publishingMode);
+        const validation = await buildPublishCheck(db, a, mode);
         const issues = [...validation.errors];
         let image: string | null = a.featured_image_url;
+        let imageAlt: string | null = a.featured_image_alt;
         if (!issues.length) {
           const img = await processFeaturedImage(db, a);
-          if (img.ok) image = img.url;
+          if (img.ok) { image = img.url; imageAlt = img.alt; }
           else issues.push({ code: "IMAGE", message: img.error });
         }
 
@@ -211,7 +247,7 @@ export async function publishArticle(
           excerpt: a.excerpt!.trim(),
           content: markdown,
           cover_image_url: image,
-          cover_image_alt: image ? a.featured_image_alt : null,
+          cover_image_alt: image ? imageAlt : null,
           category: a.category!,
           class_levels: targetClass ? [targetClass] : [],
           tags: [a.primary_keyword, ...a.secondary_keywords].filter((t): t is string => Boolean(t)).slice(0, 5),
@@ -244,6 +280,7 @@ export async function publishArticle(
           published_url: url,
           blog_post_id: blogPostId,
           featured_image_url: image,
+          featured_image_alt: imageAlt,
           // Approved by a person, or allowed by AUTO_PUBLISH mode.
           publish_authorization: a.approved_at ? "MANUAL_APPROVAL" : "AUTO_PUBLISH",
         }).eq("id", a.id);

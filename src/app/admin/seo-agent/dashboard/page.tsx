@@ -61,7 +61,11 @@ function DashboardBody({ settings, data }: NonNullable<Awaited<ReturnType<typeof
   return (
     <div className="flex flex-col gap-5">
       <TomorrowArticleCard article={data.tomorrow} tomorrowDate={data.tomorrowDate} timezone={settings.timezone} />
-      <AutomationCard status={data.automation} timezone={settings.timezone} />
+      <AutomationCard
+        status={data.automation}
+        timezone={settings.timezone}
+        autopilot={{ enabled: settings.automationEnabled, model: settings.automationModel, budgetUsd: settings.automationDailyBudgetUsd }}
+      />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard label="Keywords" value={String(c.keywords)} hint="Not archived" Icon={KeyRound} />

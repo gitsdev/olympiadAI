@@ -11,14 +11,18 @@ import { throwIfDbError } from "../db";
 import { errorMessage, seoLog } from "../logger";
 import { getSeoSettings } from "../settings-data";
 import { zonedDayRange, zonedTimeToUtc, formatZoned } from "../datetime";
-import { runPlainTask } from "../agents/run-task";
+import { runPlainTask, type AgentWorkResult } from "../agents/run-task";
 import { supabaseTaskStore } from "../agents/task-store";
 import {
   analyzeKeywordsCore, generateArticleCore, linkSuggestionsCore, planOpportunityCore, seoCheckCore, type Actor,
 } from "../pipeline";
-import { buildPublishCheck, loadArticleForPublish, publishArticle } from "../publishing/publisher";
+import { buildPublishCheck, ensureCoverImage, loadArticleForPublish, publishArticle } from "../publishing/publisher";
 import { isRunDay, LINKS_CUTOFF_MS, nextStatusAfterGeneration, pickKeywords, SEO_CHECK_CUTOFF_MS } from "./rules";
 import { checkTrackedBacklinks } from "../backlinks/service";
+import { BudgetExceededError } from "../agents/run-task";
+import { autopilotAiSettings, autopilotBudget } from "../autopilot";
+import { syncAdminSeoKeywords } from "../keyword-sync";
+import type { PublishingMode } from "../constants";
 
 export interface JobResult {
   ok: boolean;
@@ -108,19 +112,43 @@ export async function publishDueArticles(db: SupabaseClient, actor: Actor, now =
 const ACTIVE_PLAN = ["IDEA", "PLANNED"];
 
 /**
- * Spec §20: make sure tomorrow (in the configured timezone) has an article
- * draft ready for review. Never publishes directly; in AUTO_PUBLISH mode it
- * schedules the draft only if every publishing check passes.
+ * Spec §20, plus the autopilot (migration 026): make sure tomorrow (in the
+ * configured timezone) has an article.
+ *
+ * Autopilot on: runs every day on the autopilot model under the daily
+ * budget. It syncs keywords from /admin/seo, analyses keywords into
+ * clusters when no recommendation is open, plans, writes, adds a cover
+ * image, runs the SEO check, and schedules the article to auto-publish
+ * tomorrow if every strict publishing check passes (otherwise Review
+ * required). Autopilot off: the scheduled run does nothing; "Run now" works
+ * as before, on the main model and the global publishing mode.
  */
 export async function prepareTomorrowsArticle(db: SupabaseClient, actor: Actor, now = new Date()): Promise<JobResult> {
   return withLock(db, "cron:daily-article", 290, async () => {
     const started = Date.now();
-    const settings = await getSeoSettings(db);
-    const tz = settings.timezone;
-    if (actor.triggeredBy === "CRON" && !isRunDay(settings.articleGenerationFrequency, now, tz)) {
+    const baseSettings = await getSeoSettings(db);
+    const tz = baseSettings.timezone;
+    const autopilot = baseSettings.automationEnabled;
+    if (actor.triggeredBy === "CRON" && !autopilot) {
       return logQuietRun(db, actor, "DailyArticle", "prepare_tomorrow",
-        { ok: true, skipped: "not-a-run-day", summary: `Article generation is ${settings.articleGenerationFrequency.toLowerCase()}; not running today.` });
+        { ok: true, skipped: "autopilot-off", summary: "Autopilot is off. Turn it on from the SEO Agent dashboard." });
     }
+    // Autopilot AI steps use the autopilot model and are capped by the daily budget.
+    const settings = autopilot ? autopilotAiSettings(baseSettings) : baseSettings;
+    const mode: PublishingMode = autopilot ? "AUTO_PUBLISH" : settings.publishingMode;
+    const aiActor: Actor = autopilot ? { ...actor, budget: autopilotBudget(db, settings, now) } : actor;
+
+    const steps: string[] = [];
+    if (autopilot) {
+      try {
+        const sync = await syncAdminSeoKeywords(db);
+        if (sync.added) steps.push(`Added ${sync.added} keyword(s) from /admin/seo`);
+      } catch (err) {
+        seoLog.warn("autopilot.keyword_sync_failed", { error: errorMessage(err) });
+        steps.push("Keyword sync failed (continuing)");
+      }
+    }
+
     const tomorrow = zonedDayRange(now, tz, 1);
     const startIso = tomorrow.start.toISOString();
     const endIso = tomorrow.end.toISOString();
@@ -136,19 +164,15 @@ export async function prepareTomorrowsArticle(db: SupabaseClient, actor: Actor, 
     const tomorrowPlans = (plans ?? []) as { id: string; status: string; title: string }[];
     if ((arts ?? []).length || tomorrowPlans.some((p) => !ACTIVE_PLAN.includes(p.status))) {
       return logQuietRun(db, actor, "DailyArticle", "prepare_tomorrow",
-        { ok: true, skipped: "already-prepared", summary: `Tomorrow (${tomorrow.date}) already has an article.` });
+        { ok: true, skipped: "already-prepared", summary: steps.concat(`Tomorrow (${tomorrow.date}) already has an article.`).join("; ") });
     }
 
-    return runPlainTask<JobResult>(
-      { agentType: "DailyArticle", taskType: "prepare_tomorrow", inputSummary: `Article for ${tomorrow.date} (${tz})`, triggeredBy: actor.triggeredBy, createdBy: actor.createdBy },
-      { store: supabaseTaskStore(db) },
-      async () => {
-        const steps: string[] = [];
+    const prepareArticle = async (): Promise<AgentWorkResult<JobResult>> => {
         let planId = tomorrowPlans.find((p) => ACTIVE_PLAN.includes(p.status))?.id ?? null;
         if (planId) steps.push("Used tomorrow's existing plan");
 
         if (!planId) {
-          if (settings.contentPlanningFrequency === "OFF") {
+          if (!autopilot && settings.contentPlanningFrequency === "OFF") {
             return { result: { ok: true, skipped: "planning-off", summary: "Nothing planned for tomorrow and automatic planning is off." }, outputSummary: "Nothing planned; automatic planning is off" };
           }
           let oppId = await oldestOpenOpportunity(db);
@@ -162,7 +186,7 @@ export async function prepareTomorrowsArticle(db: SupabaseClient, actor: Actor, 
               const msg = "Nothing to write about: every keyword has been analysed and there are no open new-article recommendations. Add keywords to keep the daily article going.";
               return { result: { ok: true, skipped: "no-keywords", summary: msg }, outputSummary: msg };
             }
-            const analysis = await analyzeKeywordsCore(db, settings, picked.map((k) => k.id), actor);
+            const analysis = await analyzeKeywordsCore(db, settings, picked.map((k) => k.id), aiActor);
             steps.push(`Analysed ${picked.length} keyword(s) → ${analysis.clusters.length} cluster(s)`);
             oppId = await oldestOpenOpportunity(db);
             if (!oppId) {
@@ -170,26 +194,41 @@ export async function prepareTomorrowsArticle(db: SupabaseClient, actor: Actor, 
             }
           }
           const publishAt = zonedTimeToUtc(tomorrow.date, settings.defaultPublishTime, tz);
-          planId = (await planOpportunityCore(db, settings, oppId, actor, { publishAt })).planId;
+          planId = (await planOpportunityCore(db, settings, oppId, aiActor, { publishAt })).planId;
           steps.push(`Planned for ${formatZoned(publishAt, tz)}`);
         }
 
-        const { articleId, words } = await generateArticleCore(db, settings, planId, actor);
+        const { articleId, words } = await generateArticleCore(db, settings, planId, aiActor);
         steps.push(`Wrote ${words} words`);
 
+        // Every post gets at least one picture: a branded cover (no AI cost).
+        const written = await loadArticleForPublish(db, articleId);
+        if (written) {
+          try {
+            if ((await ensureCoverImage(db, written)).generated) steps.push("Created cover image");
+          } catch (err) {
+            seoLog.warn("autopilot.cover_failed", { articleId, error: errorMessage(err) });
+            steps.push("Cover image failed; it will be retried at publish time");
+          }
+        }
+
         if (Date.now() - started < SEO_CHECK_CUTOFF_MS) {
-          const seo = await seoCheckCore(db, settings, articleId, actor);
+          const seo = await seoCheckCore(db, settings, articleId, aiActor);
           steps.push(`SEO ${seo.score}/100${seo.critical.length ? ` (${seo.critical.length} critical)` : ""}`);
         } else steps.push("SEO check skipped (time budget); run it from the editor");
-        if (Date.now() - started < LINKS_CUTOFF_MS) {
-          const links = await linkSuggestionsCore(db, settings, articleId, actor);
-          steps.push(`${links.added} link suggestion(s)`);
-        } else steps.push("Link suggestions skipped (time budget)");
+        // Suggestions need a person to accept them, so the autopilot doesn't ask for any;
+        // the writer already links to real pages from the plan.
+        if (!autopilot) {
+          if (Date.now() - started < LINKS_CUTOFF_MS) {
+            const links = await linkSuggestionsCore(db, settings, articleId, aiActor);
+            steps.push(`${links.added} link suggestion(s)`);
+          } else steps.push("Link suggestions skipped (time budget)");
+        }
 
         // Quality gate + where the draft goes next.
         const full = await loadArticleForPublish(db, articleId);
-        const validation = full ? await buildPublishCheck(db, full, settings.publishingMode) : null;
-        const next = nextStatusAfterGeneration(settings.publishingMode, validation);
+        const validation = full ? await buildPublishCheck(db, full, mode) : null;
+        const next = nextStatusAfterGeneration(mode, validation);
         const { data: planRow } = await db.from("seo_content_plans").select("planned_publish_at").eq("id", planId).maybeSingle();
         const publishAt = (planRow as { planned_publish_at: string | null } | null)?.planned_publish_at
           ?? zonedTimeToUtc(tomorrow.date, settings.defaultPublishTime, tz).toISOString();
@@ -201,12 +240,27 @@ export async function prepareTomorrowsArticle(db: SupabaseClient, actor: Actor, 
         steps.push(next.reason);
 
         const summary = steps.join("; ");
-        seoLog.info("cron.daily_article", { articleId, status: next.status, elapsedMs: Date.now() - started });
+        seoLog.info("cron.daily_article", { articleId, status: next.status, autopilot, elapsedMs: Date.now() - started });
         return {
           result: { ok: true, summary, details: { articleId, status: next.status } },
           entityId: articleId,
           outputSummary: summary,
         };
+    };
+
+    const label = autopilot ? `Autopilot (${settings.aiModel}, budget $${settings.automationDailyBudgetUsd.toFixed(2)}/day)` : "Manual run";
+    return runPlainTask<JobResult>(
+      { agentType: "DailyArticle", taskType: "prepare_tomorrow", inputSummary: `${label}: article for ${tomorrow.date} (${tz})`, triggeredBy: actor.triggeredBy, createdBy: actor.createdBy },
+      { store: supabaseTaskStore(db) },
+      async () => {
+        try {
+          return await prepareArticle();
+        } catch (err) {
+          // A budget stop is expected behaviour, not a crash: record it with the steps done so far.
+          if (!(err instanceof BudgetExceededError)) throw err;
+          const summary = steps.concat(`Stopped: ${err.message}`).join("; ");
+          return { result: { ok: true, skipped: "budget", summary }, outputSummary: summary, failed: err.message };
+        }
       },
     );
   });

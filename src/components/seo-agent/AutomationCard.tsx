@@ -3,7 +3,9 @@ import { AlertTriangle, CalendarClock, KeyRound } from "lucide-react";
 import { OACard, OACardHeader, OACardTitle } from "@/components/ui";
 import { formatZoned } from "@/lib/seo-agent/datetime";
 import type { AutomationRun, AutomationStatus } from "@/lib/seo-agent/dashboard-data";
+import { formatUsd } from "@/lib/seo-agent/usage";
 import { StatusBadge } from "./StatusBadge";
+import { AutopilotToggle } from "./AutopilotToggle";
 
 function Run({ label, run, timezone }: { label: string; run: AutomationRun | null; timezone: string }) {
   return (
@@ -23,15 +25,41 @@ function Run({ label, run, timezone }: { label: string; run: AutomationRun | nul
   );
 }
 
+export interface AutopilotInfo {
+  enabled: boolean;
+  model: string;
+  budgetUsd: number;
+}
+
 /** Shows whether the scheduled jobs are running and what's stopping them from producing anything. */
-export function AutomationCard({ status, timezone }: { status: AutomationStatus; timezone: string }) {
+export function AutomationCard({ status, timezone, autopilot }: { status: AutomationStatus; timezone: string; autopilot: AutopilotInfo }) {
   const topicsLeft = status.openRecommendations + status.unanalysedKeywords;
+  const spent = status.autopilotSpentToday;
   return (
     <OACard className="flex flex-col gap-4">
-      <OACardHeader className="mb-0">
-        <OACardTitle className="flex items-center gap-2"><CalendarClock size={18} /> Automation</OACardTitle>
-        <Link href="/admin/seo-agent/agent-tasks" className="text-[12.5px] font-semibold" style={{ color: "var(--cobalt-700)" }}>Run now / history →</Link>
+      <OACardHeader className="mb-0 items-start gap-3 flex-wrap">
+        <div className="flex flex-col gap-1">
+          <OACardTitle className="flex items-center gap-2"><CalendarClock size={18} /> Automation</OACardTitle>
+          <Link href="/admin/seo-agent/agent-tasks" className="text-[12.5px] font-semibold" style={{ color: "var(--cobalt-700)" }}>Run now / history →</Link>
+        </div>
+        <AutopilotToggle enabled={autopilot.enabled} />
       </OACardHeader>
+
+      <p className="text-[13px] p-3 rounded-[var(--r-md)]" style={{ background: "var(--paper-2)", color: "var(--ink-700)" }}>
+        {autopilot.enabled ? (
+          <>
+            <strong>Autopilot is on.</strong> Every evening it picks a keyword (syncing new ones from{" "}
+            <Link href="/admin/seo" className="underline">/admin/seo</Link>), groups it into a cluster, plans and writes an article with a cover
+            image, checks it, and schedules it to publish the next morning, but only if every quality check passes. Otherwise it waits in Review.
+          </>
+        ) : (
+          <><strong>Autopilot is off.</strong> Nothing is written or published automatically. Turn it on to publish one article a day.</>
+        )}
+        <span className="block mt-1.5" style={{ color: "var(--fg-muted)" }}>
+          Model {autopilot.model} · budget {formatUsd(autopilot.budgetUsd)}/day · spent today {spent === null ? "unknown" : formatUsd(spent)}
+          {" · "}<Link href="/admin/seo-agent/settings" className="underline">change</Link>
+        </span>
+      </p>
 
       <div className="grid sm:grid-cols-2 gap-4">
         <Run label="Tomorrow's article (daily, ~8 pm)" run={status.lastDaily} timezone={timezone} />

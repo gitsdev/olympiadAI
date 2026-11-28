@@ -49,7 +49,9 @@ async function load(f: { status?: string; agent?: string; page: number }) {
         daily: cronLabel(CRON_UTC.daily, settings.timezone),
         publish: cronLabel(CRON_UTC.publish, settings.timezone),
         mode: settings.publishingMode,
-        frequency: settings.articleGenerationFrequency,
+        autopilot: settings.automationEnabled,
+        autopilotModel: settings.automationModel,
+        budgetUsd: settings.automationDailyBudgetUsd,
       },
       ...tasks,
     };
